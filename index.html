@@ -339,7 +339,7 @@ function fileToName(filename){
 }
 
 async function supaList(folder){
-  const url = `${SUPA_URL}/storage/v1/object/list/assets`;
+  const url = `${SUPA_URL}/storage/v1/object/list/asset`;
   const res = await fetch(url, {
     method: 'POST',
     headers: {
@@ -354,7 +354,7 @@ async function supaList(folder){
 }
 
 function supaPublicUrl(path){
-  return `${SUPA_URL}/storage/v1/object/public/assets/${path}`;
+  return `${SUPA_URL}/storage/v1/object/public/asset/${path}`;
 }
 
 async function loadAssets(){
