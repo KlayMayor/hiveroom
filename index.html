@@ -481,6 +481,7 @@ function showCtrl(cat, id){
 function hideCtrl(){
   CTRL_SEL = {cat:null, id:null};
   document.getElementById('item-ctrl').classList.remove('show');
+  renderRoom();
 }
 function positionCtrl(cat, id){
   const pos = (cat==='furniture' ? POS.furniture[id] : POS.walldeco[id]);
@@ -609,10 +610,21 @@ async function renderRoom(){
   ]);
   function makeOff(){const c=document.createElement('canvas');c.width=W;c.height=H;return c;}
 
-  // 레이어4: 바닥
+  // 레이어4: 바닥 (중앙 정렬 커버)
   const offFloor=makeOff(); const fctx=offFloor.getContext('2d');
   fctx.save(); poly(fctx,[C,vBL,vB,vBR]); fctx.fillStyle='#D8C8A8'; fctx.fill(); fctx.clip();
-  if(flImg) drawImgTile(fctx,flImg,0,0,W,H);
+  if(flImg){
+    // 바닥 영역의 bounding box 계산
+    const flPts=[C,vBL,vB,vBR];
+    const fxMin=Math.min(...flPts.map(p=>p.x)), fxMax=Math.max(...flPts.map(p=>p.x));
+    const fyMin=Math.min(...flPts.map(p=>p.y)), fyMax=Math.max(...flPts.map(p=>p.y));
+    const fw=fxMax-fxMin, fh=fyMax-fyMin;
+    const fcx=(fxMin+fxMax)/2, fcy=(fyMin+fyMax)/2;
+    // 이미지를 바닥 영역에 cover 방식으로 중앙 배치
+    const scale=Math.max(fw/flImg.width, fh/flImg.height)*1.05;
+    const dw=flImg.width*scale, dh=flImg.height*scale;
+    fctx.drawImage(flImg, fcx-dw/2, fcy-dh/2, dw, dh);
+  }
   fctx.restore();
   rctx.drawImage(offFloor,0,0);
 
@@ -625,6 +637,15 @@ async function renderRoom(){
   if(waImg) drawImgTile(wctx,waImg,0,0,W,H);
   wctx.restore();
   rctx.drawImage(offWall,0,0);
+
+  // 경계선 + 외곽선 (벽/바닥 위, 아이템 아래)
+  rctx.save();
+  hexClip(rctx,RCX,RCY,RS);
+  rctx.strokeStyle='rgba(80,100,130,.35)';rctx.lineWidth=5;rctx.stroke();
+  rctx.strokeStyle='rgba(100,80,60,.18)';rctx.lineWidth=2;
+  const _C={x:RCX,y:RCY};
+  [[_C,vT],[_C,vBL],[_C,vBR]].forEach(([a,b])=>{rctx.beginPath();rctx.moveTo(a.x,a.y);rctx.lineTo(b.x,b.y);rctx.stroke();});
+  rctx.restore();
 
   // 레이어2: 장식 (육각형 클립)
   const offDeco=makeOff(); const dctx=offDeco.getContext('2d');
@@ -640,17 +661,7 @@ async function renderRoom(){
   ufctx.restore();
   rctx.drawImage(offFurn,0,0);
 
-  // 외곽선 + 분할선 (아이템 위에 그림)
-  hexClip(rctx,RCX,RCY,RS);
-  rctx.strokeStyle='rgba(80,100,130,.4)';rctx.lineWidth=6;rctx.stroke();
-  rctx.save();rctx.strokeStyle='rgba(100,80,60,.2)';rctx.lineWidth=2;
-  [[C,vT],[C,vBL],[C,vBR]].forEach(([a,b])=>{rctx.beginPath();rctx.moveTo(a.x,a.y);rctx.lineTo(b.x,b.y);rctx.stroke();});
-  rctx.restore();
 
-  // 빈 칸 라벨
-  rctx.font='bold 36px Noto Sans KR,sans-serif';rctx.textAlign='center';rctx.textBaseline='middle';rctx.fillStyle='rgba(0,0,0,.18)';
-  if(!wa){rctx.fillText('벽지',lc.x,lc.y);rctx.fillText('벽지',rc.x,rc.y);}
-  if(!fl){rctx.fillText('바닥',bc.x,bc.y);}
 }
 
 function drawImgTile(ctx,img,x,y,w,h,scaleOverride){
@@ -1020,7 +1031,13 @@ function drawMap(){
 function drawFilled(cx,cy,s,num,room){
   mctx.save(); mHex(cx,cy,s-1);
   mctx.fillStyle='#fff'; mctx.fill(); mctx.clip();
-  if(room.img) mctx.drawImage(room.img, cx-s, cy-s, s*2, s*2);
+  if(room.img){
+    // 육각형 bounding box에 맞게 cover
+    const iw=room.img.width||700, ih=room.img.height||700;
+    const scale=Math.max((s*2)/iw,(s*Math.sqrt(3))/ih)*1.0;
+    const dw=iw*scale, dh=ih*scale;
+    mctx.drawImage(room.img, cx-dw/2, cy-dh/2, dw, dh);
+  }
   mctx.restore();
   // 분할선
   const vT={x:cx,y:cy-s},vBL={x:cx-s*Math.sqrt(3)/2,y:cy+s*.5},vBR={x:cx+s*Math.sqrt(3)/2,y:cy+s*.5};
