@@ -96,16 +96,22 @@ header{
 
 /* ── 왼쪽: 미리보기 ── */
 .con-left{
-  width:380px;flex-shrink:0;
+  width:460px;flex-shrink:0;
   display:flex;flex-direction:column;
   background:#F8F5F0;
   border-right:1px solid var(--border);
-  align-items:center;justify-content:center;
 }
 .preview-area{
-  display:flex;flex-direction:column;
+  flex:3;display:flex;flex-direction:column;
   align-items:center;justify-content:center;
-  gap:12px;padding:20px;width:100%;
+  gap:8px;padding:12px;width:100%;
+  min-height:0;
+}
+.preview-ad{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  background:#EEEAE2;border-top:1px solid var(--border);
+  font-size:11px;color:#BBB;letter-spacing:.3px;
+  flex-shrink:0;
 }
 .preview-label{
   font-size:10px;font-weight:700;color:var(--muted);
@@ -130,10 +136,10 @@ header{
 .asset-pane::-webkit-scrollbar{width:3px;}
 .asset-pane::-webkit-scrollbar-thumb{background:var(--border);}
 .agrid{display:flex;flex-wrap:wrap;gap:8px;padding:12px;}
-.aitem{width:80px;cursor:pointer;border-radius:10px;border:2px solid transparent;overflow:hidden;background:#fff;transition:all .13s;}
+.aitem{width:100px;cursor:pointer;border-radius:10px;border:2px solid transparent;overflow:hidden;background:#fff;transition:all .13s;}
 .aitem:hover{border-color:var(--honey);transform:scale(1.05);}
 .aitem.sel{border-color:var(--hdk);box-shadow:0 0 0 2px rgba(242,184,48,.25);}
-.athumb{width:80px;height:60px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+.athumb{width:100px;height:75px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
 .aname{font-size:9px;text-align:center;padding:2px 3px 4px;line-height:1.3;}
 .pane-sel-lbl{padding:4px 10px 8px;font-size:10px;color:var(--green);font-weight:600;flex-shrink:0;}
 .pane-sel-lbl.none{color:#CCC;}
@@ -243,7 +249,7 @@ header{
         <div class="preview-area">
           <div class="preview-label">🏠 미리보기</div>
           <div style="position:relative;display:inline-block;">
-            <canvas id="room-cv" width="700" height="700" style="width:320px;height:320px;display:block;"></canvas>
+            <canvas id="room-cv" width="700" height="700" style="width:400px;height:400px;display:block;"></canvas>
             <div id="item-ctrl">
               <div class="ctrl-size">
                 <span>크기</span>
@@ -253,11 +259,14 @@ header{
               </div>
               <div class="ctrl-sep"></div>
               <button class="ctrl-btn" id="ctrl-flip-btn" title="좌우반전" onclick="onCtrlFlip()">⇄</button>
+              <button class="ctrl-btn" id="ctrl-layer-up" title="앞으로" onclick="onCtrlLayerUp()">↑</button>
+              <button class="ctrl-btn" id="ctrl-layer-dn" title="뒤로" onclick="onCtrlLayerDn()">↓</button>
               <button class="ctrl-btn ctrl-del" title="선택해제" onclick="onCtrlDeselect()" style="color:#C44;">✕</button>
             </div>
           </div>
-          <div class="preview-hint">아이템 클릭 → 크기·반전 조절<br>드래그 → 위치 이동</div>
+          <div class="preview-hint">아이템 클릭 → 크기·반전·레이어 조절 / 드래그 → 위치 이동</div>
         </div>
+        <div class="preview-ad">광고 영역</div>
       </div>
 
       <!-- 오른쪽: 에셋 선택 -->
@@ -339,16 +348,23 @@ function fileToName(filename){
 }
 
 async function supaList(folder){
-  const url = `${SUPA_URL}/storage/v1/object/list/asset`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${SUPA_KEY}`,
-      'apikey': SUPA_KEY,
-    },
-    body: JSON.stringify({ prefix: folder + '/', limit: 200, offset: 0 }),
-  });
+  const res = await fetch(
+    `${SUPA_URL}/storage/v1/object/list/asset`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPA_KEY}`,
+        'apikey': SUPA_KEY,
+      },
+      body: JSON.stringify({
+        prefix: folder,
+        limit: 200,
+        offset: 0,
+        sortBy: { column: 'name', order: 'asc' },
+      }),
+    }
+  );
   if(!res.ok) throw new Error(await res.text());
   return await res.json();
 }
@@ -391,8 +407,9 @@ async function loadAssets(){
 const SEL = {wall:null, floor:null, furniture:new Set(), walldeco:new Set()};
 const FLIP = {furniture:{}, walldeco:{}};
 const POS  = {furniture:{}, walldeco:{}};
-const SIZE = {furniture:{}, walldeco:{}};  // id → 0.3~2.0 배율 (기본 1.0)
-let CTRL_SEL = {cat:null, id:null};        // 현재 컨트롤 표시 중인 아이템
+const SIZE = {furniture:{}, walldeco:{}};
+const LAYER_ORDER = {furniture:[], walldeco:[]};  // 뒤→앞 순서 배열
+let CTRL_SEL = {cat:null, id:null};
 let pngUrl=null;
 
 // ══════════════════════════════════════
@@ -468,17 +485,15 @@ function hideCtrl(){
 function positionCtrl(cat, id){
   const pos = (cat==='furniture' ? POS.furniture[id] : POS.walldeco[id]);
   if(!pos) return;
-  // 700px 캔버스 → 320px 화면 좌표 변환
-  const scale = 320/700;
+  const scale = 400/700;
   const sx = pos.x * scale;
   const sy = pos.y * scale;
   const ctrl = document.getElementById('item-ctrl');
-  // 아이템 아래에 표시, 화면 밖 넘치면 위로
   let top = sy + 50;
-  if(top > 290) top = sy - 70;
+  if(top > 370) top = sy - 70;
   let left = sx - 100;
   if(left < 0) left = 4;
-  if(left > 200) left = 200;
+  if(left > 280) left = 280;
   ctrl.style.left = left + 'px';
   ctrl.style.top  = top  + 'px';
 }
@@ -498,9 +513,9 @@ function onCtrlFlip(){
   renderRoom();
 }
 function onCtrlDeselect(){
-  const {cat, id} = CTRL_SEL;
-  if(cat&&id) pick(cat, id, true); // 선택 해제
-  hideCtrl();
+  CTRL_SEL = {cat:null, id:null};
+  document.getElementById('item-ctrl').classList.remove('show');
+  renderRoom();
 }
 
 function pick(cat,id,multi){
@@ -510,16 +525,29 @@ function pick(cat,id,multi){
       delete FLIP[cat]?.[id];
       delete POS[cat]?.[id];
       delete SIZE[cat]?.[id];
+      LAYER_ORDER[cat] = LAYER_ORDER[cat].filter(x=>x!==id);
       if(CTRL_SEL.cat===cat && CTRL_SEL.id===id) hideCtrl();
     } else {
       SEL[cat].add(id);
-      // 새로 선택 시 컨트롤 표시 (약간 지연해서 POS 초기화 후)
+      LAYER_ORDER[cat].push(id);
       setTimeout(()=>showCtrl(cat,id), 50);
     }
   } else {
     SEL[cat]=id;
   }
   refreshGrid(cat,multi); refreshLabel(cat); renderRoom(); updateProg();
+}
+function onCtrlLayerUp(){
+  const {cat,id}=CTRL_SEL; if(!cat||!id||!LAYER_ORDER[cat]) return;
+  const arr=LAYER_ORDER[cat], i=arr.indexOf(id);
+  if(i<arr.length-1){arr.splice(i,1);arr.splice(i+1,0,id);}
+  renderRoom();
+}
+function onCtrlLayerDn(){
+  const {cat,id}=CTRL_SEL; if(!cat||!id||!LAYER_ORDER[cat]) return;
+  const arr=LAYER_ORDER[cat], i=arr.indexOf(id);
+  if(i>0){arr.splice(i,1);arr.splice(i-1,0,id);}
+  renderRoom();
 }
 function refreshGrid(cat,multi){
   document.querySelectorAll(`[data-cat="${cat}"]`).forEach(el=>{
@@ -595,26 +623,27 @@ async function renderRoom(){
   wctx.restore();
   wctx.save(); poly(wctx,[C,vT,vTR,vBR]); wctx.fillStyle='#F0E8DC'; wctx.fill(); wctx.clip();
   if(waImg) drawImgTile(wctx,waImg,0,0,W,H);
-  drawWindowCtx(wctx,rc);
   wctx.restore();
   rctx.drawImage(offWall,0,0);
 
-  // 레이어2: 장식
+  // 레이어2: 장식 (육각형 클립)
   const offDeco=makeOff(); const dctx=offDeco.getContext('2d');
   dctx.save(); hexClip(dctx,RCX,RCY,RS); dctx.clip();
   await drawDecoCtx(dctx);
   dctx.restore();
   rctx.drawImage(offDeco,0,0);
 
-  // 레이어1: 가구
+  // 레이어1: 가구 (육각형 클립)
   const offFurn=makeOff(); const ufctx=offFurn.getContext('2d');
+  ufctx.save(); hexClip(ufctx,RCX,RCY,RS); ufctx.clip();
   await drawFurnCtx(ufctx);
+  ufctx.restore();
   rctx.drawImage(offFurn,0,0);
 
-  // 외곽선 + 분할선
+  // 외곽선 + 분할선 (아이템 위에 그림)
   hexClip(rctx,RCX,RCY,RS);
   rctx.strokeStyle='rgba(80,100,130,.4)';rctx.lineWidth=6;rctx.stroke();
-  rctx.save();rctx.strokeStyle='rgba(100,80,60,.25)';rctx.lineWidth=3;
+  rctx.save();rctx.strokeStyle='rgba(100,80,60,.2)';rctx.lineWidth=2;
   [[C,vT],[C,vBL],[C,vBR]].forEach(([a,b])=>{rctx.beginPath();rctx.moveTo(a.x,a.y);rctx.lineTo(b.x,b.y);rctx.stroke();});
   rctx.restore();
 
@@ -624,11 +653,11 @@ async function renderRoom(){
   if(!fl){rctx.fillText('바닥',bc.x,bc.y);}
 }
 
-function drawImgTile(ctx,img,x,y,w,h){
+function drawImgTile(ctx,img,x,y,w,h,scaleOverride){
   if(!img)return;
   const pat=ctx.createPattern(img,'repeat');
   if(!pat)return;
-  const scale=Math.max(w/img.width, h/img.height, 1);
+  const scale = scaleOverride || Math.min(w/img.width, h/img.height, 0.5);
   const m=new DOMMatrix(); m.a=scale; m.d=scale;
   pat.setTransform(m);
   ctx.fillStyle=pat; ctx.fillRect(x,y,w,h);
@@ -645,19 +674,34 @@ function drawWindowCtx(ctx,c){
   ctx.beginPath();ctx.moveTo(wx,wy+wh/2);ctx.lineTo(wx+ww,wy+wh/2);ctx.stroke();
 }
 
+// 육각형 내부로 좌표 클램프 (반지름 초과 시 경계로 당김)
+function clampToHex(px,py,margin){
+  const s=RS-(margin||0);
+  const dx=px-RCX, dy=py-RCY;
+  const dist=Math.sqrt(dx*dx+dy*dy);
+  if(dist<=s) return{x:px,y:py};
+  return{x:RCX+dx/dist*s, y:RCY+dy/dist*s};
+}
+
 async function drawDecoCtx(ctx){
-  const ds=[...SEL.walldeco].map(id=>ASSETS.walldeco.find(a=>a.id===id)).filter(Boolean);
   const v=rv(RCX,RCY,RS);
   const C={x:RCX,y:RCY};
   const lc=ctr(C,v[5],v[4],v[3]);
   const rc=ctr(C,v[5],v[0],v[1]);
-  const defPos=[
-    {x:lc.x-70,y:lc.y-90},{x:rc.x+70,y:rc.y-90},
-    {x:lc.x-70,y:lc.y+50},{x:rc.x+70,y:rc.y+50},
-  ];
-  for(let i=0;i<Math.min(ds.length,4);i++){
-    const d=ds[i];
-    if(!POS.walldeco[d.id]) POS.walldeco[d.id]={...defPos[i]};
+  const spreadPos=i=>{
+    const bases=[
+      {x:lc.x-60,y:lc.y-80},{x:rc.x+60,y:rc.y-80},
+      {x:lc.x-60,y:lc.y+40},{x:rc.x+60,y:rc.y+40},
+      {x:RCX,y:lc.y-80},{x:RCX,y:rc.y+40},
+      {x:lc.x-60,y:RCY},{x:rc.x+60,y:RCY},
+    ];
+    return bases[i%bases.length]||{x:RCX+((i%4-1.5)*100),y:RCY+((Math.floor(i/4)-1)*80)};
+  };
+  // LAYER_ORDER 기준으로 그리기 (앞에 있는 것이 나중에 그려짐)
+  const ids=LAYER_ORDER.walldeco.filter(id=>SEL.walldeco.has(id));
+  for(let i=0;i<ids.length;i++){
+    const d=ASSETS.walldeco.find(a=>a.id===ids[i]); if(!d) continue;
+    if(!POS.walldeco[d.id]) POS.walldeco[d.id]={...spreadPos(i)};
     const pos=POS.walldeco[d.id];
     const flipped=!!FLIP.walldeco?.[d.id];
     const sizeMul=SIZE.walldeco?.[d.id]||1.0;
@@ -684,13 +728,23 @@ function furnBaseCenter(){
 }
 
 async function drawFurnCtx(ctx){
-  const fs=[...SEL.furniture].map(id=>ASSETS.furniture.find(a=>a.id===id)).filter(Boolean);
   const bc=furnBaseCenter();
-  const slots=[{dx:-110,dy:-60},{dx:110,dy:-60},{dx:-110,dy:80},{dx:110,dy:80}];
-  for(let i=0;i<Math.min(fs.length,4);i++){
-    const f=fs[i];
-    const defPos={x:bc.x+slots[i].dx,y:bc.y+slots[i].dy};
-    if(!POS.furniture[f.id]) POS.furniture[f.id]={...defPos};
+  const spreadPos=i=>{
+    const slots=[
+      {dx:-110,dy:-60},{dx:110,dy:-60},{dx:-110,dy:80},{dx:110,dy:80},
+      {dx:0,dy:-60},{dx:0,dy:80},{dx:-110,dy:10},{dx:110,dy:10},
+      {dx:-55,dy:-120},{dx:55,dy:-120},{dx:-55,dy:120},{dx:55,dy:120},
+    ];
+    const s=slots[i%slots.length]||{dx:((i%4-1.5)*100),dy:(Math.floor(i/4)*80-40)};
+    return{x:bc.x+s.dx, y:bc.y+s.dy};
+  };
+  // LAYER_ORDER 기준으로 그리기
+  const ids=LAYER_ORDER.furniture.filter(id=>SEL.furniture.has(id));
+  for(let i=0;i<ids.length;i++){
+    const f=ASSETS.furniture.find(a=>a.id===ids[i]); if(!f) continue;
+    if(!POS.furniture[f.id]) POS.furniture[f.id]={...spreadPos(i)};
+    // 육각형 경계 클램프
+    POS.furniture[f.id]=clampToHex(POS.furniture[f.id].x, POS.furniture[f.id].y, 70);
     const pos=POS.furniture[f.id];
     const flipped=!!FLIP.furniture?.[f.id];
     const sizeMul=SIZE.furniture?.[f.id]||1.0;
