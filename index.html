@@ -247,7 +247,6 @@ header{
       <!-- 왼쪽: 미리보기 -->
       <div class="con-left">
         <div class="preview-area">
-          <div class="preview-label">🏠 미리보기</div>
           <div style="position:relative;display:inline-block;">
             <canvas id="room-cv" width="700" height="700" style="width:400px;height:400px;display:block;"></canvas>
             <div id="item-ctrl">
@@ -264,7 +263,6 @@ header{
               <button class="ctrl-btn ctrl-del" title="선택해제" onclick="onCtrlDeselect()" style="color:#C44;">✕</button>
             </div>
           </div>
-          <div class="preview-hint">아이템 클릭 → 크기·반전·레이어 조절 / 드래그 → 위치 이동</div>
         </div>
         <div class="preview-ad">광고 영역</div>
       </div>
@@ -621,7 +619,7 @@ async function renderRoom(){
     const fw=fxMax-fxMin, fh=fyMax-fyMin;
     const fcx=(fxMin+fxMax)/2, fcy=(fyMin+fyMax)/2;
     // 이미지를 바닥 영역에 cover 방식으로 중앙 배치
-    const scale=Math.max(fw/flImg.width, fh/flImg.height)*1.05;
+    const scale=Math.max(fw/flImg.width, fh/flImg.height)*0.52;
     const dw=flImg.width*scale, dh=flImg.height*scale;
     fctx.drawImage(flImg, fcx-dw/2, fcy-dh/2, dw, dh);
   }
@@ -1032,9 +1030,11 @@ function drawFilled(cx,cy,s,num,room){
   mctx.save(); mHex(cx,cy,s-1);
   mctx.fillStyle='#fff'; mctx.fill(); mctx.clip();
   if(room.img){
-    // 육각형 bounding box에 맞게 cover
-    const iw=room.img.width||700, ih=room.img.height||700;
-    const scale=Math.max((s*2)/iw,(s*Math.sqrt(3))/ih)*1.0;
+    const iw=room.img.naturalWidth||room.img.width||700;
+    const ih=room.img.naturalHeight||room.img.height||700;
+    // pointy-top 정육각형: bounding = sqrt(3)*s x 2s
+    const hexW=Math.sqrt(3)*s, hexH=2*s;
+    const scale=Math.max(hexW/iw, hexH/ih);
     const dw=iw*scale, dh=ih*scale;
     mctx.drawImage(room.img, cx-dw/2, cy-dh/2, dw, dh);
   }
