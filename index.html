@@ -904,12 +904,15 @@ async function registerRoom(){
   pg.classList.add('show'); st.textContent='📦 JPEG 생성 중...'; bar.style.width='0%';
   await sleep(100);
 
-  // 1. JPEG 생성
-  const off=document.createElement('canvas'); off.width=700; off.height=700;
+  // 1. JPEG 생성 — 육각형 세로(2×RS=644px) 기준 정사각형 크롭 (여백 없음)
+  const cropSize = RS * 2;               // 644px
+  const cropX = RCX - cropSize / 2;     // 28px
+  const cropY = RCY - cropSize / 2;     // 28px
+  const off=document.createElement('canvas'); off.width=cropSize; off.height=cropSize;
   const octx=off.getContext('2d');
-  octx.fillStyle='#fff'; octx.fillRect(0,0,700,700);
-  octx.drawImage(RCV,0,0,700,700);
-  pngUrl = off.toDataURL('image/jpeg', 0.88);
+  octx.fillStyle='#fff'; octx.fillRect(0,0,cropSize,cropSize);
+  octx.drawImage(RCV, cropX, cropY, cropSize, cropSize, 0, 0, cropSize, cropSize);
+  pngUrl = off.toDataURL('image/jpeg', 0.92);
   bar.style.width='20%'; await sleep(100);
 
   // 2. 다음 room_number 결정
@@ -1030,13 +1033,11 @@ function drawFilled(cx,cy,s,num,room){
   mctx.save(); mHex(cx,cy,s-1);
   mctx.fillStyle='#fff'; mctx.fill(); mctx.clip();
   if(room.img){
-    const iw=room.img.naturalWidth||room.img.width||700;
-    const ih=room.img.naturalHeight||room.img.height||700;
-    // pointy-top 정육각형: bounding = sqrt(3)*s x 2s
-    const hexW=Math.sqrt(3)*s, hexH=2*s;
-    const scale=Math.max(hexW/iw, hexH/ih);
-    const dw=iw*scale, dh=ih*scale;
-    mctx.drawImage(room.img, cx-dw/2, cy-dh/2, dw, dh);
+    // 저장된 이미지는 644×644 정사각형 (육각형 세로 기준 크롭)
+    // 육각형 세로 = 2s 에 맞게 그대로 매핑
+    const drawH = s * 2;
+    const drawW = s * 2;
+    mctx.drawImage(room.img, cx - drawW/2, cy - drawH/2, drawW, drawH);
   }
   mctx.restore();
   // 분할선
