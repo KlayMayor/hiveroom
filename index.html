@@ -1353,7 +1353,8 @@ async function registerRoom(){
     flip: { furniture: {...FLIP.furniture}, walldeco: {...FLIP.walldeco} },
     layerOrder: { furniture: [...LAYER_ORDER.furniture], walldeco: [...LAYER_ORDER.walldeco] },
   });
-  const dbPayload = { twitter_id: twitterId, occupied: 'Y', email, design_json: designJson };
+  const twitterAvatar = `https://unavatar.io/twitter/${twitterId}`;
+  const dbPayload = { twitter_id: twitterId, occupied: 'Y', email, design_json: designJson, avatar_url: twitterAvatar };
   const insRes = await fetch(
     isEdit
       ? `${SUPA_URL}/rest/v1/rooms?room_number=eq.${targetNum}`
@@ -1391,7 +1392,7 @@ async function goToMap(roomNum){
       i.src = `${SUPA_URL}/storage/v1/object/public/room-pic/${roomNum}/room.jpg?t=${Date.now()}`;
     }
   });
-  if(img) ROOMS[roomNum] = { img, twitterId };
+  if(img) ROOMS[roomNum] = { img, twitterId, avatarUrl: `https://unavatar.io/twitter/${twitterId}` };
   document.getElementById('cnt').textContent = Object.keys(ROOMS).length;
   closeDone(); closeConsole();
   // 해당 방 슬롯으로 맵 이동
@@ -1436,6 +1437,27 @@ function ap(q,r){const s=HEX*mScale;return{x:s*Math.sqrt(3)*(q+r/2)+mOX+mW/2,y:s
 function mHex(cx,cy,s){mctx.beginPath();for(let i=0;i<6;i++){const a=Math.PI/180*(60*i-30);const x=cx+s*Math.cos(a),y=cy+s*Math.sin(a);i?mctx.lineTo(x,y):mctx.moveTo(x,y);}mctx.closePath();}
 function ltn(hex,a){const n=parseInt(hex.replace('#',''),16);const c=(v,d)=>Math.min(255,Math.max(0,(v>>0)+d));return`rgb(${c(n>>16,a)},${c((n>>8)&255,a)},${c(n&255,a)})`;}
 
+// ── 아바타 이미지 캐시 ──
+const AVATAR_CACHE = {};
+function loadAvatarImg(url){
+  if(!url || AVATAR_CACHE[url]) return AVATAR_CACHE[url] || null;
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => { AVATAR_CACHE[url] = img; drawMap(); };
+  img.onerror = () => { AVATAR_CACHE[url] = null; };
+  img.src = url;
+  return null;
+}
+
+function drawCircleImg(ctx, img, cx, cy, r){
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI*2);
+  ctx.clip();
+  ctx.drawImage(img, cx-r, cy-r, r*2, r*2);
+  ctx.restore();
+}
+
 function drawMap(){
   mctx.clearRect(0,0,mW,mH);
   const bg=mctx.createRadialGradient(mW/2,mH/2,0,mW/2,mH/2,Math.max(mW,mH)*.7);
@@ -1478,10 +1500,26 @@ function drawFilled(cx,cy,s,num,room){
   mctx.beginPath();mctx.roundRect(cx-tw/2,tagY-11,tw,20,10);
   mctx.fillStyle='rgba(40,30,10,.55)';mctx.fill();
   mctx.fillStyle='#fff';mctx.textAlign='center';mctx.textBaseline='middle';mctx.fillText(name,cx,tagY);
-  // 방 번호 뱃지
-  const bR=Math.max(8,s*.13),bx=cx-s*.62,by=cy-s*.6;
-  mctx.beginPath();mctx.arc(bx,by,bR,0,Math.PI*2);mctx.fillStyle='rgba(0,0,0,.4)';mctx.fill();
-  mctx.font=`bold ${Math.max(7,s*.12)}px sans-serif`;mctx.fillStyle='#fff';mctx.textAlign='center';mctx.textBaseline='middle';mctx.fillText(num,bx,by);
+  // 프로필 사진 원형 뱃지 (왼쪽 위)
+  const bR=Math.max(10,s*.16), bx=cx-s*.58, by=cy-s*.56;
+  const avatarImg = room.avatarUrl ? AVATAR_CACHE[room.avatarUrl] : null;
+  if(!avatarImg && room.avatarUrl){
+    // 아직 로드 안 됐으면 로드 시작 (완료되면 drawMap 재호출됨)
+    loadAvatarImg(room.avatarUrl);
+  }
+  // 흰 테두리 원
+  mctx.beginPath(); mctx.arc(bx,by,bR+2,0,Math.PI*2);
+  mctx.fillStyle='rgba(255,255,255,.95)'; mctx.fill();
+  if(avatarImg){
+    drawCircleImg(mctx, avatarImg, bx, by, bR);
+  } else {
+    // 프로필 없으면 방 번호 표시 (fallback)
+    mctx.beginPath(); mctx.arc(bx,by,bR,0,Math.PI*2);
+    mctx.fillStyle='rgba(242,184,48,.9)'; mctx.fill();
+    mctx.font=`bold ${Math.max(7,s*.12)}px sans-serif`;
+    mctx.fillStyle='#fff'; mctx.textAlign='center'; mctx.textBaseline='middle';
+    mctx.fillText(num, bx, by);
+  }
 }
 
 // ── Supabase에서 기존 방 로드 ──
@@ -1500,7 +1538,12 @@ async function loadRooms(){
       const img = new Image();
       img.crossOrigin = 'anonymous';
       img.src = imgUrl;
-      img.onload = () => { ROOMS[row.room_number] = { img, twitterId: row.twitter_id }; resolve(); };
+      img.onload = () => {
+        ROOMS[row.room_number] = { img, twitterId: row.twitter_id, avatarUrl: row.avatar_url || '' };
+        // 프로필 이미지 미리 로드
+        if(row.avatar_url) loadAvatarImg(row.avatar_url);
+        resolve();
+      };
       img.onerror = () => resolve();
     })));
 
