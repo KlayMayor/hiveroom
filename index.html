@@ -629,13 +629,41 @@ function closeRoomSelect(){
 
 async function startEditRoom(room){
   EDIT_ROOM_NUM = room.room_number;
-  // 기존 선택 초기화
   resetConsole();
-  // Twitter ID 미리 채우기
   const twEl = document.getElementById('tw-id');
   if(twEl) twEl.value = room.twitter_id || '';
+  // design_json 있으면 상태 복원
+  if(room.design_json){
+    try{
+      const d = typeof room.design_json === 'string' ? JSON.parse(room.design_json) : room.design_json;
+      if(d.sel){
+        SEL.wall = d.sel.wall || null;
+        SEL.floor = d.sel.floor || null;
+        SEL.furniture = new Set(d.sel.furniture || []);
+        SEL.walldeco = new Set(d.sel.walldeco || []);
+      }
+      if(d.pos){
+        Object.assign(POS.furniture, d.pos.furniture || {});
+        Object.assign(POS.walldeco, d.pos.walldeco || {});
+      }
+      if(d.size){
+        Object.assign(SIZE.furniture, d.size.furniture || {});
+        Object.assign(SIZE.walldeco, d.size.walldeco || {});
+      }
+      if(d.flip){
+        Object.assign(FLIP.furniture, d.flip.furniture || {});
+        Object.assign(FLIP.walldeco, d.flip.walldeco || {});
+      }
+      if(d.layerOrder){
+        LAYER_ORDER.furniture = d.layerOrder.furniture || [];
+        LAYER_ORDER.walldeco = d.layerOrder.walldeco || [];
+      }
+    }catch(e){ console.warn('design_json 복원 실패', e); }
+  }
   openConsole();
-  // 콘솔 타이틀 변경
+  // 에셋 로드 후 그리드/미리보기 갱신
+  await new Promise(r=>setTimeout(r,100));
+  buildGrids(); renderRoom(); updateProg();
   document.querySelector('.con-title').textContent = `✏️ ${room.room_number}번 방 수정`;
 }
 
@@ -1131,13 +1159,19 @@ RCV.addEventListener('mousedown',e=>{
   const{x,y}=cvCoord(e);
   const hit=hitTest(x,y);
   if(hit){
-    dragState.active=true;
-    dragState.cat=hit.cat;
-    dragState.id=hit.id;
-    dragState.offX=x-hit.pos.x;
-    dragState.offY=y-hit.pos.y;
-    dragState.moved=false;
-    RCV.style.cursor='grabbing';
+    // 컨트롤이 열린 아이템만 드래그 허용
+    if(CTRL_SEL.cat===hit.cat && CTRL_SEL.id===hit.id){
+      dragState.active=true;
+      dragState.cat=hit.cat;
+      dragState.id=hit.id;
+      dragState.offX=x-hit.pos.x;
+      dragState.offY=y-hit.pos.y;
+      dragState.moved=false;
+      RCV.style.cursor='grabbing';
+    } else {
+      // 다른 아이템 클릭 → 컨트롤 전환
+      showCtrl(hit.cat, hit.id);
+    }
     e.preventDefault();
   } else {
     // 빈 곳 클릭 → 컨트롤 숨김
@@ -1148,7 +1182,8 @@ RCV.addEventListener('mousedown',e=>{
 RCV.addEventListener('mousemove',e=>{
   if(!dragState.active){
     const{x,y}=cvCoord(e);
-    RCV.style.cursor=hitTest(x,y)?'grab':'default';
+    const h=hitTest(x,y);
+    RCV.style.cursor=(h && CTRL_SEL.cat===h.cat && CTRL_SEL.id===h.id)?'grab':'default';
     return;
   }
   const{x,y}=cvCoord(e);
@@ -1170,8 +1205,7 @@ window.addEventListener('mouseup',()=>{
     const cat=dragState.cat, id=dragState.id;
     dragState.active=false; dragState.cat=null; dragState.id=null; dragState.moved=false;
     RCV.style.cursor='default';
-    // 클릭(드래그 없음)이면 컨트롤 표시
-    if(!wasMoved && cat && id) showCtrl(cat, id);
+    // 드래그 후 렌더만 (클릭은 mousedown에서 처리)
     renderRoom();
   }
 });
@@ -1230,7 +1264,10 @@ async function registerRoom(){
   pg.classList.add('show'); st.textContent='📦 JPEG 생성 중...'; bar.style.width='0%';
   await sleep(100);
 
-  // 1. JPEG 생성 — 육각형 세로(2×RS=644px) 기준 정사각형 크롭 (여백 없음)
+  // 1. JPEG 생성 — 선택 테두리 숨기고 렌더 후 크롭
+  const _prevCtrl = {...CTRL_SEL};
+  CTRL_SEL = {cat:null, id:null}; // 주황 테두리 제거
+  await renderRoom();              // 테두리 없이 재렌더
   const cropSize = RS * 2;
   const cropX = RCX - cropSize / 2;
   const cropY = RCY - cropSize / 2;
@@ -1239,6 +1276,7 @@ async function registerRoom(){
   octx.fillStyle='#fff'; octx.fillRect(0,0,cropSize,cropSize);
   octx.drawImage(RCV, cropX, cropY, cropSize, cropSize, 0, 0, cropSize, cropSize);
   pngUrl = off.toDataURL('image/jpeg', 0.92);
+  CTRL_SEL = _prevCtrl; // 원복
   bar.style.width='20%'; await sleep(100);
 
   // 2. room_number 결정 (신규: 최대+1 / 수정: 기존 번호)
@@ -1277,7 +1315,15 @@ async function registerRoom(){
   // 4. DB 저장 (신규: INSERT / 수정: PATCH)
   st.textContent='🗃 DB 저장 중...'; bar.style.width='85%';
   const email = CURRENT_USER?.email || '';
-  const dbPayload = { twitter_id: twitterId, occupied: 'Y', email };
+  const designJson = JSON.stringify({
+    sel: { wall: SEL.wall, floor: SEL.floor,
+           furniture: [...SEL.furniture], walldeco: [...SEL.walldeco] },
+    pos: { furniture: {...POS.furniture}, walldeco: {...POS.walldeco} },
+    size: { furniture: {...SIZE.furniture}, walldeco: {...SIZE.walldeco} },
+    flip: { furniture: {...FLIP.furniture}, walldeco: {...FLIP.walldeco} },
+    layerOrder: { furniture: [...LAYER_ORDER.furniture], walldeco: [...LAYER_ORDER.walldeco] },
+  });
+  const dbPayload = { twitter_id: twitterId, occupied: 'Y', email, design_json: designJson };
   const insRes = await fetch(
     isEdit
       ? `${SUPA_URL}/rest/v1/rooms?room_number=eq.${targetNum}`
