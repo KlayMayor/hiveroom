@@ -201,6 +201,15 @@ header{
 .tw-input{width:100%;padding:9px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:13px;font-family:'Noto Sans KR',sans-serif;outline:none;transition:border-color .15s;box-sizing:border-box;}
 .tw-input:focus{border-color:var(--honey);}
 .tw-input.err{border-color:#E05050;}
+.interest-wrap{margin:10px 0;text-align:left;}
+.interest-wrap label{font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;}
+.interest-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;}
+.int-item{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px;border-radius:10px;border:2px solid transparent;transition:border-color .15s,transform .15s;}
+.int-item:hover{transform:scale(1.1);}
+.int-item.sel{border-color:var(--honey);background:rgba(242,184,48,.1);}
+.int-item img{width:40px;height:40px;border-radius:50%;}
+.int-item span{font-size:9px;color:#888;font-weight:600;white-space:nowrap;}
+.int-item.sel span{color:var(--honey);}
 
 /* ── 구글 로그인 버튼 ── */
 .h-login-btn{
@@ -399,6 +408,13 @@ header{
     <div class="tw-input-wrap">
       <label>🐦 Twitter(X) ID</label>
       <input class="tw-input" id="tw-id" type="text" placeholder="@없이 입력 (예: hiveroom_user)" maxlength="50">
+    </div>
+    <div class="interest-wrap">
+      <label>✨ 관심사 선택 (선택사항)</label>
+      <div class="interest-grid" id="interest-grid">
+        <div style="color:#ccc;font-size:11px;padding:8px">로딩 중...</div>
+      </div>
+    </div>
     </div>
     <div class="png-prog" id="png-prog">
       <span id="png-status">📦 PNG 생성 중...</span>
@@ -672,6 +688,9 @@ async function startEditRoom(room){
   // 3. Twitter ID 미리 채우기
   const twEl = document.getElementById('tw-id');
   if(twEl) twEl.value = room.twitter_id || '';
+  // 관심사 복원
+  SEL_INTEREST = room.interest || null;
+  buildInterestGrid();
 
   // 4. 콘솔 열기
   document.getElementById('console').classList.add('open');
@@ -775,6 +794,14 @@ const POS  = {furniture:{}, walldeco:{}};
 const SIZE = {furniture:{}, walldeco:{}};
 const LAYER_ORDER = {furniture:[], walldeco:[]};  // 뒤→앞 순서 배열
 let CTRL_SEL = {cat:null, id:null};
+let SEL_INTEREST = null; // 선택된 관심사 key
+
+function pickInterest(key){
+  SEL_INTEREST = (SEL_INTEREST === key) ? null : key; // 토글
+  document.querySelectorAll('.int-item').forEach(el=>{
+    el.classList.toggle('sel', el.dataset.key === SEL_INTEREST);
+  });
+}
 let pngUrl=null;
 
 // ══════════════════════════════════════
@@ -1267,6 +1294,11 @@ RCV.addEventListener('touchend',()=>{
 // 완성 & PNG & 맵 등록
 // ══════════════════════════════════════
 function showDone(){
+  // 새 방이면 관심사 초기화 (수정이면 유지)
+  if(!EDIT_ROOM_NUM){
+    SEL_INTEREST = null;
+  }
+  buildInterestGrid(); // 최신 목록으로 그리드 갱신
   const dc=document.getElementById('done-cv');
   dc.getContext('2d').drawImage(RCV,0,0,700,700,0,0,160,160);
   const wa=SEL.wall?ASSETS.wall.find(a=>a.id===SEL.wall)?.name:null;
@@ -1358,7 +1390,7 @@ async function registerRoom(){
     layerOrder: { furniture: [...LAYER_ORDER.furniture], walldeco: [...LAYER_ORDER.walldeco] },
   });
   const twitterAvatar = `https://unavatar.io/x/${twitterId}`;
-  const dbPayload = { twitter_id: twitterId, occupied: 'Y', email, design_json: designJson, avatar_url: twitterAvatar };
+  const dbPayload = { twitter_id: twitterId, occupied: 'Y', email, design_json: designJson, avatar_url: twitterAvatar, interest: SEL_INTEREST || '' };
   const insRes = await fetch(
     isEdit
       ? `${SUPA_URL}/rest/v1/rooms?room_number=eq.${targetNum}`
@@ -1396,7 +1428,7 @@ async function goToMap(roomNum){
       i.src = `${SUPA_URL}/storage/v1/object/public/room-pic/${roomNum}/room.jpg?t=${Date.now()}`;
     }
   });
-  if(img) ROOMS[roomNum] = { img, twitterId, avatarUrl: `https://unavatar.io/x/${twitterId}` };
+  if(img) ROOMS[roomNum] = { img, twitterId, avatarUrl: `https://unavatar.io/x/${twitterId}`, interest: SEL_INTEREST || '' };
   document.getElementById('cnt').textContent = Object.keys(ROOMS).length;
   closeDone(); closeConsole();
   // 해당 방 슬롯으로 맵 이동
@@ -1445,6 +1477,55 @@ function mHex(cx,cy,s){mctx.beginPath();for(let i=0;i<6;i++){const a=Math.PI/180
 function ltn(hex,a){const n=parseInt(hex.replace('#',''),16);const c=(v,d)=>Math.min(255,Math.max(0,(v>>0)+d));return`rgb(${c(n>>16,a)},${c((n>>8)&255,a)},${c(n&255,a)})`;}
 
 // ── 아바타 이미지 캐시 ──
+// 관심사 목록 (Supabase interests 테이블에서 동적 로드)
+let INTERESTS = []; // [{key, label, icon_url, color}]
+const INTEREST_IMG_CACHE = {};
+
+async function loadInterests(){
+  try {
+    const res = await fetch(
+      `${SUPA_URL}/rest/v1/interests?active=eq.true&order=sort_order.asc`,
+      { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }
+    );
+    if(!res.ok) return;
+    INTERESTS = await res.json();
+    buildInterestGrid();
+    // 아이콘 이미지 미리 캐시
+    INTERESTS.forEach(i => preloadInterestImg(i.key, i.icon_url));
+  } catch(e){ console.warn('관심사 로드 실패:', e); }
+}
+
+function preloadInterestImg(key, url){
+  if(!url || INTEREST_IMG_CACHE[key]) return;
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => { INTEREST_IMG_CACHE[key] = img; drawMap(); };
+  img.src = url;
+}
+
+function buildInterestGrid(){
+  const grid = document.getElementById('interest-grid');
+  if(!grid) return;
+  grid.innerHTML = '';
+  INTERESTS.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'int-item' + (SEL_INTEREST === item.key ? ' sel' : '');
+    div.dataset.key = item.key;
+    div.onclick = () => pickInterest(item.key);
+    div.innerHTML = `<img src="${item.icon_url}" alt="${item.label}"><span>${item.label}</span>`;
+    grid.appendChild(div);
+  });
+}
+
+function getInterestImgForMap(key){
+  if(!key) return null;
+  if(INTEREST_IMG_CACHE[key]) return INTEREST_IMG_CACHE[key];
+  // 아직 캐시 없으면 interests에서 url 찾아 로드
+  const item = INTERESTS.find(i=>i.key===key);
+  if(item) preloadInterestImg(key, item.icon_url);
+  return null;
+}
+
 const AVATAR_CACHE = {};
 function loadAvatarImg(url){
   if(!url || AVATAR_CACHE[url]) return AVATAR_CACHE[url] || null;
@@ -1515,6 +1596,21 @@ function drawFilled(cx,cy,s,num,room){
     mctx.fillStyle='#fff'; mctx.textAlign='center'; mctx.textBaseline='middle';
     mctx.fillText(num, bx, by);
   }
+  // 관심사 아이콘 (뱃지 오른쪽 하단)
+  if(room.interest){
+    const iR = bRBase * 0.55;
+    const ix = bx + bR * 0.65, iy = by + bR * 0.65;
+    const iImg = getInterestImgForMap(room.interest);
+    mctx.beginPath(); mctx.arc(ix,iy,iR+1.5,0,Math.PI*2);
+    mctx.fillStyle='white'; mctx.fill();
+    if(iImg){
+      drawCircleImg(mctx, iImg, ix, iy, iR);
+    } else {
+      // 로드 전 플레이스홀더
+      mctx.beginPath(); mctx.arc(ix,iy,iR,0,Math.PI*2);
+      mctx.fillStyle='rgba(200,200,200,0.8)'; mctx.fill();
+    }
+  }
   // 호버 중이면 트위터ID 툴팁 표시
   if(MAP_HOVER.num===num){
     const label = `@${room.twitterId}`;
@@ -1547,7 +1643,7 @@ async function loadRooms(){
       img.crossOrigin = 'anonymous';
       img.src = imgUrl;
       img.onload = () => {
-        ROOMS[row.room_number] = { img, twitterId: row.twitter_id, avatarUrl: row.avatar_url || '' };
+        ROOMS[row.room_number] = { img, twitterId: row.twitter_id, avatarUrl: row.avatar_url || '', interest: row.interest || '' };
         // 프로필 이미지 미리 로드
         if(row.avatar_url) loadAvatarImg(row.avatar_url);
         resolve();
@@ -1653,6 +1749,7 @@ window.addEventListener('resize',resizeMap);
 renderRoom(); updateProg(); resizeMap();
 initAuth();    // Google 로그인 상태 복원
 loadAssets();  // Supabase에서 에셋 로드
+loadInterests(); // Supabase에서 관심사 목록 로드
 loadRooms();   // Supabase에서 기존 방 로드
 </script>
 </body>
