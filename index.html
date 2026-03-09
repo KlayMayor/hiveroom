@@ -201,6 +201,66 @@ header{
 .tw-input{width:100%;padding:9px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:13px;font-family:'Noto Sans KR',sans-serif;outline:none;transition:border-color .15s;box-sizing:border-box;}
 .tw-input:focus{border-color:var(--honey);}
 .tw-input.err{border-color:#E05050;}
+
+/* ── 구글 로그인 버튼 ── */
+.h-login-btn{
+  margin-left:auto;padding:7px 16px;
+  background:#fff;border:1.5px solid var(--border);
+  color:var(--text);border-radius:20px;font-size:12px;font-weight:700;
+  font-family:'Noto Sans KR',sans-serif;cursor:pointer;
+  display:flex;align-items:center;gap:7px;
+  box-shadow:0 2px 8px rgba(0,0,0,.08);transition:all .2s;
+}
+.h-login-btn:hover{border-color:var(--honey);box-shadow:0 3px 12px rgba(0,0,0,.13);}
+.h-login-btn img{width:18px;height:18px;border-radius:50%;}
+
+/* ── 프로필 버튼 + 드롭다운 ── */
+.h-profile-wrap{margin-left:auto;position:relative;}
+.h-profile-btn{
+  width:36px;height:36px;border-radius:50%;border:2.5px solid var(--honey);
+  overflow:hidden;cursor:pointer;background:#eee;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 8px rgba(0,0,0,.15);transition:all .2s;
+}
+.h-profile-btn:hover{transform:scale(1.08);}
+.h-profile-btn img{width:100%;height:100%;object-fit:cover;}
+.h-dropdown{
+  position:absolute;top:44px;right:0;
+  background:#fff;border:1px solid var(--border);
+  border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.15);
+  min-width:180px;overflow:hidden;z-index:300;
+  display:none;flex-direction:column;
+}
+.h-dropdown.open{display:flex;}
+.h-dd-header{padding:12px 16px;background:var(--hlt);border-bottom:1px solid var(--border);}
+.h-dd-name{font-size:12px;font-weight:700;color:var(--hdk);}
+.h-dd-email{font-size:10px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:148px;}
+.h-dd-btn{
+  padding:11px 16px;font-size:12px;font-weight:600;
+  border:none;background:#fff;cursor:pointer;
+  font-family:'Noto Sans KR',sans-serif;color:var(--text);
+  display:flex;align-items:center;gap:8px;
+  transition:background .12s;text-align:left;
+}
+.h-dd-btn:hover{background:var(--hlt);}
+.h-dd-sep{height:1px;background:var(--border);}
+.h-dd-btn.logout{color:#C44;}
+.h-dd-btn.logout:hover{background:#FFF0F0;}
+
+/* ── 방 선택 모달 ── */
+#room-select-ov{display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);align-items:center;justify-content:center;}
+#room-select-ov.show{display:flex;}
+.rs-box{background:#fff;border-radius:20px;padding:24px;width:min(480px,92vw);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(0,0,0,.2);animation:popin .35s cubic-bezier(.34,1.56,.64,1);}
+.rs-title{font-family:'Jua',sans-serif;font-size:18px;color:var(--hdk);margin-bottom:4px;}
+.rs-sub{font-size:11px;color:var(--muted);margin-bottom:16px;}
+.rs-grid{display:flex;flex-wrap:wrap;gap:12px;overflow-y:auto;flex:1;}
+.rs-item{width:120px;cursor:pointer;border-radius:12px;border:2px solid var(--border);overflow:hidden;background:#F8F5F0;transition:all .15s;flex-shrink:0;}
+.rs-item:hover{border-color:var(--honey);transform:scale(1.04);box-shadow:0 4px 16px rgba(242,184,48,.3);}
+.rs-item img{width:120px;height:120px;object-fit:cover;display:block;}
+.rs-item-num{font-size:11px;font-weight:700;text-align:center;padding:5px;color:var(--hdk);}
+.rs-empty{font-size:13px;color:var(--muted);text-align:center;padding:30px;width:100%;}
+.rs-close{margin-top:16px;padding:10px;border:none;background:var(--border);border-radius:12px;cursor:pointer;font-size:12px;font-weight:700;font-family:'Noto Sans KR',sans-serif;color:var(--text);}
+.rs-close:hover{background:#DDD;}
 </style>
 </head>
 <body>
@@ -210,7 +270,26 @@ header{
   <div class="logo">🍯 HiveRoom</div>
   <div class="h-sep"></div>
   <div class="h-badge">입주 <span id="cnt">3</span> / 50</div>
-  <button class="h-make-btn" id="make-btn" onclick="openConsole()">🏠 방 만들기</button>
+  <!-- 비로그인 -->
+  <button class="h-login-btn" id="login-btn" onclick="signInGoogle()">
+    <img src="https://www.google.com/favicon.ico" alt="G"> LOG IN
+  </button>
+  <!-- 로그인 후 -->
+  <div class="h-profile-wrap" id="profile-wrap" style="display:none;">
+    <div class="h-profile-btn" id="profile-btn" onclick="toggleMenu()">
+      <img id="profile-img" src="" alt="">
+    </div>
+    <div class="h-dropdown" id="h-dropdown">
+      <div class="h-dd-header">
+        <div class="h-dd-name" id="dd-name"></div>
+        <div class="h-dd-email" id="dd-email"></div>
+      </div>
+      <button class="h-dd-btn" onclick="openMakeRoom()">🏠 방 만들기</button>
+      <button class="h-dd-btn" onclick="openEditRoom()">✏️ 방 수정하기</button>
+      <div class="h-dd-sep"></div>
+      <button class="h-dd-btn logout" onclick="signOut()">🚪 로그아웃</button>
+    </div>
+  </div>
 </header>
 
 <!-- MAP: 항상 배경 전체 -->
@@ -301,6 +380,16 @@ header{
 
 </div><!-- /.map-wrap -->
 
+<!-- 방 선택 모달 -->
+<div id="room-select-ov">
+  <div class="rs-box">
+    <div class="rs-title" id="rs-title">✏️ 수정할 방 선택</div>
+    <div class="rs-sub" id="rs-sub">내 방 목록</div>
+    <div class="rs-grid" id="rs-grid"></div>
+    <button class="rs-close" onclick="closeRoomSelect()">취소</button>
+  </div>
+</div>
+
 <!-- 완성 오버레이 -->
 <div id="done-ov">
   <div class="done-box">
@@ -336,6 +425,235 @@ header{
 // ══════════════════════════════════════
 const SUPA_URL = 'https://rnnzawmbxjgbwkiiypxl.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJubnphd21ieGpnYndraWl5cHhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2OTgwNjEsImV4cCI6MjA4ODI3NDA2MX0.lsoYZv8fjVyuJ9qXdUeu_-8aQQ9ds7uRufr6rNYc-_0';
+// ══════════════════════════════════════
+// AUTH (Supabase Google OAuth via PKCE)
+// ══════════════════════════════════════
+let CURRENT_USER = null; // { id, email, name, avatar }
+let EDIT_ROOM_NUM = null; // 수정 모드일 때 방 번호
+
+async function initAuth(){
+  // 세션 확인 (localStorage에 저장된 토큰)
+  const saved = localStorage.getItem('hr_session');
+  if(saved){
+    try{
+      const session = JSON.parse(saved);
+      // 토큰 만료 확인
+      if(session.expires_at && Date.now()/1000 < session.expires_at){
+        await fetchUserFromToken(session.access_token);
+        return;
+      }
+      // 리프레시 시도
+      if(session.refresh_token){
+        const ok = await refreshSession(session.refresh_token);
+        if(ok) return;
+      }
+    }catch(e){}
+    localStorage.removeItem('hr_session');
+  }
+  // URL에 code 파라미터가 있으면 OAuth 콜백
+  const params = new URLSearchParams(location.search);
+  const code = params.get('code');
+  if(code){
+    await exchangeCode(code);
+    // URL 정리
+    history.replaceState({}, '', location.pathname);
+  }
+}
+
+async function exchangeCode(code){
+  const verifier = localStorage.getItem('hr_pkce_verifier');
+  if(!verifier) return;
+  const res = await fetch(`${SUPA_URL}/auth/v1/token?grant_type=pkce`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SUPA_KEY},
+    body: JSON.stringify({ auth_code: code, code_verifier: verifier })
+  });
+  const data = await res.json();
+  if(data.access_token){
+    localStorage.setItem('hr_session', JSON.stringify({
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+      expires_at: data.expires_at
+    }));
+    localStorage.removeItem('hr_pkce_verifier');
+    await fetchUserFromToken(data.access_token);
+  }
+}
+
+async function refreshSession(refresh_token){
+  const res = await fetch(`${SUPA_URL}/auth/v1/token?grant_type=refresh_token`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SUPA_KEY},
+    body: JSON.stringify({ refresh_token })
+  });
+  const data = await res.json();
+  if(data.access_token){
+    localStorage.setItem('hr_session', JSON.stringify({
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+      expires_at: data.expires_at
+    }));
+    await fetchUserFromToken(data.access_token);
+    return true;
+  }
+  return false;
+}
+
+async function fetchUserFromToken(token){
+  const res = await fetch(`${SUPA_URL}/auth/v1/user`, {
+    headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${token}`}
+  });
+  const data = await res.json();
+  if(data.id){
+    CURRENT_USER = {
+      id: data.id,
+      email: data.email,
+      name: data.user_metadata?.full_name || data.email,
+      avatar: data.user_metadata?.avatar_url || '',
+      token
+    };
+    setLoggedIn(CURRENT_USER);
+  }
+}
+
+async function signInGoogle(){
+  // PKCE code_verifier 생성
+  const verifier = generateVerifier();
+  localStorage.setItem('hr_pkce_verifier', verifier);
+  const challenge = await generateChallenge(verifier);
+  const redirectUrl = encodeURIComponent(location.origin + location.pathname);
+  const url = `${SUPA_URL}/auth/v1/authorize?provider=google&redirect_to=${redirectUrl}&code_challenge=${challenge}&code_challenge_method=S256`;
+  location.href = url;
+}
+
+async function signOut(){
+  const saved = localStorage.getItem('hr_session');
+  if(saved){
+    const { access_token } = JSON.parse(saved);
+    await fetch(`${SUPA_URL}/auth/v1/logout`, {
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${access_token}`}
+    }).catch(()=>{});
+  }
+  localStorage.removeItem('hr_session');
+  CURRENT_USER = null;
+  setLoggedOut();
+  closeMenu();
+}
+
+function generateVerifier(){
+  const arr = new Uint8Array(32);
+  crypto.getRandomValues(arr);
+  return btoa(String.fromCharCode(...arr)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+async function generateChallenge(verifier){
+  const data = new TextEncoder().encode(verifier);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return btoa(String.fromCharCode(...new Uint8Array(hash))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+
+function setLoggedIn(user){
+  document.getElementById('login-btn').style.display='none';
+  const pw = document.getElementById('profile-wrap');
+  pw.style.display='flex'; pw.style.alignItems='center';
+  document.getElementById('profile-img').src = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=F2B830&color=fff`;
+  document.getElementById('dd-name').textContent = user.name;
+  document.getElementById('dd-email').textContent = user.email;
+}
+function setLoggedOut(){
+  document.getElementById('login-btn').style.display='flex';
+  document.getElementById('profile-wrap').style.display='none';
+  closeMenu();
+}
+function toggleMenu(){
+  document.getElementById('h-dropdown').classList.toggle('open');
+}
+function closeMenu(){
+  document.getElementById('h-dropdown').classList.remove('open');
+}
+// 외부 클릭 시 메뉴 닫기
+document.addEventListener('click', e=>{
+  const wrap = document.getElementById('profile-wrap');
+  if(wrap && !wrap.contains(e.target)) closeMenu();
+});
+
+// ── 방 만들기 (새 방) ──
+function openMakeRoom(){
+  closeMenu();
+  if(!CURRENT_USER){ alert('로그인이 필요해요!'); return; }
+  EDIT_ROOM_NUM = null;
+  resetConsole();
+  openConsole();
+}
+
+// ── 방 수정하기 ──
+async function openEditRoom(){
+  closeMenu();
+  if(!CURRENT_USER){ alert('로그인이 필요해요!'); return; }
+  // 내 방 목록 로드
+  const res = await fetch(
+    `${SUPA_URL}/rest/v1/rooms?email=eq.${encodeURIComponent(CURRENT_USER.email)}&order=room_number.asc`,
+    { headers:{ 'apikey':SUPA_KEY, 'Authorization':`Bearer ${SUPA_KEY}` } }
+  );
+  const rooms = await res.json();
+  showRoomSelect(rooms, 'edit');
+}
+
+function showRoomSelect(rooms, mode){
+  const grid = document.getElementById('rs-grid');
+  const title = document.getElementById('rs-title');
+  const sub = document.getElementById('rs-sub');
+  title.textContent = mode==='edit' ? '✏️ 수정할 방 선택' : '🏠 방 선택';
+  sub.textContent = `내 방 ${rooms.length}개`;
+  grid.innerHTML = '';
+  if(!rooms.length){
+    grid.innerHTML = '<div class="rs-empty">등록된 방이 없어요.<br>방 만들기로 첫 번째 방을 만들어보세요!</div>';
+  } else {
+    rooms.forEach(room => {
+      const imgUrl = `${SUPA_URL}/storage/v1/object/public/room-pic/${room.room_number}/room.jpg?t=${Date.now()}`;
+      const div = document.createElement('div');
+      div.className = 'rs-item';
+      div.innerHTML = `<img src="${imgUrl}" onerror="this.src=''" alt="방 ${room.room_number}"><div class="rs-item-num">${room.room_number}번 방</div>`;
+      div.onclick = () => {
+        closeRoomSelect();
+        if(mode==='edit') startEditRoom(room);
+      };
+      grid.appendChild(div);
+    });
+  }
+  document.getElementById('room-select-ov').classList.add('show');
+}
+function closeRoomSelect(){
+  document.getElementById('room-select-ov').classList.remove('show');
+}
+
+async function startEditRoom(room){
+  EDIT_ROOM_NUM = room.room_number;
+  // 기존 선택 초기화
+  resetConsole();
+  // Twitter ID 미리 채우기
+  const twEl = document.getElementById('tw-id');
+  if(twEl) twEl.value = room.twitter_id || '';
+  openConsole();
+  // 콘솔 타이틀 변경
+  document.querySelector('.con-title').textContent = `✏️ ${room.room_number}번 방 수정`;
+}
+
+function resetConsole(){
+  SEL.wall=null; SEL.floor=null; SEL.furniture=new Set(); SEL.walldeco=new Set();
+  Object.keys(FLIP.furniture).forEach(k=>delete FLIP.furniture[k]);
+  Object.keys(FLIP.walldeco).forEach(k=>delete FLIP.walldeco[k]);
+  Object.keys(POS.furniture).forEach(k=>delete POS.furniture[k]);
+  Object.keys(POS.walldeco).forEach(k=>delete POS.walldeco[k]);
+  Object.keys(SIZE.furniture).forEach(k=>delete SIZE.furniture[k]);
+  Object.keys(SIZE.walldeco).forEach(k=>delete SIZE.walldeco[k]);
+  LAYER_ORDER.furniture=[]; LAYER_ORDER.walldeco=[];
+  CTRL_SEL={cat:null,id:null};
+  hideCtrl();
+  buildGrids(); renderRoom(); updateProg();
+  document.querySelector('.con-title').textContent = '🏠 방 만들기';
+}
+
 // ══════════════════════════════════════
 // ASSET DB (Supabase Storage REST API)
 // ══════════════════════════════════════
@@ -906,15 +1224,16 @@ async function registerRoom(){
   if(!twitterId){ twEl.classList.add('err'); twEl.focus(); return; }
   twEl.classList.remove('err');
 
+  const isEdit = !!EDIT_ROOM_NUM;
   const rb=document.getElementById('reg-btn'); rb.disabled=true; rb.textContent='⏳ 처리 중...';
   const pg=document.getElementById('png-prog'), bar=document.getElementById('png-bar'), st=document.getElementById('png-status');
   pg.classList.add('show'); st.textContent='📦 JPEG 생성 중...'; bar.style.width='0%';
   await sleep(100);
 
   // 1. JPEG 생성 — 육각형 세로(2×RS=644px) 기준 정사각형 크롭 (여백 없음)
-  const cropSize = RS * 2;               // 644px
-  const cropX = RCX - cropSize / 2;     // 28px
-  const cropY = RCY - cropSize / 2;     // 28px
+  const cropSize = RS * 2;
+  const cropX = RCX - cropSize / 2;
+  const cropY = RCY - cropSize / 2;
   const off=document.createElement('canvas'); off.width=cropSize; off.height=cropSize;
   const octx=off.getContext('2d');
   octx.fillStyle='#fff'; octx.fillRect(0,0,cropSize,cropSize);
@@ -922,20 +1241,25 @@ async function registerRoom(){
   pngUrl = off.toDataURL('image/jpeg', 0.92);
   bar.style.width='20%'; await sleep(100);
 
-  // 2. 다음 room_number 결정
+  // 2. room_number 결정 (신규: 최대+1 / 수정: 기존 번호)
   st.textContent='🗃 방 번호 확인 중...'; bar.style.width='35%';
-  const dbRes = await fetch(
-    `${SUPA_URL}/rest/v1/rooms?select=room_number&order=room_number.desc&limit=1`,
-    { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }
-  );
-  const dbData = await dbRes.json();
-  const nextNum = dbData && dbData.length > 0 ? dbData[0].room_number + 1 : 1;
+  let targetNum;
+  if(isEdit){
+    targetNum = EDIT_ROOM_NUM;
+  } else {
+    const dbRes = await fetch(
+      `${SUPA_URL}/rest/v1/rooms?select=room_number&order=room_number.desc&limit=1`,
+      { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }
+    );
+    const dbData = await dbRes.json();
+    targetNum = dbData && dbData.length > 0 ? dbData[0].room_number + 1 : 1;
+  }
 
   // 3. Storage 업로드
   st.textContent='☁️ 이미지 업로드 중...'; bar.style.width='55%';
   const blob = await (await fetch(pngUrl)).blob();
   const upRes = await fetch(
-    `${SUPA_URL}/storage/v1/object/room-pic/${nextNum}/room.jpg`,
+    `${SUPA_URL}/storage/v1/object/room-pic/${targetNum}/room.jpg`,
     {
       method: 'POST',
       headers: {
@@ -950,28 +1274,32 @@ async function registerRoom(){
   if(!upRes.ok){ alert('업로드 오류: ' + await upRes.text()); rb.disabled=false; rb.textContent='✅ 맵에 등록하기'; return; }
   bar.style.width='75%';
 
-  // 4. DB 저장
+  // 4. DB 저장 (신규: INSERT / 수정: PATCH)
   st.textContent='🗃 DB 저장 중...'; bar.style.width='85%';
+  const email = CURRENT_USER?.email || '';
+  const dbPayload = { twitter_id: twitterId, occupied: 'Y', email };
   const insRes = await fetch(
-    `${SUPA_URL}/rest/v1/rooms`,
+    isEdit
+      ? `${SUPA_URL}/rest/v1/rooms?room_number=eq.${targetNum}`
+      : `${SUPA_URL}/rest/v1/rooms`,
     {
-      method: 'POST',
+      method: isEdit ? 'PATCH' : 'POST',
       headers: {
         'apikey': SUPA_KEY,
         'Authorization': `Bearer ${SUPA_KEY}`,
         'Content-Type': 'application/json',
         'Prefer': 'return=minimal',
       },
-      body: JSON.stringify({ room_number: nextNum, twitter_id: twitterId, occupied: 'Y' }),
+      body: JSON.stringify(isEdit ? dbPayload : { room_number: targetNum, ...dbPayload }),
     }
   );
   if(!insRes.ok){ alert('DB 오류: ' + await insRes.text()); rb.disabled=false; rb.textContent='✅ 맵에 등록하기'; return; }
 
-  bar.style.width='100%'; st.textContent='✅ 등록 완료!'; await sleep(300);
+  bar.style.width='100%'; st.textContent=isEdit?'✅ 수정 완료!':'✅ 등록 완료!'; await sleep(300);
   document.getElementById('png-thumb').src = pngUrl;
   document.getElementById('png-result').classList.add('show');
-  document.querySelector('.png-fname').textContent = `room_${nextNum}.jpg`;
-  rb.textContent='🗺 맵에서 확인하기'; rb.disabled=false; rb.onclick=()=>goToMap(nextNum);
+  document.querySelector('.png-fname').textContent = `room_${targetNum}.jpg`;
+  rb.textContent='🗺 맵에서 확인하기'; rb.disabled=false; rb.onclick=()=>goToMap(targetNum);
 }
 async function goToMap(roomNum){
   const imgUrl = `${SUPA_URL}/storage/v1/object/public/room-pic/${roomNum}/room.jpg?t=${Date.now()}`;
@@ -1120,6 +1448,7 @@ window.addEventListener('mouseup',()=>{isDrag=false;mCV.classList.remove('drag')
 // 초기화
 window.addEventListener('resize',resizeMap);
 renderRoom(); updateProg(); resizeMap();
+initAuth();    // Google 로그인 상태 복원
 loadAssets();  // Supabase에서 에셋 로드
 loadRooms();   // Supabase에서 기존 방 로드
 </script>
