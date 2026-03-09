@@ -1433,6 +1433,8 @@ const mctx=mCV.getContext('2d');
 let mW=0,mH=0,HEX=58,mScale=1,mOX=0,mOY=0;
 let isDrag=false,dSt={x:0,y:0},dOff={x:0,y:0};
 let MAP_HOVER={num:null,bx:0,by:0,bR:0}; // 호버 중인 방 뱃지
+let BADGE_SCALE={}; // 각 방 뱃지 현재 스케일 (1.0 ~ 2.0)
+let BADGE_RAF=null; // requestAnimationFrame ID
 
 function resizeMap(){
   const w=document.getElementById('map-wrap');
@@ -1493,23 +1495,23 @@ function drawFilled(cx,cy,s,num,room){
   mctx.restore();
   // 외곽선
   mHex(cx,cy,s-.5); mctx.strokeStyle='#E8C84A'; mctx.lineWidth=2; mctx.stroke();
-  // 프로필 사진 원형 뱃지 (왼쪽 위)
-  const bR=Math.max(10,s*.16), bx=cx-s*.58, by=cy-s*.56;
+  // 프로필 사진 원형 뱃지 (왼쪽 위) — 스케일 애니메이션 적용
+  const bRBase=Math.max(10,s*.16), bx=cx-s*.58, by=cy-s*.56;
+  const sc = BADGE_SCALE[num] || 1.0;
+  const bR = bRBase * sc;
   const avatarImg = room.avatarUrl ? AVATAR_CACHE[room.avatarUrl] : null;
   if(!avatarImg && room.avatarUrl){
-    // 아직 로드 안 됐으면 로드 시작 (완료되면 drawMap 재호출됨)
     loadAvatarImg(room.avatarUrl);
   }
-  // 흰 테두리 원
-  mctx.beginPath(); mctx.arc(bx,by,bR+2,0,Math.PI*2);
+  // 흰 테두리 원 (스케일 적용)
+  mctx.beginPath(); mctx.arc(bx,by,bR+2*sc,0,Math.PI*2);
   mctx.fillStyle='rgba(255,255,255,.95)'; mctx.fill();
   if(avatarImg){
     drawCircleImg(mctx, avatarImg, bx, by, bR);
   } else {
-    // 프로필 없으면 방 번호 표시 (fallback)
     mctx.beginPath(); mctx.arc(bx,by,bR,0,Math.PI*2);
     mctx.fillStyle='rgba(242,184,48,.9)'; mctx.fill();
-    mctx.font=`bold ${Math.max(7,s*.12)}px sans-serif`;
+    mctx.font=`bold ${Math.max(7,s*.12*sc)}px sans-serif`;
     mctx.fillStyle='#fff'; mctx.textAlign='center'; mctx.textBaseline='middle';
     mctx.fillText(num, bx, by);
   }
@@ -1578,6 +1580,33 @@ function zoomIn(){mScale=Math.min(mScale*1.2,3);drawMap();}
 function zoomOut(){mScale=Math.max(mScale/1.2,.3);drawMap();}
 function resetView(){mScale=1;mOX=0;mOY=0;drawMap();}
 
+// ── 뱃지 스케일 애니메이션 ──
+function startBadgeAnim(){
+  if(BADGE_RAF) return; // 이미 실행 중
+  function tick(){
+    let needMore = false;
+    for(let num=1;num<=50;num++){
+      if(!ROOMS[num]) continue;
+      const target = MAP_HOVER.num===num ? 2.0 : 1.0;
+      const cur = BADGE_SCALE[num] || 1.0;
+      const diff = target - cur;
+      if(Math.abs(diff) < 0.01){
+        BADGE_SCALE[num] = target;
+      } else {
+        BADGE_SCALE[num] = cur + diff * 0.18; // 이징 속도
+        needMore = true;
+      }
+    }
+    drawMap();
+    if(needMore){
+      BADGE_RAF = requestAnimationFrame(tick);
+    } else {
+      BADGE_RAF = null;
+    }
+  }
+  BADGE_RAF = requestAnimationFrame(tick);
+}
+
 mCV.addEventListener('wheel',e=>{e.preventDefault();mScale=Math.max(.3,Math.min(3,mScale*(e.deltaY>0?.9:1.1)));drawMap();},{passive:false});
 mCV.addEventListener('mousedown',e=>{isDrag=true;dSt={x:e.clientX,y:e.clientY};dOff={x:mOX,y:mOY};mCV.classList.add('drag');});
 window.addEventListener('mousemove',e=>{
@@ -1598,7 +1627,7 @@ window.addEventListener('mousemove',e=>{
   const prevNum=MAP_HOVER.num;
   MAP_HOVER=found||{num:null,bx:0,by:0,bR:0};
   mCV.style.cursor=found?'pointer':'default';
-  if((found?.num||null)!==prevNum) drawMap(); // 변경 시만 재렌더
+  if((found?.num||null)!==prevNum) startBadgeAnim(); // 호버 변경 시 애니메이션 시작
 });
 window.addEventListener('mouseup',()=>{isDrag=false;mCV.classList.remove('drag');});
 mCV.addEventListener('click',e=>{
