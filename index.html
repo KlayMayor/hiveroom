@@ -1353,7 +1353,7 @@ async function registerRoom(){
     flip: { furniture: {...FLIP.furniture}, walldeco: {...FLIP.walldeco} },
     layerOrder: { furniture: [...LAYER_ORDER.furniture], walldeco: [...LAYER_ORDER.walldeco] },
   });
-  const twitterAvatar = `https://unavatar.io/twitter/${twitterId}`;
+  const twitterAvatar = `https://unavatar.io/x/${twitterId}`;
   const dbPayload = { twitter_id: twitterId, occupied: 'Y', email, design_json: designJson, avatar_url: twitterAvatar };
   const insRes = await fetch(
     isEdit
@@ -1392,7 +1392,7 @@ async function goToMap(roomNum){
       i.src = `${SUPA_URL}/storage/v1/object/public/room-pic/${roomNum}/room.jpg?t=${Date.now()}`;
     }
   });
-  if(img) ROOMS[roomNum] = { img, twitterId, avatarUrl: `https://unavatar.io/twitter/${twitterId}` };
+  if(img) ROOMS[roomNum] = { img, twitterId, avatarUrl: `https://unavatar.io/x/${twitterId}` };
   document.getElementById('cnt').textContent = Object.keys(ROOMS).length;
   closeDone(); closeConsole();
   // 해당 방 슬롯으로 맵 이동
