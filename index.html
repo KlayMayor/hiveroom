@@ -1598,7 +1598,7 @@ function drawFilled(cx,cy,s,num,room){
   }
   // 관심사 아이콘 (뱃지 오른쪽 하단)
   if(room.interest){
-    const iR = bRBase * 0.44;
+    const iR = bRBase * 0.35;
     const ix = bx + bR * 0.65, iy = by + bR * 0.65;
     const iImg = getInterestImgForMap(room.interest);
     mctx.beginPath(); mctx.arc(ix,iy,iR+1.5,0,Math.PI*2);
