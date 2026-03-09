@@ -1322,15 +1322,16 @@ async function registerRoom(){
     for(let i=1; i<=50; i++){ if(!used.has(i)){ targetNum=i; break; } }
   }
 
-  // 3. Storage 업로드
+  // 3. Storage 업로드 (신규: POST / 수정: PUT)
   st.textContent='☁️ 이미지 업로드 중...'; bar.style.width='55%';
   const blob = await (await fetch(pngUrl)).blob();
+  // 수정 시 PUT, 신규 시 POST (x-upsert로 덮어쓰기)
   const upRes = await fetch(
     `${SUPA_URL}/storage/v1/object/room-pic/${targetNum}/room.jpg`,
     {
-      method: 'POST',
+      method: isEdit ? 'PUT' : 'POST',
       headers: {
-        'Authorization': `Bearer ${SUPA_KEY}`,
+        'Authorization': `Bearer ${CURRENT_USER?.token || SUPA_KEY}`,
         'apikey': SUPA_KEY,
         'Content-Type': 'image/jpeg',
         'x-upsert': 'true',
@@ -1361,7 +1362,7 @@ async function registerRoom(){
       method: isEdit ? 'PATCH' : 'POST',
       headers: {
         'apikey': SUPA_KEY,
-        'Authorization': `Bearer ${SUPA_KEY}`,
+        'Authorization': `Bearer ${CURRENT_USER?.token || SUPA_KEY}`,
         'Content-Type': 'application/json',
         'Prefer': isEdit ? 'return=minimal' : 'return=minimal,resolution=ignore-duplicates',
       },
@@ -1377,41 +1378,32 @@ async function registerRoom(){
   rb.textContent='🗺 맵에서 확인하기'; rb.disabled=false; rb.onclick=()=>goToMap(targetNum);
 }
 async function goToMap(roomNum){
-  // pngUrl(base64)로 즉시 맵에 표시 — Storage CDN 지연 없이 바로 반영
   const twitterId = document.getElementById('tw-id').value.replace('@','').trim();
-  if(pngUrl){
-    const img = new Image();
-    img.onload = () => {
-      ROOMS[roomNum] = { img, twitterId };
-      document.getElementById('cnt').textContent = Object.keys(ROOMS).length;
-      closeDone(); closeConsole();
-      // 해당 방 슬롯으로 맵 이동
-      const pos = SLOT_POS[roomNum];
-      if(pos){
-        const s = HEX * mScale;
-        mOX = -(s * Math.sqrt(3) * (pos.q + pos.r/2));
-        mOY = -(s * 1.5 * pos.r);
-      }
-      drawMap();
-      const t=document.getElementById('toast'); t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000);
-    };
-    img.src = pngUrl; // base64 → 즉시 로드
-  } else {
-    // fallback: Storage URL
-    const imgUrl = `${SUPA_URL}/storage/v1/object/public/room-pic/${roomNum}/room.jpg?t=${Date.now()}`;
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.src = imgUrl;
-    img.onload = () => {
-      ROOMS[roomNum] = { img, twitterId };
-      document.getElementById('cnt').textContent = Object.keys(ROOMS).length;
-      closeDone(); closeConsole();
-      const pos = SLOT_POS[roomNum];
-      if(pos){ const s=HEX*mScale; mOX=-(s*Math.sqrt(3)*(pos.q+pos.r/2)); mOY=-(s*1.5*pos.r); }
-      drawMap();
-      const t=document.getElementById('toast'); t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000);
-    };
+  // pngUrl(base64) → Image 로드를 Promise로 감싸서 await
+  const img = await new Promise(resolve => {
+    const i = new Image();
+    i.onload = () => resolve(i);
+    i.onerror = () => resolve(null);
+    if(pngUrl){
+      i.src = pngUrl; // base64 → 동기적으로 즉시 로드
+    } else {
+      i.crossOrigin = 'anonymous';
+      i.src = `${SUPA_URL}/storage/v1/object/public/room-pic/${roomNum}/room.jpg?t=${Date.now()}`;
+    }
+  });
+  if(img) ROOMS[roomNum] = { img, twitterId };
+  document.getElementById('cnt').textContent = Object.keys(ROOMS).length;
+  closeDone(); closeConsole();
+  // 해당 방 슬롯으로 맵 이동
+  const pos = SLOT_POS[roomNum];
+  if(pos){
+    const s = HEX * mScale;
+    mOX = -(s * Math.sqrt(3) * (pos.q + pos.r/2));
+    mOY = -(s * 1.5 * pos.r);
   }
+  drawMap();
+  const t=document.getElementById('toast'); t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3000);
 }
 function dlPng(){if(!pngUrl)return;const a=document.createElement('a');a.href=pngUrl;a.download='room_slot4.jpg';a.click();}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
