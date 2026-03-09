@@ -663,7 +663,14 @@ async function startEditRoom(room){
   openConsole();
   // 에셋 로드 후 그리드/미리보기 갱신
   await new Promise(r=>setTimeout(r,100));
-  buildGrids(); renderRoom(); updateProg();
+  buildGrids();
+  // 복원된 SEL 상태를 그리드에 반영
+  ['wall','floor','furniture','walldeco'].forEach(cat=>{
+    const multi = (cat==='furniture'||cat==='walldeco');
+    refreshGrid(cat, multi);
+    refreshLabel(cat);
+  });
+  renderRoom(); updateProg();
   document.querySelector('.con-title').textContent = `✏️ ${room.room_number}번 방 수정`;
 }
 
@@ -1285,12 +1292,17 @@ async function registerRoom(){
   if(isEdit){
     targetNum = EDIT_ROOM_NUM;
   } else {
+    // 동시접속 충돌 방지: 빈 슬롯 중 가장 작은 번호 선택
+    // rooms 테이블에서 사용 중인 번호 목록 조회
     const dbRes = await fetch(
-      `${SUPA_URL}/rest/v1/rooms?select=room_number&order=room_number.desc&limit=1`,
+      `${SUPA_URL}/rest/v1/rooms?select=room_number&order=room_number.asc`,
       { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }
     );
     const dbData = await dbRes.json();
-    targetNum = dbData && dbData.length > 0 ? dbData[0].room_number + 1 : 1;
+    const used = new Set((dbData||[]).map(r=>r.room_number));
+    // 1~50 중 비어있는 첫 번째 슬롯
+    targetNum = 1;
+    for(let i=1; i<=50; i++){ if(!used.has(i)){ targetNum=i; break; } }
   }
 
   // 3. Storage 업로드
@@ -1334,7 +1346,7 @@ async function registerRoom(){
         'apikey': SUPA_KEY,
         'Authorization': `Bearer ${SUPA_KEY}`,
         'Content-Type': 'application/json',
-        'Prefer': 'return=minimal',
+        'Prefer': isEdit ? 'return=minimal' : 'return=minimal,resolution=ignore-duplicates',
       },
       body: JSON.stringify(isEdit ? dbPayload : { room_number: targetNum, ...dbPayload }),
     }
@@ -1348,19 +1360,41 @@ async function registerRoom(){
   rb.textContent='🗺 맵에서 확인하기'; rb.disabled=false; rb.onclick=()=>goToMap(targetNum);
 }
 async function goToMap(roomNum){
-  const imgUrl = `${SUPA_URL}/storage/v1/object/public/room-pic/${roomNum}/room.jpg?t=${Date.now()}`;
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.src = imgUrl;
-  img.onload = () => {
-    ROOMS[roomNum] = { img, twitterId: document.getElementById('tw-id').value.replace('@','').trim() };
-    document.getElementById('cnt').textContent = Object.keys(ROOMS).length;
-    closeDone(); closeConsole();
-    const pos = SLOT_POS[roomNum];
-    if(pos){ const s=HEX*mScale; mOX=-(s*Math.sqrt(3)*(pos.q+pos.r/2)); mOY=-(s*1.5*pos.r); }
-    drawMap();
-    const t=document.getElementById('toast'); t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000);
-  };
+  // pngUrl(base64)로 즉시 맵에 표시 — Storage CDN 지연 없이 바로 반영
+  const twitterId = document.getElementById('tw-id').value.replace('@','').trim();
+  if(pngUrl){
+    const img = new Image();
+    img.onload = () => {
+      ROOMS[roomNum] = { img, twitterId };
+      document.getElementById('cnt').textContent = Object.keys(ROOMS).length;
+      closeDone(); closeConsole();
+      // 해당 방 슬롯으로 맵 이동
+      const pos = SLOT_POS[roomNum];
+      if(pos){
+        const s = HEX * mScale;
+        mOX = -(s * Math.sqrt(3) * (pos.q + pos.r/2));
+        mOY = -(s * 1.5 * pos.r);
+      }
+      drawMap();
+      const t=document.getElementById('toast'); t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000);
+    };
+    img.src = pngUrl; // base64 → 즉시 로드
+  } else {
+    // fallback: Storage URL
+    const imgUrl = `${SUPA_URL}/storage/v1/object/public/room-pic/${roomNum}/room.jpg?t=${Date.now()}`;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = imgUrl;
+    img.onload = () => {
+      ROOMS[roomNum] = { img, twitterId };
+      document.getElementById('cnt').textContent = Object.keys(ROOMS).length;
+      closeDone(); closeConsole();
+      const pos = SLOT_POS[roomNum];
+      if(pos){ const s=HEX*mScale; mOX=-(s*Math.sqrt(3)*(pos.q+pos.r/2)); mOY=-(s*1.5*pos.r); }
+      drawMap();
+      const t=document.getElementById('toast'); t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000);
+    };
+  }
 }
 function dlPng(){if(!pngUrl)return;const a=document.createElement('a');a.href=pngUrl;a.download='room_slot4.jpg';a.click();}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
