@@ -1037,14 +1037,8 @@ async function renderRoom(){
   ufctx.restore();
   rctx.drawImage(offFurn,0,0);
 
-  // 경계선 + 외곽선 (가구/장식 위에서 분할선만, 외곽은 별도)
-  // 분할선은 오프스크린에 그려서 가구 아래로 ← 대신 외곽선만 마지막에
-  // 분할선을 별도 오프스크린에 그린 뒤 가구 아래에 합성
-  // ※ 외곽 테두리(황금선)만 마지막에 그려 항상 위에 표시
-  rctx.save();
-  hexClip(rctx,RCX,RCY,RS);
-  rctx.strokeStyle='rgba(80,100,130,.35)';rctx.lineWidth=5;rctx.stroke();
-  rctx.restore();
+  // 외곽 테두리는 JPEG에 포함되지 않도록 renderRoom에서 제거
+  // (맵에서는 drawFilled가 황금선으로 별도 표시)
 
 
 }
@@ -1495,11 +1489,6 @@ function drawFilled(cx,cy,s,num,room){
     const drawW = s * 2;
     mctx.drawImage(room.img, cx - drawW/2, cy - drawH/2, drawW, drawH);
   }
-  mctx.restore();
-  // 분할선
-  const vT={x:cx,y:cy-s},vBL={x:cx-s*Math.sqrt(3)/2,y:cy+s*.5},vBR={x:cx+s*Math.sqrt(3)/2,y:cy+s*.5};
-  mctx.save();mctx.strokeStyle='rgba(0,0,0,.13)';mctx.lineWidth=Math.max(.6,s*.012);
-  [[{x:cx,y:cy},vT],[{x:cx,y:cy},vBL],[{x:cx,y:cy},vBR]].forEach(([a,b])=>{mctx.beginPath();mctx.moveTo(a.x,a.y);mctx.lineTo(b.x,b.y);mctx.stroke();});
   mctx.restore();
   // 외곽선
   mHex(cx,cy,s-.5); mctx.strokeStyle='#E8C84A'; mctx.lineWidth=2; mctx.stroke();
