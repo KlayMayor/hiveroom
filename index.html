@@ -629,49 +629,63 @@ function closeRoomSelect(){
 
 async function startEditRoom(room){
   EDIT_ROOM_NUM = room.room_number;
-  resetConsole();
-  const twEl = document.getElementById('tw-id');
-  if(twEl) twEl.value = room.twitter_id || '';
-  // design_json 있으면 상태 복원
+
+  // 1. 상태 초기화 (SEL/POS/SIZE/FLIP/LAYER 모두)
+  SEL.wall=null; SEL.floor=null; SEL.furniture=new Set(); SEL.walldeco=new Set();
+  ['furniture','walldeco'].forEach(cat=>{
+    Object.keys(FLIP[cat]).forEach(k=>delete FLIP[cat][k]);
+    Object.keys(POS[cat]).forEach(k=>delete POS[cat][k]);
+    Object.keys(SIZE[cat]).forEach(k=>delete SIZE[cat][k]);
+    LAYER_ORDER[cat]=[];
+  });
+  CTRL_SEL={cat:null,id:null};
+
+  // 2. design_json으로 SEL/POS/SIZE/FLIP/LAYER 복원
   if(room.design_json){
     try{
       const d = typeof room.design_json === 'string' ? JSON.parse(room.design_json) : room.design_json;
       if(d.sel){
-        SEL.wall = d.sel.wall || null;
+        SEL.wall  = d.sel.wall  || null;
         SEL.floor = d.sel.floor || null;
         SEL.furniture = new Set(d.sel.furniture || []);
-        SEL.walldeco = new Set(d.sel.walldeco || []);
+        SEL.walldeco  = new Set(d.sel.walldeco  || []);
       }
       if(d.pos){
         Object.assign(POS.furniture, d.pos.furniture || {});
-        Object.assign(POS.walldeco, d.pos.walldeco || {});
+        Object.assign(POS.walldeco,  d.pos.walldeco  || {});
       }
       if(d.size){
         Object.assign(SIZE.furniture, d.size.furniture || {});
-        Object.assign(SIZE.walldeco, d.size.walldeco || {});
+        Object.assign(SIZE.walldeco,  d.size.walldeco  || {});
       }
       if(d.flip){
         Object.assign(FLIP.furniture, d.flip.furniture || {});
-        Object.assign(FLIP.walldeco, d.flip.walldeco || {});
+        Object.assign(FLIP.walldeco,  d.flip.walldeco  || {});
       }
       if(d.layerOrder){
-        LAYER_ORDER.furniture = d.layerOrder.furniture || [];
-        LAYER_ORDER.walldeco = d.layerOrder.walldeco || [];
+        LAYER_ORDER.furniture = [...(d.layerOrder.furniture || [])];
+        LAYER_ORDER.walldeco  = [...(d.layerOrder.walldeco  || [])];
       }
     }catch(e){ console.warn('design_json 복원 실패', e); }
   }
-  openConsole();
-  // 에셋 로드 후 그리드/미리보기 갱신
-  await new Promise(r=>setTimeout(r,100));
-  buildGrids();
-  // 복원된 SEL 상태를 그리드에 반영
-  ['wall','floor','furniture','walldeco'].forEach(cat=>{
-    const multi = (cat==='furniture'||cat==='walldeco');
-    refreshGrid(cat, multi);
-    refreshLabel(cat);
-  });
-  renderRoom(); updateProg();
+
+  // 3. Twitter ID 미리 채우기
+  const twEl = document.getElementById('tw-id');
+  if(twEl) twEl.value = room.twitter_id || '';
+
+  // 4. 콘솔 열기
+  document.getElementById('console').classList.add('open');
   document.querySelector('.con-title').textContent = `✏️ ${room.room_number}번 방 수정`;
+
+  // 5. SEL 상태가 설정된 상태에서 buildGrids (sel 클래스 포함)
+  buildGrids();
+
+  // 6. label 및 진행도 갱신
+  ['wall','floor','furniture','walldeco'].forEach(cat => refreshLabel(cat));
+  updateProg();
+
+  // 7. renderRoom (벽지/바닥/가구/장식 모두 표시)
+  await renderRoom();
 }
 
 function resetConsole(){
@@ -805,7 +819,10 @@ function buildG(gid, list, cat, multi) {
     : '';
   list.forEach(a => {
     const d = document.createElement('div');
-    d.className='aitem'; d.dataset.id=a.id; d.dataset.cat=cat;
+    // 현재 SEL 상태에 따라 sel 클래스 적용
+    const selected = multi ? SEL[cat].has(a.id) : SEL[cat] === a.id;
+    d.className='aitem' + (selected ? ' sel' : '');
+    d.dataset.id=a.id; d.dataset.cat=cat;
     d.innerHTML=`
       <div class="athumb">
         <img src="${a.url}" alt="${a.name}"
