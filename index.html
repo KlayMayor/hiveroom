@@ -1013,14 +1013,15 @@ async function renderRoom(){
   wctx.restore();
   rctx.drawImage(offWall,0,0);
 
-  // 경계선 + 외곽선 (벽/바닥 위, 아이템 아래)
-  rctx.save();
-  hexClip(rctx,RCX,RCY,RS);
-  rctx.strokeStyle='rgba(80,100,130,.35)';rctx.lineWidth=5;rctx.stroke();
-  rctx.strokeStyle='rgba(100,80,60,.18)';rctx.lineWidth=2;
+  // 분할선 (벽/바닥 위, 가구/장식 아래) — 오프스크린에 그려서 합성
+  const offDiv=makeOff(); const dvctx=offDiv.getContext('2d');
+  dvctx.save();
+  hexClip(dvctx,RCX,RCY,RS); dvctx.clip();
+  dvctx.strokeStyle='rgba(100,80,60,.18)'; dvctx.lineWidth=2;
   const _C={x:RCX,y:RCY};
-  [[_C,vT],[_C,vBL],[_C,vBR]].forEach(([a,b])=>{rctx.beginPath();rctx.moveTo(a.x,a.y);rctx.lineTo(b.x,b.y);rctx.stroke();});
-  rctx.restore();
+  [[_C,vT],[_C,vBL],[_C,vBR]].forEach(([a,b])=>{dvctx.beginPath();dvctx.moveTo(a.x,a.y);dvctx.lineTo(b.x,b.y);dvctx.stroke();});
+  dvctx.restore();
+  rctx.drawImage(offDiv,0,0);
 
   // 레이어2: 장식 (육각형 클립)
   const offDeco=makeOff(); const dctx=offDeco.getContext('2d');
@@ -1035,6 +1036,15 @@ async function renderRoom(){
   await drawFurnCtx(ufctx);
   ufctx.restore();
   rctx.drawImage(offFurn,0,0);
+
+  // 경계선 + 외곽선 (가구/장식 위에서 분할선만, 외곽은 별도)
+  // 분할선은 오프스크린에 그려서 가구 아래로 ← 대신 외곽선만 마지막에
+  // 분할선을 별도 오프스크린에 그린 뒤 가구 아래에 합성
+  // ※ 외곽 테두리(황금선)만 마지막에 그려 항상 위에 표시
+  rctx.save();
+  hexClip(rctx,RCX,RCY,RS);
+  rctx.strokeStyle='rgba(80,100,130,.35)';rctx.lineWidth=5;rctx.stroke();
+  rctx.restore();
 
 
 }
