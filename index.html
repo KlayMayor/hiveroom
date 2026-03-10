@@ -42,6 +42,13 @@ header{
   font-family:'Noto Sans KR',sans-serif;transition:all .15s;white-space:nowrap;
 }
 .h-toggle-btn.on{background:var(--hlt);border-color:var(--honey);color:var(--hdk);}
+.h-hive-badge{
+  font-size:12px;font-weight:700;
+  background:linear-gradient(135deg,#FFF8E8,#FFF0C8);
+  border:1.5px solid var(--honey);color:var(--hdk);
+  padding:4px 14px;border-radius:16px;
+  display:flex;align-items:center;gap:4px;white-space:nowrap;
+}
 
 /* ── MAP (항상 배경 전체화면) ── */
 .map-wrap{flex:1;position:relative;background:#ECEEF2;overflow:hidden;}
@@ -262,6 +269,74 @@ header{
 .h-dd-btn.logout{color:#C44;}
 .h-dd-btn.logout:hover{background:#FFF0F0;}
 
+/* ── 부동산 관리 모달 ── */
+#estate-ov{display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);align-items:center;justify-content:center;}
+#estate-ov.show{display:flex;}
+.estate-box{background:#fff;border-radius:20px;padding:24px;width:min(520px,94vw);max-height:85vh;display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(0,0,0,.2);animation:popin .35s cubic-bezier(.34,1.56,.64,1);}
+.estate-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.estate-title{font-family:'Jua',sans-serif;font-size:18px;color:var(--hdk);}
+.estate-bal{font-size:12px;font-weight:700;background:var(--hlt);border:1.5px solid var(--honey);color:var(--hdk);padding:4px 12px;border-radius:12px;}
+.estate-sub{font-size:11px;color:var(--muted);margin-bottom:16px;}
+.estate-grid{display:flex;flex-wrap:wrap;gap:12px;overflow-y:auto;flex:1;}
+.estate-item{width:120px;cursor:pointer;border-radius:12px;border:2px solid var(--border);overflow:hidden;background:#F8F5F0;transition:all .15s;flex-shrink:0;}
+.estate-item:hover{border-color:var(--honey);transform:scale(1.04);box-shadow:0 4px 16px rgba(242,184,48,.3);}
+.estate-item img{width:100%;aspect-ratio:1;object-fit:cover;display:block;}
+.estate-item-info{padding:6px 8px;}
+.estate-item-num{font-size:11px;font-weight:700;color:var(--hdk);}
+.estate-item-val{font-size:10px;color:#F2A020;font-weight:600;margin-top:2px;}
+.estate-close{margin-top:16px;padding:9px;border-radius:12px;border:1.5px solid var(--border);background:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:'Noto Sans KR',sans-serif;color:var(--muted);transition:all .15s;}
+.estate-close:hover{background:var(--hlt);border-color:var(--honey);}
+
+/* ── 투자 팝업 ── */
+#invest-ov{display:none;position:fixed;inset:0;z-index:700;background:rgba(0,0,0,.4);backdrop-filter:blur(4px);align-items:center;justify-content:center;}
+#invest-ov.show{display:flex;}
+.invest-box{background:#fff;border-radius:20px;padding:28px;width:min(340px,90vw);box-shadow:0 24px 60px rgba(0,0,0,.2);animation:popin .3s cubic-bezier(.34,1.56,.64,1);}
+.invest-title{font-family:'Jua',sans-serif;font-size:17px;color:var(--hdk);margin-bottom:4px;}
+.invest-info{font-size:11px;color:var(--muted);margin-bottom:20px;}
+.invest-row{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.invest-label{font-size:12px;font-weight:600;color:var(--text);flex:1;}
+.invest-input{width:90px;padding:7px 10px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-weight:700;text-align:center;font-family:'Jua',sans-serif;color:var(--hdk);}
+.invest-input:focus{outline:none;border-color:var(--honey);}
+.invest-spin{display:flex;flex-direction:column;gap:2px;}
+.invest-spin button{width:26px;height:20px;border:1.5px solid var(--border);background:#fafafa;border-radius:6px;cursor:pointer;font-size:11px;line-height:1;transition:all .1s;}
+.invest-spin button:hover{background:var(--hlt);border-color:var(--honey);}
+.invest-result{font-size:11px;color:var(--muted);background:#F8F5F0;border-radius:10px;padding:10px 12px;margin-bottom:18px;line-height:1.7;}
+.invest-result b{color:var(--hdk);}
+.invest-btns{display:flex;gap:8px;}
+.invest-confirm{flex:1;padding:11px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--honey),var(--accent));color:#fff;font-size:13px;font-weight:700;font-family:'Noto Sans KR',sans-serif;cursor:pointer;}
+.invest-confirm:disabled{background:#ccc;cursor:not-allowed;}
+.invest-cancel{padding:11px 16px;border-radius:12px;border:1.5px solid var(--border);background:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:'Noto Sans KR',sans-serif;color:var(--muted);}
+
+/* ── 맵 사이드 패널 (방 구매) ── */
+#room-panel{position:fixed;left:-340px;top:50px;width:320px;height:calc(100vh - 50px);background:#fff;box-shadow:4px 0 24px rgba(0,0,0,.12);z-index:500;display:flex;flex-direction:column;transition:left .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;}
+#room-panel.open{left:0;}
+.rp-img{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:#F0EDE8;}
+.rp-body{padding:18px;}
+.rp-num{font-family:'Jua',sans-serif;font-size:20px;color:var(--hdk);margin-bottom:2px;}
+.rp-zone{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;margin-bottom:10px;}
+.rp-zone-1{background:#FFF8E8;color:#A87800;border:1px solid #E8C84A;}
+.rp-zone-2{background:#EAF6FB;color:#1A7A9A;border:1px solid #7EC8E3;}
+.rp-zone-3{background:#EEF8EE;color:#3A7A3A;border:1px solid #A8D8A8;}
+.rp-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #F0EDE8;font-size:12px;}
+.rp-row:last-of-type{border-bottom:none;}
+.rp-lbl{color:var(--muted);font-weight:500;}
+.rp-val{font-weight:700;color:var(--hdk);}
+.rp-buy-btn{width:100%;margin-top:14px;padding:13px;border-radius:14px;border:none;background:linear-gradient(135deg,var(--honey),var(--accent));color:#fff;font-size:14px;font-weight:700;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:all .2s;}
+.rp-buy-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 5px 18px rgba(224,120,32,.4);}
+.rp-buy-btn:disabled{background:#D0CECA;cursor:not-allowed;}
+.rp-insufficient{text-align:center;font-size:11px;color:#C44;margin-top:6px;font-weight:600;}
+.rp-own-badge{text-align:center;font-size:11px;color:var(--muted);margin-top:6px;}
+.rp-close{position:absolute;top:12px;right:12px;width:28px;height:28px;border-radius:50%;border:none;background:rgba(0,0,0,.15);color:#fff;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:1;}
+
+/* ── 구매 성공 팝업 ── */
+#buy-success-ov{display:none;position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:center;justify-content:center;}
+#buy-success-ov.show{display:flex;}
+.buy-success-box{background:#fff;border-radius:20px;padding:32px 28px;width:min(320px,88vw);text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.2);animation:popin .35s cubic-bezier(.34,1.56,.64,1);}
+.buy-success-icon{font-size:48px;margin-bottom:12px;}
+.buy-success-title{font-family:'Jua',sans-serif;font-size:20px;color:var(--hdk);margin-bottom:8px;}
+.buy-success-desc{font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:20px;}
+.buy-success-btn{padding:11px 28px;border-radius:14px;border:none;background:linear-gradient(135deg,var(--honey),var(--accent));color:#fff;font-size:13px;font-weight:700;font-family:'Noto Sans KR',sans-serif;cursor:pointer;}
+
 /* ── 방 선택 모달 ── */
 #room-select-ov{display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);align-items:center;justify-content:center;}
 #room-select-ov.show{display:flex;}
@@ -294,6 +369,10 @@ header{
     <img src="https://www.google.com/favicon.ico" alt="G"> LOG IN
   </button>
   <!-- 로그인 후 -->
+  <!-- HIVE 잔액 (로그인 후) -->
+  <div class="h-hive-badge" id="hive-badge" style="display:none;">
+    🍯 <span id="hive-bal">—</span> HIVE
+  </div>
   <div class="h-profile-wrap" id="profile-wrap" style="display:none;">
     <div class="h-profile-btn" id="profile-btn" onclick="toggleMenu()">
       <img id="profile-img" src="" alt="">
@@ -305,6 +384,7 @@ header{
       </div>
       <button class="h-dd-btn" onclick="openMakeRoom()">🏠 방 만들기</button>
       <button class="h-dd-btn" onclick="openEditRoom()">✏️ 방 수정하기</button>
+      <button class="h-dd-btn" onclick="openEstate()">🏘️ 부동산 관리하기</button>
       <div class="h-dd-sep"></div>
       <button class="h-dd-btn logout" onclick="signOut()">🚪 로그아웃</button>
     </div>
@@ -406,6 +486,70 @@ header{
     <div class="rs-sub" id="rs-sub">내 방 목록</div>
     <div class="rs-grid" id="rs-grid"></div>
     <button class="rs-close" onclick="closeRoomSelect()">취소</button>
+  </div>
+</div>
+
+<!-- 부동산 관리 모달 -->
+<div id="estate-ov">
+  <div class="estate-box">
+    <div class="estate-head">
+      <div class="estate-title">🏘️ 부동산 관리</div>
+      <div class="estate-bal">🍯 <span id="estate-bal-text">—</span> HIVE</div>
+    </div>
+    <div class="estate-sub" id="estate-sub">내 방 목록</div>
+    <div class="estate-grid" id="estate-grid"></div>
+    <button class="estate-close" onclick="closeEstate()">닫기</button>
+  </div>
+</div>
+
+<!-- 투자 팝업 -->
+<div id="invest-ov">
+  <div class="invest-box">
+    <div class="invest-title" id="invest-title">🍯 타일에 투자하기</div>
+    <div class="invest-info" id="invest-info">투자금만큼 타일 가치가 상승합니다</div>
+    <div class="invest-row">
+      <div class="invest-label">투자 금액 (HIVE)</div>
+      <input class="invest-input" id="invest-amount" type="number" min="0" value="0" oninput="onInvestInput()">
+      <div class="invest-spin">
+        <button onclick="adjustInvest(1)">▲</button>
+        <button onclick="adjustInvest(-1)">▼</button>
+      </div>
+    </div>
+    <div class="invest-result" id="invest-result">
+      현재 가치: <b id="ir-cur">—</b> HIVE<br>
+      투자 후 가치: <b id="ir-after">—</b> HIVE<br>
+      잔액: <b id="ir-bal">—</b> HIVE → <b id="ir-bal-after">—</b> HIVE
+    </div>
+    <div class="invest-btns">
+      <button class="invest-confirm" id="invest-confirm-btn" onclick="confirmInvest()">투자하기</button>
+      <button class="invest-cancel" onclick="closeInvest()">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- 맵 사이드 패널 (방 구매) -->
+<div id="room-panel">
+  <button class="rp-close" onclick="closeRoomPanel()">✕</button>
+  <img class="rp-img" id="rp-img" src="" alt="">
+  <div class="rp-body">
+    <div class="rp-num" id="rp-num">— 번 방</div>
+    <div class="rp-zone" id="rp-zone"></div>
+    <div class="rp-row"><span class="rp-lbl">현재 가치</span><span class="rp-val" id="rp-value">—</span></div>
+    <div class="rp-row"><span class="rp-lbl">소유자</span><span class="rp-val" id="rp-owner">—</span></div>
+    <div class="rp-row"><span class="rp-lbl">내 잔액</span><span class="rp-val" id="rp-mybal">—</span></div>
+    <button class="rp-buy-btn" id="rp-buy-btn" onclick="buyRoom()">구매하기</button>
+    <div class="rp-insufficient" id="rp-insufficient" style="display:none">잔액이 부족합니다</div>
+    <div class="rp-own-badge" id="rp-own-badge" style="display:none">내 방입니다</div>
+  </div>
+</div>
+
+<!-- 구매 성공 팝업 -->
+<div id="buy-success-ov">
+  <div class="buy-success-box">
+    <div class="buy-success-icon">🎉</div>
+    <div class="buy-success-title">구매 완료!</div>
+    <div class="buy-success-desc">타일을 성공적으로 구매했어요.<br>방 수정하기 메뉴에서<br>방을 수정해보세요.</div>
+    <button class="buy-success-btn" onclick="closeBuySuccess()">확인</button>
   </div>
 </div>
 
@@ -585,10 +729,14 @@ function setLoggedIn(user){
   document.getElementById('profile-img').src = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=F2B830&color=fff`;
   document.getElementById('dd-name').textContent = user.name;
   document.getElementById('dd-email').textContent = user.email;
+  document.getElementById('hive-badge').style.display='flex';
+  loadMyBalance();
 }
 function setLoggedOut(){
   document.getElementById('login-btn').style.display='flex';
   document.getElementById('profile-wrap').style.display='none';
+  document.getElementById('hive-badge').style.display='none';
+  MY_BALANCE = null;
   closeMenu();
 }
 function toggleMenu(){
@@ -616,7 +764,6 @@ function openMakeRoom(){
 async function openEditRoom(){
   closeMenu();
   if(!CURRENT_USER){ alert('로그인이 필요해요!'); return; }
-  // 내 방 목록 로드
   const res = await fetch(
     `${SUPA_URL}/rest/v1/rooms?email=eq.${encodeURIComponent(CURRENT_USER.email)}&order=room_number.asc`,
     { headers:{ 'apikey':SUPA_KEY, 'Authorization':`Bearer ${SUPA_KEY}` } }
@@ -625,33 +772,6 @@ async function openEditRoom(){
   showRoomSelect(rooms, 'edit');
 }
 
-function showRoomSelect(rooms, mode){
-  const grid = document.getElementById('rs-grid');
-  const title = document.getElementById('rs-title');
-  const sub = document.getElementById('rs-sub');
-  title.textContent = mode==='edit' ? '✏️ 수정할 방 선택' : '🏠 방 선택';
-  sub.textContent = `내 방 ${rooms.length}개`;
-  grid.innerHTML = '';
-  if(!rooms.length){
-    grid.innerHTML = '<div class="rs-empty">등록된 방이 없어요.<br>방 만들기로 첫 번째 방을 만들어보세요!</div>';
-  } else {
-    rooms.forEach(room => {
-      const imgUrl = `${SUPA_URL}/storage/v1/object/public/room-pic/${room.room_number}/room.jpg?t=${Date.now()}`;
-      const div = document.createElement('div');
-      div.className = 'rs-item';
-      div.innerHTML = `<img src="${imgUrl}" onerror="this.src=''" alt="방 ${room.room_number}"><div class="rs-item-num">${room.room_number}번 방</div>`;
-      div.onclick = () => {
-        closeRoomSelect();
-        if(mode==='edit') startEditRoom(room);
-      };
-      grid.appendChild(div);
-    });
-  }
-  document.getElementById('room-select-ov').classList.add('show');
-}
-function closeRoomSelect(){
-  document.getElementById('room-select-ov').classList.remove('show');
-}
 
 async function startEditRoom(room){
   EDIT_ROOM_NUM = room.room_number;
@@ -1403,7 +1523,13 @@ async function registerRoom(){
     layerOrder: { furniture: [...LAYER_ORDER.furniture], walldeco: [...LAYER_ORDER.walldeco] },
   });
   const twitterAvatar = `https://unavatar.io/x/${twitterId}`;
-  const dbPayload = { twitter_id: twitterId, occupied: 'Y', email, design_json: designJson, avatar_url: twitterAvatar, interest: SEL_INTEREST || '' };
+  const zonePrice = isEdit ? 0 : getZoneConfig(targetNum).price;
+  const dbPayload = {
+    twitter_id: twitterId, occupied: 'Y', email,
+    design_json: designJson, avatar_url: twitterAvatar,
+    interest: SEL_INTEREST || '',
+    ...(isEdit ? {} : { tile_value: zonePrice })
+  };
   const insRes = await fetch(
     isEdit
       ? `${SUPA_URL}/rest/v1/rooms?room_number=eq.${targetNum}`
@@ -1420,6 +1546,18 @@ async function registerRoom(){
     }
   );
   if(!insRes.ok){ alert('DB 오류: ' + await insRes.text()); rb.disabled=false; rb.textContent='✅ 맵에 등록하기'; return; }
+
+  // 신규 방 생성 시 HIVE 차감
+  if(!isEdit && MY_BALANCE !== null){
+    await fetch(
+      `${SUPA_URL}/rest/v1/user_balances?user_email=eq.${encodeURIComponent(email)}`,
+      { method:'PATCH',
+        headers:{ 'apikey':SUPA_KEY, 'Authorization':`Bearer ${CURRENT_USER?.token}`, 'Content-Type':'application/json' },
+        body: JSON.stringify({ balance: MY_BALANCE - zonePrice }) }
+    );
+    MY_BALANCE -= zonePrice;
+    updateBalanceUI();
+  }
 
   bar.style.width='100%'; st.textContent=isEdit?'✅ 수정 완료!':'✅ 등록 완료!'; await sleep(300);
   document.getElementById('png-thumb').src = pngUrl;
@@ -1564,6 +1702,24 @@ const SLOT_POS = [null,
   {q:0,r:18},{q:1,r:17},{q:2,r:16},{q:3,r:15},{q:4,r:14},{q:5,r:13},{q:6,r:12},{q:7,r:11},{q:8,r:10},{q:9,r:9}
 ];
 const ROOMS = {}; // Supabase에서 로드됨
+
+// ── ZONE 설정 ──
+const ZONE_CONFIG = {
+  1: { max: 37,   price: 300, tax: 3, border: '#E8C84A', label: 'ZONE 1' }, // 금색
+  2: { max: 91,   price: 200, tax: 2, border: '#7EC8E3', label: 'ZONE 2' }, // 하늘색
+  3: { max: 1000, price: 100, tax: 1, border: '#A8D8A8', label: 'ZONE 3' }, // 연두색
+};
+function getZone(num){
+  if(num <= 37)   return 1;
+  if(num <= 91)   return 2;
+  return 3;
+}
+function getZoneConfig(num){ return ZONE_CONFIG[getZone(num)]; }
+
+// ── 경제 상수 ──
+const DAILY_WAGE   = 1;   // 일당 HIVE
+const INIT_BALANCE = 300; // 최초 가입 지급 HIVE
+let MY_BALANCE = null;    // 현재 유저 잔액
 let SHOW_ROOM_NUMBERS = false; // Room No. 토글 상태
 
 const mCV=document.getElementById('map-cv');
@@ -1738,7 +1894,8 @@ function drawFilled(cx,cy,s,num,room){
   }
   mctx.restore();
   // 외곽선
-  mHex(cx,cy,s-.5); mctx.strokeStyle='#E8C84A'; mctx.lineWidth=2; mctx.stroke();
+  const zCfg = getZoneConfig(num);
+  mHex(cx,cy,s-.5); mctx.strokeStyle=zCfg.border; mctx.lineWidth=2.5; mctx.stroke();
   // reserved 방은 뱃지 없이 이미지만 표시
   if(room.reserved) return;
   // 프로필 사진 원형 뱃지 (왼쪽 위) — 스케일 애니메이션 적용
@@ -1795,7 +1952,7 @@ function drawFilled(cx,cy,s,num,room){
 async function loadRooms(){
   try {
     const res = await fetch(
-      `${SUPA_URL}/rest/v1/rooms?occupied=eq.Y&order=room_number.asc`,
+      `${SUPA_URL}/rest/v1/rooms?occupied=eq.Y&order=room_number.asc&select=*`,
       { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }
     );
     if(!res.ok) throw new Error(await res.text());
@@ -1810,10 +1967,12 @@ async function loadRooms(){
       img.onload = () => {
         ROOMS[row.room_number] = {
           img,
-          twitterId: row.twitter_id,
-          avatarUrl: row.avatar_url || '',
-          interest: row.interest || '',
-          reserved: row.reserved || false
+          twitterId:  row.twitter_id,
+          avatarUrl:  row.avatar_url  || '',
+          interest:   row.interest    || '',
+          reserved:   row.reserved    || false,
+          tileValue:  row.tile_value  || 0,
+          ownerEmail: row.email       || ''
         };
         if(row.avatar_url) loadAvatarImg(row.avatar_url);
         resolve();
@@ -1857,10 +2016,12 @@ async function loadOneRoom(row){
     img.onload = () => {
       ROOMS[row.room_number] = {
         img,
-        twitterId: row.twitter_id,
-        avatarUrl: row.avatar_url || '',
-        interest:  row.interest  || '',
-        reserved:  row.reserved  || false
+        twitterId:  row.twitter_id,
+        avatarUrl:  row.avatar_url  || '',
+        interest:   row.interest    || '',
+        reserved:   row.reserved    || false,
+        tileValue:  row.tile_value  || 0,
+        ownerEmail: row.email       || ''
       };
       if(row.avatar_url) loadAvatarImg(row.avatar_url);
       drawMap();
@@ -1954,6 +2115,234 @@ function startStarAnim(){
 }
 function stopStarAnim(){ if(starRAF){ cancelAnimationFrame(starRAF); starRAF=null; } }
 
+// ── HIVE 잔액 로드 & 표시 ──
+async function loadMyBalance(){
+  if(!CURRENT_USER) return;
+  try {
+    const res = await fetch(
+      `${SUPA_URL}/rest/v1/user_balances?user_email=eq.${encodeURIComponent(CURRENT_USER.email)}&select=balance`,
+      { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${CURRENT_USER.token}` } }
+    );
+    if(!res.ok) return;
+    const data = await res.json();
+    if(data && data.length > 0){
+      MY_BALANCE = data[0].balance;
+    } else {
+      // 최초 가입: 300 HIVE 지급
+      await initUserBalance();
+    }
+    updateBalanceUI();
+  } catch(e){ console.warn('잔액 로드 실패:', e); }
+}
+
+async function initUserBalance(){
+  if(!CURRENT_USER) return;
+  const res = await fetch(`${SUPA_URL}/rest/v1/user_balances`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': `Bearer ${CURRENT_USER.token}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation'
+    },
+    body: JSON.stringify({
+      user_email: CURRENT_USER.email,
+      balance: INIT_BALANCE,
+      last_daily_wage: new Date().toISOString().split('T')[0]
+    })
+  });
+  if(res.ok){ MY_BALANCE = INIT_BALANCE; }
+}
+
+function updateBalanceUI(){
+  const el = document.getElementById('hive-bal');
+  if(el) el.textContent = MY_BALANCE !== null ? MY_BALANCE.toLocaleString() : '—';
+}
+
+// ══════════════════════════════════════
+// 부동산 관리
+// ══════════════════════════════════════
+async function openEstate(){
+  closeMenu();
+  if(!CURRENT_USER){ alert('로그인이 필요해요!'); return; }
+  const res = await fetch(
+    `${SUPA_URL}/rest/v1/rooms?email=eq.${encodeURIComponent(CURRENT_USER.email)}&order=room_number.asc&select=room_number,tile_value`,
+    { headers:{ 'apikey':SUPA_KEY, 'Authorization':`Bearer ${CURRENT_USER.token||SUPA_KEY}` } }
+  );
+  const rooms = await res.json();
+  const grid = document.getElementById('estate-grid');
+  const sub  = document.getElementById('estate-sub');
+  document.getElementById('estate-bal-text').textContent = MY_BALANCE !== null ? MY_BALANCE.toLocaleString() : '—';
+  sub.textContent = `내 방 ${(rooms||[]).length}개`;
+  grid.innerHTML = '';
+  if(!rooms || !rooms.length){
+    grid.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px">등록된 방이 없어요.</div>';
+  } else {
+    rooms.forEach(room => {
+      const imgUrl = `${SUPA_URL}/storage/v1/object/public/room-pic/${room.room_number}/room.jpg?t=${Date.now()}`;
+      const div = document.createElement('div');
+      div.className = 'estate-item';
+      div.innerHTML = `
+        <img src="${imgUrl}" onerror="this.style.background='#EDE5D8'" alt="">
+        <div class="estate-item-info">
+          <div class="estate-item-num">${room.room_number}번 방</div>
+          <div class="estate-item-val">🍯 ${(room.tile_value||0).toLocaleString()} HIVE</div>
+        </div>`;
+      div.onclick = () => openInvest(room);
+      grid.appendChild(div);
+    });
+  }
+  document.getElementById('estate-ov').classList.add('show');
+}
+function closeEstate(){ document.getElementById('estate-ov').classList.remove('show'); }
+
+// ══════════════════════════════════════
+// 투자 팝업
+// ══════════════════════════════════════
+let INVEST_ROOM = null;
+function openInvest(room){
+  INVEST_ROOM = room;
+  document.getElementById('invest-title').textContent = `🍯 ${room.room_number}번 방 투자하기`;
+  document.getElementById('invest-amount').max = MY_BALANCE || 0;
+  document.getElementById('invest-amount').value = 0;
+  updateInvestPreview();
+  document.getElementById('invest-ov').classList.add('show');
+}
+function closeInvest(){ document.getElementById('invest-ov').classList.remove('show'); }
+function adjustInvest(d){
+  const inp = document.getElementById('invest-amount');
+  const max = MY_BALANCE || 0;
+  inp.value = Math.max(0, Math.min(max, parseInt(inp.value||0) + d));
+  updateInvestPreview();
+}
+function onInvestInput(){
+  const inp = document.getElementById('invest-amount');
+  const max = MY_BALANCE || 0;
+  inp.value = Math.max(0, Math.min(max, parseInt(inp.value)||0));
+  updateInvestPreview();
+}
+function updateInvestPreview(){
+  const amt   = parseInt(document.getElementById('invest-amount').value)||0;
+  const cur   = INVEST_ROOM ? (INVEST_ROOM.tile_value||0) : 0;
+  const bal   = MY_BALANCE || 0;
+  document.getElementById('ir-cur').textContent     = cur.toLocaleString();
+  document.getElementById('ir-after').textContent   = (cur+amt).toLocaleString();
+  document.getElementById('ir-bal').textContent     = bal.toLocaleString();
+  document.getElementById('ir-bal-after').textContent = (bal-amt).toLocaleString();
+  document.getElementById('invest-confirm-btn').disabled = amt <= 0;
+}
+async function confirmInvest(){
+  const amt = parseInt(document.getElementById('invest-amount').value)||0;
+  if(amt <= 0 || amt > MY_BALANCE) return;
+  const btn = document.getElementById('invest-confirm-btn');
+  btn.disabled = true; btn.textContent = '처리 중...';
+  const newVal = (INVEST_ROOM.tile_value||0) + amt;
+  const newBal = MY_BALANCE - amt;
+  // 타일 가치 업데이트
+  await fetch(`${SUPA_URL}/rest/v1/rooms?room_number=eq.${INVEST_ROOM.room_number}`, {
+    method:'PATCH',
+    headers:{ 'apikey':SUPA_KEY,'Authorization':`Bearer ${CURRENT_USER.token}`,'Content-Type':'application/json' },
+    body: JSON.stringify({ tile_value: newVal })
+  });
+  // 잔액 차감
+  await fetch(`${SUPA_URL}/rest/v1/user_balances?user_email=eq.${encodeURIComponent(CURRENT_USER.email)}`, {
+    method:'PATCH',
+    headers:{ 'apikey':SUPA_KEY,'Authorization':`Bearer ${CURRENT_USER.token}`,'Content-Type':'application/json' },
+    body: JSON.stringify({ balance: newBal })
+  });
+  MY_BALANCE = newBal;
+  updateBalanceUI();
+  INVEST_ROOM.tile_value = newVal;
+  closeInvest();
+  // estate 잔액 갱신
+  document.getElementById('estate-bal-text').textContent = MY_BALANCE.toLocaleString();
+  // 해당 카드 가치 갱신
+  document.querySelectorAll('.estate-item-val').forEach(el => {
+    if(el.closest('.estate-item')?.querySelector('.estate-item-num')?.textContent === `${INVEST_ROOM.room_number}번 방`)
+      el.textContent = `🍯 ${newVal.toLocaleString()} HIVE`;
+  });
+  btn.disabled = false; btn.textContent = '투자하기';
+  alert(`✅ ${amt} HIVE 투자 완료!
+타일 가치: ${newVal} HIVE`);
+}
+
+// ══════════════════════════════════════
+// 맵 사이드 패널 (방 구매)
+// ══════════════════════════════════════
+let PANEL_ROOM_NUM = null;
+function openRoomPanel(num){
+  const room = ROOMS[num];
+  if(!room) return;
+  PANEL_ROOM_NUM = num;
+  const zCfg = getZoneConfig(num);
+  const imgUrl = `${SUPA_URL}/storage/v1/object/public/room-pic/${num}/room.jpg?t=${Date.now()}`;
+  document.getElementById('rp-img').src = imgUrl;
+  document.getElementById('rp-num').textContent = `${num}번 방`;
+  const zoneEl = document.getElementById('rp-zone');
+  zoneEl.textContent = zCfg.label;
+  zoneEl.className = `rp-zone rp-zone-${getZone(num)}`;
+  document.getElementById('rp-value').textContent = `${(room.tileValue||0).toLocaleString()} HIVE`;
+  document.getElementById('rp-owner').textContent = room.twitterId ? `@${room.twitterId}` : '—';
+  const myBal = MY_BALANCE !== null ? MY_BALANCE : 0;
+  document.getElementById('rp-mybal').textContent = `${myBal.toLocaleString()} HIVE`;
+  const isOwn = CURRENT_USER && CURRENT_USER.email && room.ownerEmail === CURRENT_USER.email;
+  const price = room.tileValue || 0;
+  const canBuy = CURRENT_USER && !isOwn && !room.reserved && myBal >= price;
+  const buyBtn = document.getElementById('rp-buy-btn');
+  const insuf  = document.getElementById('rp-insufficient');
+  const ownBadge = document.getElementById('rp-own-badge');
+  if(isOwn){
+    buyBtn.style.display = 'none';
+    insuf.style.display = 'none';
+    ownBadge.style.display = 'block';
+  } else if(room.reserved){
+    buyBtn.style.display = 'none';
+    insuf.style.display = 'none';
+    ownBadge.style.display = 'none';
+  } else {
+    buyBtn.style.display = 'block';
+    ownBadge.style.display = 'none';
+    buyBtn.disabled = !canBuy || !CURRENT_USER;
+    insuf.style.display = (!CURRENT_USER || (!canBuy && !isOwn && !room.reserved)) ? 'block' : 'none';
+    if(!CURRENT_USER) insuf.textContent = '로그인이 필요합니다';
+    else insuf.textContent = '잔액이 부족합니다';
+  }
+  document.getElementById('room-panel').classList.add('open');
+}
+function closeRoomPanel(){
+  document.getElementById('room-panel').classList.remove('open');
+  PANEL_ROOM_NUM = null;
+}
+async function buyRoom(){
+  if(!CURRENT_USER || PANEL_ROOM_NUM === null) return;
+  const room = ROOMS[PANEL_ROOM_NUM];
+  if(!room || room.reserved) return;
+  const price = room.tileValue || 0;
+  if(MY_BALANCE < price){ alert('잔액이 부족합니다'); return; }
+  const btn = document.getElementById('rp-buy-btn');
+  btn.disabled = true; btn.textContent = '처리 중...';
+  // 1. rooms 테이블 owner_email 변경
+  const r1 = await fetch(`${SUPA_URL}/rest/v1/rooms?room_number=eq.${PANEL_ROOM_NUM}`, {
+    method:'PATCH',
+    headers:{ 'apikey':SUPA_KEY,'Authorization':`Bearer ${CURRENT_USER.token}`,'Content-Type':'application/json' },
+    body: JSON.stringify({ owner_email: CURRENT_USER.email, email: CURRENT_USER.email })
+  });
+  // 2. 구매자 잔액 차감
+  const newBal = MY_BALANCE - price;
+  await fetch(`${SUPA_URL}/rest/v1/user_balances?user_email=eq.${encodeURIComponent(CURRENT_USER.email)}`, {
+    method:'PATCH',
+    headers:{ 'apikey':SUPA_KEY,'Authorization':`Bearer ${CURRENT_USER.token}`,'Content-Type':'application/json' },
+    body: JSON.stringify({ balance: newBal })
+  });
+  MY_BALANCE = newBal;
+  updateBalanceUI();
+  room.ownerEmail = CURRENT_USER.email;
+  closeRoomPanel();
+  document.getElementById('buy-success-ov').classList.add('show');
+  btn.disabled = false; btn.textContent = '구매하기';
+}
+function closeBuySuccess(){ document.getElementById('buy-success-ov').classList.remove('show'); }
+
 function toggleRoomNumbers(){
   SHOW_ROOM_NUMBERS = !SHOW_ROOM_NUMBERS;
   const btn = document.getElementById('room-num-btn');
@@ -2021,17 +2410,29 @@ mCV.addEventListener('click',e=>{
   const rect=mCV.getBoundingClientRect();
   const mx=e.clientX-rect.left, my=e.clientY-rect.top;
   const s=HEX*mScale;
-  for(let num=1;num<=50;num++){
-    const room=ROOMS[num]; if(!room) continue;
+  // 트위터 뱃지 클릭 우선
+  for(let num=1;num<=1000;num++){
+    const room=ROOMS[num]; if(!room || room.reserved) continue;
     const pos=SLOT_POS[num]; if(!pos) continue;
     const{x:cx,y:cy}=ap(pos.q,pos.r);
     const bR=Math.max(10,s*.16), bx=cx-s*.58, by=cy-s*.56;
-    const dist=Math.sqrt((mx-bx)**2+(my-by)**2);
-    if(dist<=bR+4){
-      window.open(`https://x.com/${room.twitterId}`,'_blank');
+    if(Math.sqrt((mx-bx)**2+(my-by)**2)<=bR+4){
+      if(room.twitterId) window.open(`https://x.com/${room.twitterId}`,'_blank');
       return;
     }
   }
+  // 헥사곤 타일 클릭 → 사이드 패널
+  for(let num=1;num<=1000;num++){
+    const room=ROOMS[num]; if(!room) continue;
+    const pos=SLOT_POS[num]; if(!pos) continue;
+    const{x:cx,y:cy}=ap(pos.q,pos.r);
+    if(Math.sqrt((mx-cx)**2+(my-cy)**2)<s*0.92){
+      openRoomPanel(num);
+      return;
+    }
+  }
+  // 빈 곳 클릭 → 패널 닫기
+  closeRoomPanel();
 });
 
 // 초기화
