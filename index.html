@@ -594,6 +594,7 @@ header{
 // SUPABASE 설정
 // ══════════════════════════════════════
 const SUPA_URL = 'https://rnnzawmbxjgbwkiiypxl.supabase.co';
+const EDGE_URL = 'https://rnnzawmbxjgbwkiiypxl.supabase.co/functions/v1';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJubnphd21ieGpnYndraWl5cHhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2OTgwNjEsImV4cCI6MjA4ODI3NDA2MX0.lsoYZv8fjVyuJ9qXdUeu_-8aQQ9ds7uRufr6rNYc-_0';
 // ══════════════════════════════════════
 // AUTH (Supabase Google OAuth via PKCE)
@@ -1555,25 +1556,25 @@ async function registerRoom(){
   );
   if(!insRes.ok){ alert('DB 오류: ' + await insRes.text()); rb.disabled=false; rb.textContent='✅ 맵에 등록하기'; return; }
 
-  // 신규 방 생성 시 HIVE 차감 + room_balances 초기화
-  if(!isEdit && MY_BALANCE !== null){
-    const newUserBal = MY_BALANCE - zonePrice;
-    await Promise.all([
-      // 유저 잔액 차감
-      fetch(`${SUPA_URL}/rest/v1/user_balances?user_email=eq.${encodeURIComponent(email)}`, {
-        method:'PATCH',
-        headers:{ 'apikey':SUPA_KEY, 'Authorization':`Bearer ${CURRENT_USER?.token}`, 'Content-Type':'application/json' },
-        body: JSON.stringify({ balance: newUserBal })
-      }),
-      // room_balances 생성 (타일 초기 가치 = zonePrice)
-      fetch(`${SUPA_URL}/rest/v1/room_balances`, {
-        method:'POST',
-        headers:{ 'apikey':SUPA_KEY, 'Authorization':`Bearer ${CURRENT_USER?.token}`, 'Content-Type':'application/json', 'Prefer':'resolution=merge-duplicates' },
-        body: JSON.stringify({ room_number: targetNum, balance: zonePrice })
-      })
-    ]);
-    MY_BALANCE = newUserBal;
-    ROOM_BALANCES[targetNum] = zonePrice;
+  // 신규 방 생성 시 Edge Function으로 잔액 처리 (서버 검증)
+  if(!isEdit){
+    st.textContent='💰 HIVE 처리 중...'; bar.style.width='90%';
+    const efRes = await fetch(`${EDGE_URL}/create-room`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${CURRENT_USER.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ room_number: targetNum, zone_price: zonePrice })
+    });
+    const efData = await efRes.json();
+    if(!efRes.ok){
+      alert(`HIVE 처리 오류: ${efData.error}\n보유: ${efData.balance ?? MY_BALANCE} HIVE / 필요: ${efData.required ?? zonePrice} HIVE`);
+      rb.disabled=false; rb.textContent='✅ 맵에 등록하기';
+      return;
+    }
+    MY_BALANCE = efData.new_balance;
+    ROOM_BALANCES[targetNum] = efData.room_balance;
     updateBalanceUI();
   }
 
@@ -2262,23 +2263,20 @@ async function confirmInvest(){
   if(amt <= 0 || amt > MY_BALANCE) return;
   const btn = document.getElementById('invest-confirm-btn');
   btn.disabled = true; btn.textContent = '처리 중...';
-  const curRoomBal = ROOM_BALANCES[INVEST_ROOM.room_number] || 0;
-  const newRoomBal = curRoomBal + amt;
-  const newUserBal = MY_BALANCE - amt;
-  await Promise.all([
-    // room_balances 증가 (upsert)
-    fetch(`${SUPA_URL}/rest/v1/room_balances?room_number=eq.${INVEST_ROOM.room_number}`, {
-      method:'PATCH',
-      headers:{ 'apikey':SUPA_KEY,'Authorization':`Bearer ${CURRENT_USER.token}`,'Content-Type':'application/json' },
-      body: JSON.stringify({ balance: newRoomBal, updated_at: new Date().toISOString() })
-    }),
-    // user_balances 차감
-    fetch(`${SUPA_URL}/rest/v1/user_balances?user_email=eq.${encodeURIComponent(CURRENT_USER.email)}`, {
-      method:'PATCH',
-      headers:{ 'apikey':SUPA_KEY,'Authorization':`Bearer ${CURRENT_USER.token}`,'Content-Type':'application/json' },
-      body: JSON.stringify({ balance: newUserBal })
-    })
-  ]);
+  // Edge Function으로 서버 검증 처리
+  const efRes = await fetch(`${EDGE_URL}/invest-room`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${CURRENT_USER.token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ room_number: INVEST_ROOM.room_number, amount: amt })
+  });
+  const efData = await efRes.json();
+  if(!efRes.ok){
+    alert(`투자 실패: ${efData.error}`);
+    btn.disabled = false; btn.textContent = '투자하기';
+    return;
+  }
+  const newRoomBal = efData.new_room_balance;
+  const newUserBal = efData.new_user_balance;
   ROOM_BALANCES[INVEST_ROOM.room_number] = newRoomBal;
   if(ROOMS[INVEST_ROOM.room_number]) ROOMS[INVEST_ROOM.room_number].tileValue = newRoomBal;
   MY_BALANCE = newUserBal;
@@ -2364,33 +2362,25 @@ async function buyRoom(){
   if(MY_BALANCE < price){ alert('잔액이 부족합니다'); return; }
   const btn = document.getElementById('rp-buy-btn');
   btn.disabled = true; btn.textContent = '처리 중...';
-  const newUserBal = MY_BALANCE - price;
-  await Promise.all([
-    // 1. rooms 소유자 변경
-    fetch(`${SUPA_URL}/rest/v1/rooms?room_number=eq.${PANEL_ROOM_NUM}`, {
-      method:'PATCH',
-      headers:{ 'apikey':SUPA_KEY,'Authorization':`Bearer ${CURRENT_USER.token}`,'Content-Type':'application/json' },
-      body: JSON.stringify({ email: CURRENT_USER.email })
-    }),
-    // 2. 구매자 잔액 차감
-    fetch(`${SUPA_URL}/rest/v1/user_balances?user_email=eq.${encodeURIComponent(CURRENT_USER.email)}`, {
-      method:'PATCH',
-      headers:{ 'apikey':SUPA_KEY,'Authorization':`Bearer ${CURRENT_USER.token}`,'Content-Type':'application/json' },
-      body: JSON.stringify({ balance: newUserBal })
-    })
-    // ※ 판매자 송금은 Edge Function으로 처리 예정 (현재는 구매자 차감만)
-  ]);
-  // room_balances가 0이었다면 ZONE 가격으로 초기화
-  if(!roomBal || roomBal === 0){
-    await fetch(`${SUPA_URL}/rest/v1/room_balances?room_number=eq.${PANEL_ROOM_NUM}`, {
-      method:'PATCH',
-      headers:{ 'apikey':SUPA_KEY,'Authorization':`Bearer ${CURRENT_USER.token}`,'Content-Type':'application/json' },
-      body: JSON.stringify({ balance: price, updated_at: new Date().toISOString() })
-    });
+  // Edge Function으로 서버 검증 처리 (판매자 송금도 포함)
+  const efRes = await fetch(`${EDGE_URL}/buy-room`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${CURRENT_USER.token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ room_number: PANEL_ROOM_NUM })
+  });
+  const efData = await efRes.json();
+  if(!efRes.ok){
+    alert(`구매 실패: ${efData.error}`);
+    btn.disabled = false; btn.textContent = '구매하기';
+    return;
   }
-  MY_BALANCE = newUserBal;
-  ROOM_BALANCES[PANEL_ROOM_NUM] = price;
-  if(ROOMS[PANEL_ROOM_NUM]) ROOMS[PANEL_ROOM_NUM].tileValue = price;
+  MY_BALANCE = efData.new_buyer_balance;
+  ROOM_BALANCES[PANEL_ROOM_NUM] = efData.price;
+  if(ROOMS[PANEL_ROOM_NUM]){
+    ROOMS[PANEL_ROOM_NUM].tileValue   = efData.price;
+    ROOMS[PANEL_ROOM_NUM].ownerEmail  = CURRENT_USER.email;
+    ROOMS[PANEL_ROOM_NUM].creatorEmail = CURRENT_USER.email;
+  }
   if(room) room.ownerEmail = CURRENT_USER.email;
   updateBalanceUI();
   closeRoomPanel();
