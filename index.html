@@ -1464,6 +1464,24 @@ const mCV=document.getElementById('map-cv');
 const mctx=mCV.getContext('2d');
 let mW=0,mH=0,HEX=58,mScale=1,mOX=0,mOY=0;
 let isDrag=false,dSt={x:0,y:0},dOff={x:0,y:0};
+
+// ── 우주 배경 별 데이터 (1회 생성) ──
+const STARS = Array.from({length: 280}, () => ({
+  x: Math.random(),  // 0~1 비율 (resizeMap 시 재계산)
+  y: Math.random(),
+  r: Math.random() * 1.6 + 0.2,
+  a: Math.random() * 0.7 + 0.3,
+  twinkle: Math.random() * Math.PI * 2  // 초기 위상
+}));
+// 성운 블롭 (배경 장식)
+const NEBULAS = Array.from({length: 5}, () => ({
+  x: Math.random(), y: Math.random(),
+  rx: Math.random() * 0.18 + 0.08,
+  ry: Math.random() * 0.12 + 0.06,
+  hue: [240,260,200,280,220][Math.floor(Math.random()*5)],
+  a: Math.random() * 0.07 + 0.03
+}));
+let starTick = 0;
 let MAP_HOVER={num:null,bx:0,by:0,bR:0}; // 호버 중인 방 뱃지
 let BADGE_SCALE={}; // 각 방 뱃지 현재 스케일 (1.0 ~ 2.0)
 let BADGE_RAF=null; // requestAnimationFrame ID
@@ -1548,9 +1566,41 @@ function drawCircleImg(ctx, img, cx, cy, r){
 
 function drawMap(){
   mctx.clearRect(0,0,mW,mH);
-  const bg=mctx.createRadialGradient(mW/2,mH/2,0,mW/2,mH/2,Math.max(mW,mH)*.7);
-  bg.addColorStop(0,'#F0F2F8');bg.addColorStop(1,'#E4E8F0');
-  mctx.fillStyle=bg;mctx.fillRect(0,0,mW,mH);
+
+  // ── 우주 배경 ──
+  // 딥 스페이스 그라디언트
+  const bg = mctx.createRadialGradient(mW*.4,mH*.35,0, mW*.5,mH*.5,Math.max(mW,mH)*.85);
+  bg.addColorStop(0,'#1a1240');
+  bg.addColorStop(0.4,'#0d0820');
+  bg.addColorStop(1,'#050310');
+  mctx.fillStyle=bg; mctx.fillRect(0,0,mW,mH);
+
+  // 성운
+  starTick += 0.008;
+  NEBULAS.forEach(n=>{
+    const gx=n.x*mW, gy=n.y*mH;
+    const gr=mctx.createRadialGradient(gx,gy,0,gx,gy,n.rx*mW);
+    gr.addColorStop(0,`hsla(${n.hue},70%,60%,${n.a})`);
+    gr.addColorStop(1,'transparent');
+    mctx.save();
+    mctx.scale(1, n.ry/n.rx);
+    mctx.fillStyle=gr;
+    mctx.beginPath();
+    mctx.arc(gx, gy*(n.rx/n.ry), n.rx*mW, 0, Math.PI*2);
+    mctx.fill();
+    mctx.restore();
+  });
+
+  // 별 (반짝임)
+  STARS.forEach(st=>{
+    const a = st.a * (0.6 + 0.4*Math.sin(starTick*1.5 + st.twinkle));
+    mctx.beginPath();
+    mctx.arc(st.x*mW, st.y*mH, st.r, 0, Math.PI*2);
+    mctx.fillStyle=`rgba(255,255,255,${a.toFixed(2)})`;
+    mctx.fill();
+  });
+
+  // ── 방 렌더 (채워진 방만) ──
   const s=HEX*mScale;
   const sorted=[...Array(51).keys()].slice(1).sort((a,b)=>{const pa=SLOT_POS[a],pb=SLOT_POS[b];return(pa.r-pb.r)||(pa.q-pb.q);});
   sorted.forEach(num=>{
@@ -1559,7 +1609,7 @@ function drawMap(){
     if(cx<-s*2||cx>mW+s*2||cy<-s*2||cy>mH+s*2)return;
     const room=ROOMS[num];
     if(room) drawFilled(cx,cy,s,num,room);
-    else drawEmpty(cx,cy,s,num);
+    // 빈 방은 렌더하지 않음
   });
 }
 
@@ -1739,19 +1789,16 @@ function subscribeRooms(){
   connect();
 }
 
-function drawEmpty(cx,cy,s,num){
-  const vT={x:cx,y:cy-s},vBL={x:cx-s*Math.sqrt(3)/2,y:cy+s*.5},vBR={x:cx+s*Math.sqrt(3)/2,y:cy+s*.5};
-  const vTL={x:cx-s*Math.sqrt(3)/2,y:cy-s*.5},vTR={x:cx+s*Math.sqrt(3)/2,y:cy-s*.5},vB={x:cx,y:cy+s};
-  mctx.save();mHex(cx,cy,s-.5);mctx.clip();
-  [[{x:cx,y:cy},vT,vTL,vBL,'#F2F6FB'],[{x:cx,y:cy},vT,vTR,vBR,'#F8FAFB'],[{x:cx,y:cy},vBL,vB,vBR,'#EEF2F8']].forEach(pts=>{
-    const col=pts.pop();mctx.beginPath();pts.forEach((p,i)=>i?mctx.lineTo(p.x,p.y):mctx.moveTo(p.x,p.y));mctx.closePath();mctx.fillStyle=col;mctx.fill();
-  });mctx.restore();
-  mHex(cx,cy,s-.5);mctx.save();mctx.setLineDash([6,4]);mctx.strokeStyle='#C8D8E8';mctx.lineWidth=1.5;mctx.stroke();mctx.restore();
-  mctx.save();mctx.strokeStyle='rgba(180,100,100,.38)';mctx.lineWidth=Math.max(.6,s*.012);
-  [[{x:cx,y:cy},vT],[{x:cx,y:cy},vBL],[{x:cx,y:cy},vBR]].forEach(([a,b])=>{mctx.beginPath();mctx.moveTo(a.x,a.y);mctx.lineTo(b.x,b.y);mctx.stroke();});mctx.restore();
-  mctx.font=`bold ${Math.max(14,s*.3)}px 'Jua',sans-serif`;mctx.textAlign='center';mctx.textBaseline='middle';mctx.fillStyle='#D8D8D8';mctx.fillText(num,cx,cy-s*.06);
-  mctx.font=`${Math.max(8,s*.11)}px 'Noto Sans KR',sans-serif`;mctx.fillStyle='#C8C8C8';mctx.fillText('빈 방',cx,cy+s*.25);
+// drawEmpty 제거됨 — 빈 방은 표시하지 않음
+
+// 별 반짝임 애니메이션 루프
+let starRAF = null;
+function startStarAnim(){
+  if(starRAF) return;
+  function tick(){ starRAF = requestAnimationFrame(tick); drawMap(); }
+  starRAF = requestAnimationFrame(tick);
 }
+function stopStarAnim(){ if(starRAF){ cancelAnimationFrame(starRAF); starRAF=null; } }
 
 function zoomIn(){mScale=Math.min(mScale*1.2,3);drawMap();}
 function zoomOut(){mScale=Math.max(mScale/1.2,.3);drawMap();}
@@ -1827,6 +1874,7 @@ mCV.addEventListener('click',e=>{
 
 // 초기화
 window.addEventListener('resize',resizeMap);
+startStarAnim(); // 별 반짝임 시작
 renderRoom(); updateProg(); resizeMap();
 initAuth();    // Google 로그인 상태 복원
 loadAssets();  // Supabase에서 에셋 로드
