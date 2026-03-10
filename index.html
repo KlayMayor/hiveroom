@@ -1527,8 +1527,7 @@ async function registerRoom(){
   const dbPayload = {
     twitter_id: twitterId, occupied: 'Y', email,
     design_json: designJson, avatar_url: twitterAvatar,
-    interest: SEL_INTEREST || '',
-    ...(isEdit ? {} : { tile_value: zonePrice })
+    interest: SEL_INTEREST || ''
   };
   const insRes = await fetch(
     isEdit
@@ -1547,15 +1546,25 @@ async function registerRoom(){
   );
   if(!insRes.ok){ alert('DB 오류: ' + await insRes.text()); rb.disabled=false; rb.textContent='✅ 맵에 등록하기'; return; }
 
-  // 신규 방 생성 시 HIVE 차감
+  // 신규 방 생성 시 HIVE 차감 + room_balances 초기화
   if(!isEdit && MY_BALANCE !== null){
-    await fetch(
-      `${SUPA_URL}/rest/v1/user_balances?user_email=eq.${encodeURIComponent(email)}`,
-      { method:'PATCH',
+    const newUserBal = MY_BALANCE - zonePrice;
+    await Promise.all([
+      // 유저 잔액 차감
+      fetch(`${SUPA_URL}/rest/v1/user_balances?user_email=eq.${encodeURIComponent(email)}`, {
+        method:'PATCH',
         headers:{ 'apikey':SUPA_KEY, 'Authorization':`Bearer ${CURRENT_USER?.token}`, 'Content-Type':'application/json' },
-        body: JSON.stringify({ balance: MY_BALANCE - zonePrice }) }
-    );
-    MY_BALANCE -= zonePrice;
+        body: JSON.stringify({ balance: newUserBal })
+      }),
+      // room_balances 생성 (타일 초기 가치 = zonePrice)
+      fetch(`${SUPA_URL}/rest/v1/room_balances`, {
+        method:'POST',
+        headers:{ 'apikey':SUPA_KEY, 'Authorization':`Bearer ${CURRENT_USER?.token}`, 'Content-Type':'application/json', 'Prefer':'resolution=merge-duplicates' },
+        body: JSON.stringify({ room_number: targetNum, balance: zonePrice })
+      })
+    ]);
+    MY_BALANCE = newUserBal;
+    ROOM_BALANCES[targetNum] = zonePrice;
     updateBalanceUI();
   }
 
@@ -1720,6 +1729,7 @@ function getZoneConfig(num){ return ZONE_CONFIG[getZone(num)]; }
 const DAILY_WAGE   = 1;   // 일당 HIVE
 const INIT_BALANCE = 300; // 최초 가입 지급 HIVE
 let MY_BALANCE = null;    // 현재 유저 잔액
+const ROOM_BALANCES = {}; // { room_number: balance } 캐시
 let SHOW_ROOM_NUMBERS = false; // Room No. 토글 상태
 
 const mCV=document.getElementById('map-cv');
@@ -1951,10 +1961,15 @@ function drawFilled(cx,cy,s,num,room){
 // ── Supabase에서 기존 방 로드 ──
 async function loadRooms(){
   try {
-    const res = await fetch(
-      `${SUPA_URL}/rest/v1/rooms?occupied=eq.Y&order=room_number.asc&select=*`,
-      { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }
-    );
+    // rooms + room_balances 병렬 로드
+    const [res, balRes] = await Promise.all([
+      fetch(`${SUPA_URL}/rest/v1/rooms?occupied=eq.Y&order=room_number.asc&select=*`,
+        { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }),
+      fetch(`${SUPA_URL}/rest/v1/room_balances?select=room_number,balance`,
+        { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } })
+    ]);
+    const balData = balRes.ok ? await balRes.json() : [];
+    (balData||[]).forEach(b => { ROOM_BALANCES[b.room_number] = b.balance; });
     if(!res.ok) throw new Error(await res.text());
     const data = await res.json();
     if(!data || data.length === 0) return;
@@ -1971,7 +1986,7 @@ async function loadRooms(){
           avatarUrl:  row.avatar_url  || '',
           interest:   row.interest    || '',
           reserved:   row.reserved    || false,
-          tileValue:  row.tile_value  || 0,
+          tileValue:  ROOM_BALANCES[row.room_number] || 0,
           ownerEmail: row.email       || ''
         };
         if(row.avatar_url) loadAvatarImg(row.avatar_url);
@@ -2020,7 +2035,7 @@ async function loadOneRoom(row){
         avatarUrl:  row.avatar_url  || '',
         interest:   row.interest    || '',
         reserved:   row.reserved    || false,
-        tileValue:  row.tile_value  || 0,
+        tileValue:  ROOM_BALANCES[row.room_number] || 0,
         ownerEmail: row.email       || ''
       };
       if(row.avatar_url) loadAvatarImg(row.avatar_url);
@@ -2166,7 +2181,7 @@ async function openEstate(){
   closeMenu();
   if(!CURRENT_USER){ alert('로그인이 필요해요!'); return; }
   const res = await fetch(
-    `${SUPA_URL}/rest/v1/rooms?email=eq.${encodeURIComponent(CURRENT_USER.email)}&order=room_number.asc&select=room_number,tile_value`,
+    `${SUPA_URL}/rest/v1/rooms?email=eq.${encodeURIComponent(CURRENT_USER.email)}&order=room_number.asc&select=room_number`,
     { headers:{ 'apikey':SUPA_KEY, 'Authorization':`Bearer ${CURRENT_USER.token||SUPA_KEY}` } }
   );
   const rooms = await res.json();
@@ -2186,7 +2201,7 @@ async function openEstate(){
         <img src="${imgUrl}" onerror="this.style.background='#EDE5D8'" alt="">
         <div class="estate-item-info">
           <div class="estate-item-num">${room.room_number}번 방</div>
-          <div class="estate-item-val">🍯 ${(room.tile_value||0).toLocaleString()} HIVE</div>
+          <div class="estate-item-val">🍯 ${(ROOM_BALANCES[room.room_number]||0).toLocaleString()} HIVE</div>
         </div>`;
       div.onclick = () => openInvest(room);
       grid.appendChild(div);
@@ -2201,7 +2216,7 @@ function closeEstate(){ document.getElementById('estate-ov').classList.remove('s
 // ══════════════════════════════════════
 let INVEST_ROOM = null;
 function openInvest(room){
-  INVEST_ROOM = room;
+  INVEST_ROOM = { ...room, tile_value: ROOM_BALANCES[room.room_number] || 0 };
   document.getElementById('invest-title').textContent = `🍯 ${room.room_number}번 방 투자하기`;
   document.getElementById('invest-amount').max = MY_BALANCE || 0;
   document.getElementById('invest-amount').value = 0;
@@ -2236,30 +2251,35 @@ async function confirmInvest(){
   if(amt <= 0 || amt > MY_BALANCE) return;
   const btn = document.getElementById('invest-confirm-btn');
   btn.disabled = true; btn.textContent = '처리 중...';
-  const newVal = (INVEST_ROOM.tile_value||0) + amt;
-  const newBal = MY_BALANCE - amt;
-  // 타일 가치 업데이트
-  await fetch(`${SUPA_URL}/rest/v1/rooms?room_number=eq.${INVEST_ROOM.room_number}`, {
-    method:'PATCH',
-    headers:{ 'apikey':SUPA_KEY,'Authorization':`Bearer ${CURRENT_USER.token}`,'Content-Type':'application/json' },
-    body: JSON.stringify({ tile_value: newVal })
-  });
-  // 잔액 차감
-  await fetch(`${SUPA_URL}/rest/v1/user_balances?user_email=eq.${encodeURIComponent(CURRENT_USER.email)}`, {
-    method:'PATCH',
-    headers:{ 'apikey':SUPA_KEY,'Authorization':`Bearer ${CURRENT_USER.token}`,'Content-Type':'application/json' },
-    body: JSON.stringify({ balance: newBal })
-  });
-  MY_BALANCE = newBal;
+  const curRoomBal = ROOM_BALANCES[INVEST_ROOM.room_number] || 0;
+  const newRoomBal = curRoomBal + amt;
+  const newUserBal = MY_BALANCE - amt;
+  await Promise.all([
+    // room_balances 증가 (upsert)
+    fetch(`${SUPA_URL}/rest/v1/room_balances?room_number=eq.${INVEST_ROOM.room_number}`, {
+      method:'PATCH',
+      headers:{ 'apikey':SUPA_KEY,'Authorization':`Bearer ${CURRENT_USER.token}`,'Content-Type':'application/json' },
+      body: JSON.stringify({ balance: newRoomBal, updated_at: new Date().toISOString() })
+    }),
+    // user_balances 차감
+    fetch(`${SUPA_URL}/rest/v1/user_balances?user_email=eq.${encodeURIComponent(CURRENT_USER.email)}`, {
+      method:'PATCH',
+      headers:{ 'apikey':SUPA_KEY,'Authorization':`Bearer ${CURRENT_USER.token}`,'Content-Type':'application/json' },
+      body: JSON.stringify({ balance: newUserBal })
+    })
+  ]);
+  ROOM_BALANCES[INVEST_ROOM.room_number] = newRoomBal;
+  if(ROOMS[INVEST_ROOM.room_number]) ROOMS[INVEST_ROOM.room_number].tileValue = newRoomBal;
+  MY_BALANCE = newUserBal;
   updateBalanceUI();
-  INVEST_ROOM.tile_value = newVal;
+  INVEST_ROOM.tile_value = newRoomBal;
   closeInvest();
   // estate 잔액 갱신
   document.getElementById('estate-bal-text').textContent = MY_BALANCE.toLocaleString();
   // 해당 카드 가치 갱신
   document.querySelectorAll('.estate-item-val').forEach(el => {
     if(el.closest('.estate-item')?.querySelector('.estate-item-num')?.textContent === `${INVEST_ROOM.room_number}번 방`)
-      el.textContent = `🍯 ${newVal.toLocaleString()} HIVE`;
+      el.textContent = `🍯 ${newRoomBal.toLocaleString()} HIVE`;
   });
   btn.disabled = false; btn.textContent = '투자하기';
   alert(`✅ ${amt} HIVE 투자 완료!
@@ -2317,26 +2337,30 @@ async function buyRoom(){
   if(!CURRENT_USER || PANEL_ROOM_NUM === null) return;
   const room = ROOMS[PANEL_ROOM_NUM];
   if(!room || room.reserved) return;
-  const price = room.tileValue || 0;
+  const price = ROOM_BALANCES[PANEL_ROOM_NUM] || 0;
   if(MY_BALANCE < price){ alert('잔액이 부족합니다'); return; }
   const btn = document.getElementById('rp-buy-btn');
   btn.disabled = true; btn.textContent = '처리 중...';
-  // 1. rooms 테이블 owner_email 변경
-  const r1 = await fetch(`${SUPA_URL}/rest/v1/rooms?room_number=eq.${PANEL_ROOM_NUM}`, {
-    method:'PATCH',
-    headers:{ 'apikey':SUPA_KEY,'Authorization':`Bearer ${CURRENT_USER.token}`,'Content-Type':'application/json' },
-    body: JSON.stringify({ owner_email: CURRENT_USER.email, email: CURRENT_USER.email })
-  });
-  // 2. 구매자 잔액 차감
-  const newBal = MY_BALANCE - price;
-  await fetch(`${SUPA_URL}/rest/v1/user_balances?user_email=eq.${encodeURIComponent(CURRENT_USER.email)}`, {
-    method:'PATCH',
-    headers:{ 'apikey':SUPA_KEY,'Authorization':`Bearer ${CURRENT_USER.token}`,'Content-Type':'application/json' },
-    body: JSON.stringify({ balance: newBal })
-  });
-  MY_BALANCE = newBal;
+  const newUserBal = MY_BALANCE - price;
+  await Promise.all([
+    // 1. rooms 소유자 변경
+    fetch(`${SUPA_URL}/rest/v1/rooms?room_number=eq.${PANEL_ROOM_NUM}`, {
+      method:'PATCH',
+      headers:{ 'apikey':SUPA_KEY,'Authorization':`Bearer ${CURRENT_USER.token}`,'Content-Type':'application/json' },
+      body: JSON.stringify({ email: CURRENT_USER.email })
+    }),
+    // 2. 구매자 잔액 차감
+    fetch(`${SUPA_URL}/rest/v1/user_balances?user_email=eq.${encodeURIComponent(CURRENT_USER.email)}`, {
+      method:'PATCH',
+      headers:{ 'apikey':SUPA_KEY,'Authorization':`Bearer ${CURRENT_USER.token}`,'Content-Type':'application/json' },
+      body: JSON.stringify({ balance: newUserBal })
+    })
+    // ※ 판매자 송금은 Edge Function으로 처리 예정 (현재는 구매자 차감만)
+  ]);
+  MY_BALANCE = newUserBal;
+  ROOM_BALANCES[PANEL_ROOM_NUM] = price; // 타일 가치 유지
+  if(room) room.ownerEmail = CURRENT_USER.email;
   updateBalanceUI();
-  room.ownerEmail = CURRENT_USER.email;
   closeRoomPanel();
   document.getElementById('buy-success-ov').classList.add('show');
   btn.disabled = false; btn.textContent = '구매하기';
