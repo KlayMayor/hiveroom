@@ -1916,8 +1916,8 @@ function drawFilled(cx,cy,s,num,room){
   // 외곽선
   const zCfg = getZoneConfig(num);
   mHex(cx,cy,s-.5); mctx.strokeStyle=zCfg.border; mctx.lineWidth=2.5; mctx.stroke();
-  // reserved 방은 뱃지 없이 이미지만 표시
-  if(room.reserved) return;
+  // reserved 방도 twitterId/avatarUrl 있으면 뱃지 표시
+  if(room.reserved && !room.twitterId && !room.avatarUrl) return;
   // 프로필 사진 원형 뱃지 (왼쪽 위) — 스케일 애니메이션 적용
   const bRBase=Math.max(10,s*.16), bx=cx-s*.58, by=cy-s*.56;
   const sc = BADGE_SCALE[num] || 1.0;
@@ -2004,9 +2004,18 @@ async function loadRooms(){
         resolve();
       };
       img.onerror = () => {
-        // 이미지 없어도 reserved면 빈 슬롯 예약 표시
+        // 이미지 없어도 reserved면 빈 슬롯 예약 표시 (twitterId/avatarUrl 유지)
         if(row.reserved){
-          ROOMS[row.room_number] = { img: null, reserved: true, twitterId: '', avatarUrl: '', interest: '' };
+          ROOMS[row.room_number] = {
+            img: null, reserved: true,
+            twitterId:  row.twitter_id  || '',
+            avatarUrl:  row.avatar_url  || '',
+            interest:   row.interest    || '',
+            tileValue:  ROOM_BALANCES[row.room_number] || 0,
+            ownerEmail: row.email       || '',
+            creatorEmail: row.email     || ''
+          };
+          if(row.avatar_url) loadAvatarImg(row.avatar_url);
         }
         resolve();
       };
@@ -2458,7 +2467,7 @@ mCV.addEventListener('click',e=>{
   const s=HEX*mScale;
   // 트위터 뱃지 클릭 우선
   for(let num=1;num<=1000;num++){
-    const room=ROOMS[num]; if(!room || room.reserved) continue;
+    const room=ROOMS[num]; if(!room) continue;
     const pos=SLOT_POS[num]; if(!pos) continue;
     const{x:cx,y:cy}=ap(pos.q,pos.r);
     const bR=Math.max(10,s*.16), bx=cx-s*.58, by=cy-s*.56;
