@@ -1701,7 +1701,14 @@ function drawMap(){
     if(cx<-s*2||cx>mW+s*2||cy<-s*2||cy>mH+s*2)return;
     const room=ROOMS[num];
     if(room) drawFilled(cx,cy,s,num,room);
-    else drawEmptyGrid(cx,cy,s); // 빈 방: 연한 그리드만
+    else {
+      // 중앙에서 거리 기반 알파 (외곽일수록 흐리게)
+      const distX = cx - mW/2, distY = cy - mH/2;
+      const dist = Math.sqrt(distX*distX + distY*distY);
+      const maxDist = Math.sqrt((mW/2)*(mW/2) + (mH/2)*(mH/2));
+      const alpha = Math.max(0.04, 0.55 * (1 - dist/maxDist));
+      drawEmptyGrid(cx,cy,s,alpha);
+    }
   });
 }
 
@@ -1895,9 +1902,9 @@ function subscribeRooms(){
   connect();
 }
 
-function drawEmptyGrid(cx,cy,s){
+function drawEmptyGrid(cx,cy,s,alpha=0.55){
   mHex(cx,cy,s-1);
-  mctx.strokeStyle='#efefef';
+  mctx.strokeStyle=`rgba(239,239,239,${alpha.toFixed(3)})`;
   mctx.lineWidth=1;
   mctx.stroke();
 }
