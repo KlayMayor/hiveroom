@@ -1658,6 +1658,87 @@ async function loadRooms(){
   }
 }
 
+// ── 단일 방 이미지 로드 & 맵 반영 ──
+async function loadOneRoom(row){
+  return new Promise(resolve => {
+    const imgUrl = `${SUPA_URL}/storage/v1/object/public/room-pic/${row.room_number}/room.jpg?t=${Date.now()}`;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      ROOMS[row.room_number] = {
+        img,
+        twitterId: row.twitter_id,
+        avatarUrl: row.avatar_url || '',
+        interest:  row.interest  || ''
+      };
+      if(row.avatar_url) loadAvatarImg(row.avatar_url);
+      document.getElementById('cnt').textContent = Object.keys(ROOMS).length;
+      drawMap();
+      resolve();
+    };
+    img.onerror = () => resolve();
+    img.src = imgUrl;
+  });
+}
+
+// ── Supabase Realtime 구독 (rooms 테이블 INSERT/UPDATE 감지) ──
+function subscribeRooms(){
+  const wsUrl = SUPA_URL.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + SUPA_KEY + '&vsn=1.0.0';
+  let ws, heartbeat, reconnectTimer;
+
+  function connect(){
+    ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      console.log('🔴 Realtime 연결됨');
+      // 채널 join
+      ws.send(JSON.stringify({
+        topic: 'realtime:public:rooms',
+        event: 'phx_join',
+        payload: { config: { broadcast: { self: false }, presence: { key: '' } } },
+        ref: '1'
+      }));
+      // 30초마다 heartbeat
+      heartbeat = setInterval(() => {
+        ws.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: null }));
+      }, 30000);
+    };
+
+    ws.onmessage = async (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        // INSERT 또는 UPDATE 이벤트
+        if(msg.event === 'INSERT' || msg.event === 'UPDATE'){
+          const row = msg.payload?.record;
+          if(row && row.occupied === 'Y'){
+            console.log(`📦 Realtime: ${msg.event} room #${row.room_number}`);
+            await loadOneRoom(row);
+          }
+        }
+        // DELETE 이벤트
+        if(msg.event === 'DELETE'){
+          const old = msg.payload?.old_record;
+          if(old?.room_number){
+            delete ROOMS[old.room_number];
+            document.getElementById('cnt').textContent = Object.keys(ROOMS).length;
+            drawMap();
+          }
+        }
+      } catch(err){ /* ignore parse errors */ }
+    };
+
+    ws.onerror = (e) => console.warn('Realtime 오류:', e);
+
+    ws.onclose = () => {
+      clearInterval(heartbeat);
+      console.log('🔴 Realtime 끊김 — 5초 후 재연결');
+      reconnectTimer = setTimeout(connect, 5000);
+    };
+  }
+
+  connect();
+}
+
 function drawEmpty(cx,cy,s,num){
   const vT={x:cx,y:cy-s},vBL={x:cx-s*Math.sqrt(3)/2,y:cy+s*.5},vBR={x:cx+s*Math.sqrt(3)/2,y:cy+s*.5};
   const vTL={x:cx-s*Math.sqrt(3)/2,y:cy-s*.5},vTR={x:cx+s*Math.sqrt(3)/2,y:cy-s*.5},vB={x:cx,y:cy+s};
@@ -1751,6 +1832,7 @@ initAuth();    // Google 로그인 상태 복원
 loadAssets();  // Supabase에서 에셋 로드
 loadInterests(); // Supabase에서 관심사 목록 로드
 loadRooms();   // Supabase에서 기존 방 로드
+subscribeRooms(); // Supabase Realtime 구독
 </script>
 </body>
 </html>
