@@ -1469,7 +1469,7 @@ let isDrag=false,dSt={x:0,y:0},dOff={x:0,y:0};
 const STARS = Array.from({length: 280}, () => ({
   x: Math.random(),  // 0~1 비율 (resizeMap 시 재계산)
   y: Math.random(),
-  r: Math.random() * 1.6 + 0.2,
+  r: Math.random() * 2.4 + 0.3,
   a: Math.random() * 0.7 + 0.3,
   twinkle: Math.random() * Math.PI * 2  // 초기 위상
 }));
@@ -1576,7 +1576,7 @@ function drawMap(){
   mctx.fillStyle=bg; mctx.fillRect(0,0,mW,mH);
 
   // 성운
-  starTick += 0.008;
+  starTick += 0.012;
   NEBULAS.forEach(n=>{
     const gx=n.x*mW, gy=n.y*mH;
     const gr=mctx.createRadialGradient(gx,gy,0,gx,gy,n.rx*mW);
@@ -1593,7 +1593,7 @@ function drawMap(){
 
   // 별 (반짝임)
   STARS.forEach(st=>{
-    const a = st.a * (0.6 + 0.4*Math.sin(starTick*1.5 + st.twinkle));
+    const a = st.a * (0.15 + 0.85*Math.sin(starTick*1.5 + st.twinkle));
     mctx.beginPath();
     mctx.arc(st.x*mW, st.y*mH, st.r, 0, Math.PI*2);
     mctx.fillStyle=`rgba(255,255,255,${a.toFixed(2)})`;
