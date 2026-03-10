@@ -2301,12 +2301,13 @@ function openRoomPanel(num){
   const zoneEl = document.getElementById('rp-zone');
   zoneEl.textContent = zCfg.label;
   zoneEl.className = `rp-zone rp-zone-${getZone(num)}`;
-  document.getElementById('rp-value').textContent = `${(room.tileValue||0).toLocaleString()} HIVE`;
+  const tilePrice = ROOM_BALANCES[num] ?? room.tileValue ?? 0;
+  document.getElementById('rp-value').textContent = `${tilePrice.toLocaleString()} HIVE`;
   document.getElementById('rp-owner').textContent = room.twitterId ? `@${room.twitterId}` : '—';
   const myBal = MY_BALANCE !== null ? MY_BALANCE : 0;
   document.getElementById('rp-mybal').textContent = `${myBal.toLocaleString()} HIVE`;
   const isOwn = CURRENT_USER && CURRENT_USER.email && room.ownerEmail === CURRENT_USER.email;
-  const price = room.tileValue || 0;
+  const price = tilePrice;
   const canBuy = CURRENT_USER && !isOwn && !room.reserved && myBal >= price;
   const buyBtn = document.getElementById('rp-buy-btn');
   const insuf  = document.getElementById('rp-insufficient');
@@ -2337,7 +2338,11 @@ async function buyRoom(){
   if(!CURRENT_USER || PANEL_ROOM_NUM === null) return;
   const room = ROOMS[PANEL_ROOM_NUM];
   if(!room || room.reserved) return;
-  const price = ROOM_BALANCES[PANEL_ROOM_NUM] || 0;
+  // 타일 가치: room_balances에서 읽되, 0이면 ZONE 기본가격 적용
+  const roomBal = ROOM_BALANCES[PANEL_ROOM_NUM];
+  const price = (roomBal != null && roomBal > 0)
+    ? roomBal
+    : getZoneConfig(PANEL_ROOM_NUM).price;
   if(MY_BALANCE < price){ alert('잔액이 부족합니다'); return; }
   const btn = document.getElementById('rp-buy-btn');
   btn.disabled = true; btn.textContent = '처리 중...';
@@ -2357,8 +2362,17 @@ async function buyRoom(){
     })
     // ※ 판매자 송금은 Edge Function으로 처리 예정 (현재는 구매자 차감만)
   ]);
+  // room_balances가 0이었다면 ZONE 가격으로 초기화
+  if(!roomBal || roomBal === 0){
+    await fetch(`${SUPA_URL}/rest/v1/room_balances?room_number=eq.${PANEL_ROOM_NUM}`, {
+      method:'PATCH',
+      headers:{ 'apikey':SUPA_KEY,'Authorization':`Bearer ${CURRENT_USER.token}`,'Content-Type':'application/json' },
+      body: JSON.stringify({ balance: price, updated_at: new Date().toISOString() })
+    });
+  }
   MY_BALANCE = newUserBal;
-  ROOM_BALANCES[PANEL_ROOM_NUM] = price; // 타일 가치 유지
+  ROOM_BALANCES[PANEL_ROOM_NUM] = price;
+  if(ROOMS[PANEL_ROOM_NUM]) ROOMS[PANEL_ROOM_NUM].tileValue = price;
   if(room) room.ownerEmail = CURRENT_USER.email;
   updateBalanceUI();
   closeRoomPanel();
