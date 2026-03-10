@@ -278,7 +278,7 @@ header{
 <header>
   <div class="logo">🍯 HiveRoom</div>
   <div class="h-sep"></div>
-  <div class="h-badge">입주 <span id="cnt">3</span> / 50</div>
+  <div class="h-badge">Resident <span id="cnt">0</span></div>
   <!-- 비로그인 -->
   <button class="h-login-btn" id="login-btn" onclick="signInGoogle()">
     <img src="https://www.google.com/favicon.ico" alt="G"> LOG IN
@@ -1609,7 +1609,7 @@ function drawMap(){
     if(cx<-s*2||cx>mW+s*2||cy<-s*2||cy>mH+s*2)return;
     const room=ROOMS[num];
     if(room) drawFilled(cx,cy,s,num,room);
-    // 빈 방은 렌더하지 않음
+    else drawEmptyGrid(cx,cy,s); // 빈 방: 연한 그리드만
   });
 }
 
@@ -1701,11 +1701,25 @@ async function loadRooms(){
       img.onerror = () => resolve();
     })));
 
-    document.getElementById('cnt').textContent = data.length;
     drawMap();
+    loadResidentCount(); // 가입자 수 표시
   } catch(e){
     console.warn('방 로드 실패:', e.message);
   }
+}
+
+async function loadResidentCount(){
+  try {
+    const res = await fetch(
+      `${SUPA_URL}/rest/v1/rooms?select=email&occupied=eq.Y`,
+      { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }
+    );
+    if(!res.ok) return;
+    const data = await res.json();
+    // 고유 이메일 수 = 실제 가입자 수
+    const unique = new Set(data.map(r => r.email)).size;
+    document.getElementById('cnt').textContent = unique;
+  } catch(e){ console.warn('가입자 수 로드 실패:', e); }
 }
 
 // ── 단일 방 이미지 로드 & 맵 반영 ──
@@ -1722,8 +1736,8 @@ async function loadOneRoom(row){
         interest:  row.interest  || ''
       };
       if(row.avatar_url) loadAvatarImg(row.avatar_url);
-      document.getElementById('cnt').textContent = Object.keys(ROOMS).length;
       drawMap();
+      loadResidentCount();
       resolve();
     };
     img.onerror = () => resolve();
@@ -1770,8 +1784,8 @@ function subscribeRooms(){
           const old = msg.payload?.old_record;
           if(old?.room_number){
             delete ROOMS[old.room_number];
-            document.getElementById('cnt').textContent = Object.keys(ROOMS).length;
             drawMap();
+            loadResidentCount();
           }
         }
       } catch(err){ /* ignore parse errors */ }
@@ -1789,7 +1803,12 @@ function subscribeRooms(){
   connect();
 }
 
-// drawEmpty 제거됨 — 빈 방은 표시하지 않음
+function drawEmptyGrid(cx,cy,s){
+  mHex(cx,cy,s-1);
+  mctx.strokeStyle='#efefef';
+  mctx.lineWidth=1;
+  mctx.stroke();
+}
 
 // 별 반짝임 애니메이션 루프
 let starRAF = null;
