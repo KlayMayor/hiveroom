@@ -36,6 +36,12 @@ header{
 }
 .h-make-btn:hover{transform:translateY(-1px);box-shadow:0 5px 18px rgba(224,120,32,.4);}
 .h-make-btn.active{background:linear-gradient(135deg,#888,#555);}
+.h-toggle-btn{
+  font-size:11px;font-weight:700;padding:4px 12px;border-radius:14px;cursor:pointer;
+  border:1px solid var(--border);background:#f5f5f5;color:#888;
+  font-family:'Noto Sans KR',sans-serif;transition:all .15s;white-space:nowrap;
+}
+.h-toggle-btn.on{background:var(--hlt);border-color:var(--honey);color:var(--hdk);}
 
 /* ── MAP (항상 배경 전체화면) ── */
 .map-wrap{flex:1;position:relative;background:#ECEEF2;overflow:hidden;}
@@ -279,6 +285,10 @@ header{
   <div class="logo">🍯 HiveRoom</div>
   <div class="h-sep"></div>
   <div class="h-badge">Resident <span id="cnt">0</span></div>
+  <div class="h-sep"></div>
+  <button class="h-toggle-btn" id="room-num-btn" onclick="toggleRoomNumbers()">
+    # Room No.
+  </button>
   <!-- 비로그인 -->
   <button class="h-login-btn" id="login-btn" onclick="signInGoogle()">
     <img src="https://www.google.com/favicon.ico" alt="G"> LOG IN
@@ -1345,17 +1355,20 @@ async function registerRoom(){
   if(isEdit){
     targetNum = EDIT_ROOM_NUM;
   } else {
-    // 동시접속 충돌 방지: 빈 슬롯 중 가장 작은 번호 선택
-    // rooms 테이블에서 사용 중인 번호 목록 조회
+    // 동시접속 충돌 방지: 빈 슬롯 중 reserved 제외하고 가장 작은 번호 선택
     const dbRes = await fetch(
-      `${SUPA_URL}/rest/v1/rooms?select=room_number&order=room_number.asc`,
+      `${SUPA_URL}/rest/v1/rooms?select=room_number,reserved&order=room_number.asc`,
       { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }
     );
     const dbData = await dbRes.json();
     const used = new Set((dbData||[]).map(r=>r.room_number));
-    // 1~50 중 비어있는 첫 번째 슬롯
-    targetNum = 1;
-    for(let i=1; i<=50; i++){ if(!used.has(i)){ targetNum=i; break; } }
+    const reserved = new Set((dbData||[]).filter(r=>r.reserved).map(r=>r.room_number));
+    // 1~1000 중 사용 중이지 않고 reserved도 아닌 첫 번째 슬롯
+    targetNum = null;
+    for(let i=1; i<=1000; i++){
+      if(!used.has(i) && !reserved.has(i)){ targetNum=i; break; }
+    }
+    if(!targetNum){ alert('현재 모든 방이 가득 찼습니다! 🏘️'); rb.disabled=false; rb.textContent='✅ 맵에 등록하기'; return; }
   }
 
   // 3. Storage 업로드 (신규: POST / 수정: PUT)
@@ -1551,6 +1564,7 @@ const SLOT_POS = [null,
   {q:0,r:18},{q:1,r:17},{q:2,r:16},{q:3,r:15},{q:4,r:14},{q:5,r:13},{q:6,r:12},{q:7,r:11},{q:8,r:10},{q:9,r:9}
 ];
 const ROOMS = {}; // Supabase에서 로드됨
+let SHOW_ROOM_NUMBERS = false; // Room No. 토글 상태
 
 const mCV=document.getElementById('map-cv');
 const mctx=mCV.getContext('2d');
@@ -1707,7 +1721,7 @@ function drawMap(){
       const dist = Math.sqrt(distX*distX + distY*distY);
       const maxDist = Math.sqrt((mW/2)*(mW/2) + (mH/2)*(mH/2));
       const alpha = Math.max(0.04, 0.55 * (1 - dist/maxDist));
-      drawEmptyGrid(cx,cy,s,alpha);
+      drawEmptyGrid(cx,cy,s,alpha,num);
     }
   });
 }
@@ -1725,6 +1739,8 @@ function drawFilled(cx,cy,s,num,room){
   mctx.restore();
   // 외곽선
   mHex(cx,cy,s-.5); mctx.strokeStyle='#E8C84A'; mctx.lineWidth=2; mctx.stroke();
+  // reserved 방은 뱃지 없이 이미지만 표시
+  if(room.reserved) return;
   // 프로필 사진 원형 뱃지 (왼쪽 위) — 스케일 애니메이션 적용
   const bRBase=Math.max(10,s*.16), bx=cx-s*.58, by=cy-s*.56;
   const sc = BADGE_SCALE[num] || 1.0;
@@ -1792,12 +1808,23 @@ async function loadRooms(){
       img.crossOrigin = 'anonymous';
       img.src = imgUrl;
       img.onload = () => {
-        ROOMS[row.room_number] = { img, twitterId: row.twitter_id, avatarUrl: row.avatar_url || '', interest: row.interest || '' };
-        // 프로필 이미지 미리 로드
+        ROOMS[row.room_number] = {
+          img,
+          twitterId: row.twitter_id,
+          avatarUrl: row.avatar_url || '',
+          interest: row.interest || '',
+          reserved: row.reserved || false
+        };
         if(row.avatar_url) loadAvatarImg(row.avatar_url);
         resolve();
       };
-      img.onerror = () => resolve();
+      img.onerror = () => {
+        // 이미지 없어도 reserved면 빈 슬롯 예약 표시
+        if(row.reserved){
+          ROOMS[row.room_number] = { img: null, reserved: true, twitterId: '', avatarUrl: '', interest: '' };
+        }
+        resolve();
+      };
     })));
 
     drawMap();
@@ -1832,7 +1859,8 @@ async function loadOneRoom(row){
         img,
         twitterId: row.twitter_id,
         avatarUrl: row.avatar_url || '',
-        interest:  row.interest  || ''
+        interest:  row.interest  || '',
+        reserved:  row.reserved  || false
       };
       if(row.avatar_url) loadAvatarImg(row.avatar_url);
       drawMap();
@@ -1902,11 +1930,19 @@ function subscribeRooms(){
   connect();
 }
 
-function drawEmptyGrid(cx,cy,s,alpha=0.55){
+function drawEmptyGrid(cx,cy,s,alpha=0.55,num=null){
   mHex(cx,cy,s-1);
   mctx.strokeStyle=`rgba(239,239,239,${alpha.toFixed(3)})`;
   mctx.lineWidth=1;
   mctx.stroke();
+  if(SHOW_ROOM_NUMBERS && num !== null){
+    const ta = Math.min(alpha * 2.5, 0.7);
+    mctx.font=`bold ${Math.max(9,s*.18)}px 'Jua',sans-serif`;
+    mctx.textAlign='center';
+    mctx.textBaseline='middle';
+    mctx.fillStyle=`rgba(220,220,220,${ta.toFixed(2)})`;
+    mctx.fillText(num, cx, cy);
+  }
 }
 
 // 별 반짝임 애니메이션 루프
@@ -1917,6 +1953,14 @@ function startStarAnim(){
   starRAF = requestAnimationFrame(tick);
 }
 function stopStarAnim(){ if(starRAF){ cancelAnimationFrame(starRAF); starRAF=null; } }
+
+function toggleRoomNumbers(){
+  SHOW_ROOM_NUMBERS = !SHOW_ROOM_NUMBERS;
+  const btn = document.getElementById('room-num-btn');
+  btn.classList.toggle('on', SHOW_ROOM_NUMBERS);
+  btn.textContent = SHOW_ROOM_NUMBERS ? '# Room No. ON' : '# Room No.';
+  drawMap();
+}
 
 function zoomIn(){mScale=Math.min(mScale*1.2,3);drawMap();}
 function zoomOut(){mScale=Math.max(mScale/1.2,.3);drawMap();}
