@@ -1489,6 +1489,15 @@ async function registerRoom(){
       if(!used.has(i) && !reserved.has(i)){ targetNum=i; break; }
     }
     if(!targetNum){ alert('현재 모든 방이 가득 찼습니다! 🏘️'); rb.disabled=false; rb.textContent='✅ 맵에 등록하기'; return; }
+
+    // ★ 잔액 체크 (targetNum 확정 후 정확한 ZONE 가격으로)
+    if(MY_BALANCE === null) await loadMyBalance();
+    const requiredHive = getZoneConfig(targetNum).price;
+    if(MY_BALANCE < requiredHive){
+      alert(`HIVE 잔액이 부족합니다!\n필요: ${requiredHive} HIVE (ZONE ${getZone(targetNum)})\n보유: ${MY_BALANCE} HIVE`);
+      rb.disabled=false; rb.textContent='✅ 맵에 등록하기';
+      return;
+    }
   }
 
   // 3. Storage 업로드 (신규: POST / 수정: PUT)
@@ -1982,12 +1991,13 @@ async function loadRooms(){
       img.onload = () => {
         ROOMS[row.room_number] = {
           img,
-          twitterId:  row.twitter_id,
-          avatarUrl:  row.avatar_url  || '',
-          interest:   row.interest    || '',
-          reserved:   row.reserved    || false,
-          tileValue:  ROOM_BALANCES[row.room_number] || 0,
-          ownerEmail: row.email       || ''
+          twitterId:    row.twitter_id,
+          avatarUrl:    row.avatar_url  || '',
+          interest:     row.interest    || '',
+          reserved:     row.reserved    || false,
+          tileValue:    ROOM_BALANCES[row.room_number] || 0,
+          ownerEmail:   row.email       || '',
+          creatorEmail: row.email       || ''
         };
         if(row.avatar_url) loadAvatarImg(row.avatar_url);
         resolve();
@@ -2031,12 +2041,13 @@ async function loadOneRoom(row){
     img.onload = () => {
       ROOMS[row.room_number] = {
         img,
-        twitterId:  row.twitter_id,
-        avatarUrl:  row.avatar_url  || '',
-        interest:   row.interest    || '',
-        reserved:   row.reserved    || false,
-        tileValue:  ROOM_BALANCES[row.room_number] || 0,
-        ownerEmail: row.email       || ''
+        twitterId:    row.twitter_id,
+        avatarUrl:    row.avatar_url  || '',
+        interest:     row.interest    || '',
+        reserved:     row.reserved    || false,
+        tileValue:    ROOM_BALANCES[row.room_number] || 0,
+        ownerEmail:   row.email       || '',
+        creatorEmail: row.email       || ''
       };
       if(row.avatar_url) loadAvatarImg(row.avatar_url);
       drawMap();
@@ -2306,13 +2317,20 @@ function openRoomPanel(num){
   document.getElementById('rp-owner').textContent = room.twitterId ? `@${room.twitterId}` : '—';
   const myBal = MY_BALANCE !== null ? MY_BALANCE : 0;
   document.getElementById('rp-mybal').textContent = `${myBal.toLocaleString()} HIVE`;
-  const isOwn = CURRENT_USER && CURRENT_USER.email && room.ownerEmail === CURRENT_USER.email;
+  // isOwn: rooms.email(=소유자 이메일)과 내 이메일 비교
+  // ownerEmail = row.email (loadRooms에서 설정) = 현재 소유자
+  const isOwnFinal = !!(
+    CURRENT_USER &&
+    CURRENT_USER.email &&
+    room.ownerEmail &&
+    room.ownerEmail.toLowerCase() === CURRENT_USER.email.toLowerCase()
+  );
   const price = tilePrice;
-  const canBuy = CURRENT_USER && !isOwn && !room.reserved && myBal >= price;
+  const canBuy = CURRENT_USER && !isOwnFinal && !room.reserved && myBal >= price;
   const buyBtn = document.getElementById('rp-buy-btn');
   const insuf  = document.getElementById('rp-insufficient');
   const ownBadge = document.getElementById('rp-own-badge');
-  if(isOwn){
+  if(isOwnFinal){
     buyBtn.style.display = 'none';
     insuf.style.display = 'none';
     ownBadge.style.display = 'block';
@@ -2324,7 +2342,7 @@ function openRoomPanel(num){
     buyBtn.style.display = 'block';
     ownBadge.style.display = 'none';
     buyBtn.disabled = !canBuy || !CURRENT_USER;
-    insuf.style.display = (!CURRENT_USER || (!canBuy && !isOwn && !room.reserved)) ? 'block' : 'none';
+    insuf.style.display = (!CURRENT_USER || (!canBuy && !isOwnFinal && !room.reserved)) ? 'block' : 'none';
     if(!CURRENT_USER) insuf.textContent = '로그인이 필요합니다';
     else insuf.textContent = '잔액이 부족합니다';
   }
