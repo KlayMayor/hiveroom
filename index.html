@@ -2411,9 +2411,10 @@ async function confirmInvest(){
     headers: { 'Authorization': `Bearer ${CURRENT_USER.token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ room_number: INVEST_ROOM.room_number, amount: amt })
   });
-  const efData = await efRes.json();
+  let efData;
+  try { efData = await efRes.json(); } catch(e) { efData = {}; }
   if(!efRes.ok){
-    alert(`투자 실패: ${efData.error}`);
+    alert(`투자 실패 (${efRes.status}): ${efData.error || JSON.stringify(efData)}`);
     btn.disabled = false; btn.textContent = '투자하기';
     return;
   }
