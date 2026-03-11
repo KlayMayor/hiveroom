@@ -218,15 +218,8 @@ header{
 .tw-check-ok{color:#4CAF50;font-weight:600;}
 .tw-check-err{color:#E05050;font-weight:600;}
 .tw-check-ing{color:var(--muted);}
-.interest-wrap{margin:10px 0;text-align:left;}
-.interest-wrap label{font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;}
-.interest-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;}
-.int-item{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px;border-radius:10px;border:2px solid transparent;transition:border-color .15s,transform .15s;}
-.int-item:hover{transform:scale(1.1);}
-.int-item.sel{border-color:var(--honey);background:rgba(242,184,48,.1);}
-.int-item img{width:40px;height:40px;border-radius:50%;}
-.int-item span{font-size:9px;color:#888;font-weight:600;white-space:nowrap;}
-.int-item.sel span{color:var(--honey);}
+/* 관심사 아이콘 그리드 스타일 (레거시, 유지) */
+.interest-preview-img{width:36px;height:36px;border-radius:50%;border:2px solid var(--honey);object-fit:cover;}
 
 /* ── 구글 로그인 버튼 ── */
 .h-login-btn{
@@ -663,19 +656,43 @@ header{
     <canvas id="done-cv" width="160" height="160" style="border-radius:8px;"></canvas>
     <div class="done-title">🎉 방 디자인 완성!</div>
     <div class="done-desc" id="done-desc">나만의 방을 맵에 등록할까요?</div>
-    <div class="tw-input-wrap">
-      <label>🐦 Twitter(X) ID</label>
-      <input class="tw-input" id="tw-id" type="text" placeholder="@없이 입력 (예: hiveroom_user)" maxlength="50"
-        oninput="onTwitterIdInput(this)">
-      <div id="tw-check-msg" style="font-size:11px;margin-top:5px;min-height:16px;"></div>
-    </div>
-    <div class="interest-wrap">
-      <label>✨ 관심사 선택 (선택사항)</label>
-      <div class="interest-grid" id="interest-grid">
-        <div style="color:#ccc;font-size:11px;padding:8px">로딩 중...</div>
+
+    <!-- STEP 1: Twitter ID -->
+    <div id="done-step1">
+      <div style="font-size:11.5px;color:var(--muted);background:var(--hlt);border-radius:10px;padding:9px 13px;margin-bottom:10px;line-height:1.7;text-align:left;">
+        🐦 입력하신 트위터 아이디의 프로필 사진과 링크가 생성됩니다.
+      </div>
+      <div class="tw-input-wrap">
+        <label>🐦 Twitter(X) ID <span style="color:#E05050;">*</span></label>
+        <input class="tw-input" id="tw-id" type="text" placeholder="@없이 입력 (예: hiveroom_user)" maxlength="50"
+          oninput="onTwitterIdInput(this)">
+        <div id="tw-check-msg" style="font-size:11px;margin-top:5px;min-height:16px;"></div>
+      </div>
+      <div class="done-btns" style="margin-top:12px;">
+        <button class="done-main-btn" onclick="doneStep1Next()">다음 →</button>
+        <button class="done-sub-btn" onclick="closeDone()">계속 수정</button>
       </div>
     </div>
+
+    <!-- STEP 2: 관심사 Twitter ID -->
+    <div id="done-step2" style="display:none;">
+      <div style="font-size:11.5px;color:var(--muted);background:var(--hlt);border-radius:10px;padding:9px 13px;margin-bottom:10px;line-height:1.7;text-align:left;">
+        ✨ 관심있는 트위터 아이디를 입력하시면 해당 프로필 사진이 작은 뱃지로 표시됩니다.<br>
+        <span style="color:var(--hdk);font-weight:600;">(예. @Tesla, @Bitcoin 등)</span>
+      </div>
+      <div class="tw-input-wrap">
+        <label>✨ 관심사 Twitter ID <span style="color:var(--muted);font-weight:400;">(선택사항)</span></label>
+        <input class="tw-input" id="interest-id" type="text" placeholder="@없이 입력 (예: Tesla)" maxlength="50">
+        <div id="interest-preview" style="margin-top:8px;min-height:40px;display:flex;align-items:center;gap:10px;"></div>
+      </div>
+      <div class="done-btns" style="margin-top:12px;">
+        <button class="done-main-btn" onclick="doneStep2Next()">다음 →</button>
+        <button class="done-sub-btn" onclick="doneStep2Back()">← 뒤로</button>
+      </div>
     </div>
+
+    <!-- STEP 3: 등록 -->
+    <div id="done-step3" style="display:none;">
     <div class="png-prog" id="png-prog">
       <span id="png-status">📦 PNG 생성 중...</span>
       <div class="png-bar-track"><div class="png-bar" id="png-bar"></div></div>
@@ -683,14 +700,15 @@ header{
     <div class="png-result" id="png-result">
       <img class="png-thumb" id="png-thumb" src="" alt="">
       <div class="png-meta">
-        <div class="png-fname">room_slot4.jpg</div>
+        <div class="png-fname">room.jpg</div>
         <div class="png-fsize">700 × 700 px · JPEG</div>
         <span class="png-dl" onclick="dlPng()">⬇ PNG 다운로드</span>
       </div>
     </div>
     <div class="done-btns">
       <button class="done-main-btn" id="reg-btn" onclick="registerRoom()">✅ 맵에 등록하기</button>
-      <button class="done-sub-btn" onclick="closeDone()">계속 수정</button>
+      <button class="done-sub-btn" onclick="doneStep3Back()">← 뒤로</button>
+    </div>
     </div>
   </div>
 </div>
@@ -946,7 +964,7 @@ async function startEditRoom(room){
   const twEl = document.getElementById('tw-id');
   if(twEl) twEl.value = room.twitter_id || '';
   // 관심사 복원
-  SEL_INTEREST = room.interest || null;
+  SEL_INTEREST = room.interest || '';
   buildInterestGrid();
 
   // 4. 콘솔 열기
@@ -1079,14 +1097,9 @@ const POS  = {furniture:{}, walldeco:{}};
 const SIZE = {furniture:{}, walldeco:{}};
 const LAYER_ORDER = {furniture:[], walldeco:[]};  // 뒤→앞 순서 배열
 let CTRL_SEL = {cat:null, id:null};
-let SEL_INTEREST = null; // 선택된 관심사 key
+let SEL_INTEREST = ''; // 관심사 Twitter ID (문자열)
 
-function pickInterest(key){
-  SEL_INTEREST = (SEL_INTEREST === key) ? null : key; // 토글
-  document.querySelectorAll('.int-item').forEach(el=>{
-    el.classList.toggle('sel', el.dataset.key === SEL_INTEREST);
-  });
-}
+// pickInterest: 제거됨 (interest = twitter ID 직접 입력)
 let pngUrl=null;
 
 // ══════════════════════════════════════
@@ -1581,7 +1594,7 @@ RCV.addEventListener('touchend',()=>{
 function showDone(){
   // 새 방이면 관심사 초기화 (수정이면 유지)
   if(!EDIT_ROOM_NUM){
-    SEL_INTEREST = null;
+    SEL_INTEREST = '';
   }
   buildInterestGrid(); // 최신 목록으로 그리드 갱신
   const dc=document.getElementById('done-cv');
@@ -1593,6 +1606,17 @@ function showDone(){
   document.getElementById('png-prog').classList.remove('show');
   document.getElementById('png-result').classList.remove('show');
   const rb=document.getElementById('reg-btn');rb.textContent='✅ 맵에 등록하기';rb.onclick=registerRoom;rb.disabled=false;
+  // 스텝 초기화
+  document.getElementById('done-step1').style.display='block';
+  document.getElementById('done-step2').style.display='none';
+  document.getElementById('done-step3').style.display='none';
+  // 수정 모드: interest-id 미리 채우기
+  const intEl = document.getElementById('interest-id');
+  if(intEl){
+    intEl.value = SEL_INTEREST || '';
+    intEl.oninput = updateInterestPreview;
+  }
+  updateInterestPreview();
   document.getElementById('done-ov').classList.add('show');
 }
 function closeDone(){document.getElementById('done-ov').classList.remove('show');}
@@ -1740,7 +1764,7 @@ async function goToMap(roomNum){
       i.src = `${SUPA_URL}/storage/v1/object/public/room-pic/${roomNum}/room.jpg?t=${Date.now()}`;
     }
   });
-  if(img) ROOMS[roomNum] = { img, twitterId, avatarUrl: `https://unavatar.io/x/${twitterId}`, interest: SEL_INTEREST || '' };
+  if(img) ROOMS[roomNum] = { img, twitterId, avatarUrl: `https://unavatar.io/x/${twitterId}`, interest: SEL_INTEREST || '', ownerEmail: CURRENT_USER?.email||'', creatorEmail: CURRENT_USER?.email||'' };
   document.getElementById('cnt').textContent = Object.keys(ROOMS).length;
   _pendingTileNum = null;
   closeDone(); closeConsole();
@@ -1922,54 +1946,6 @@ function mHex(cx,cy,s){mctx.beginPath();for(let i=0;i<6;i++){const a=Math.PI/180
 function ltn(hex,a){const n=parseInt(hex.replace('#',''),16);const c=(v,d)=>Math.min(255,Math.max(0,(v>>0)+d));return`rgb(${c(n>>16,a)},${c((n>>8)&255,a)},${c(n&255,a)})`;}
 
 // ── 아바타 이미지 캐시 ──
-// 관심사 목록 (Supabase interests 테이블에서 동적 로드)
-let INTERESTS = []; // [{key, label, icon_url, color}]
-const INTEREST_IMG_CACHE = {};
-
-async function loadInterests(){
-  try {
-    const res = await fetch(
-      `${SUPA_URL}/rest/v1/interests?active=eq.true&order=sort_order.asc`,
-      { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }
-    );
-    if(!res.ok) return;
-    INTERESTS = await res.json();
-    buildInterestGrid();
-    // 아이콘 이미지 미리 캐시
-    INTERESTS.forEach(i => preloadInterestImg(i.key, i.icon_url));
-  } catch(e){ console.warn('관심사 로드 실패:', e); }
-}
-
-function preloadInterestImg(key, url){
-  if(!url || INTEREST_IMG_CACHE[key]) return;
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.onload = () => { INTEREST_IMG_CACHE[key] = img; drawMap(); };
-  img.src = url;
-}
-
-function buildInterestGrid(){
-  const grid = document.getElementById('interest-grid');
-  if(!grid) return;
-  grid.innerHTML = '';
-  INTERESTS.forEach(item => {
-    const div = document.createElement('div');
-    div.className = 'int-item' + (SEL_INTEREST === item.key ? ' sel' : '');
-    div.dataset.key = item.key;
-    div.onclick = () => pickInterest(item.key);
-    div.innerHTML = `<img src="${item.icon_url}" alt="${item.label}"><span>${item.label}</span>`;
-    grid.appendChild(div);
-  });
-}
-
-function getInterestImgForMap(key){
-  if(!key) return null;
-  if(INTEREST_IMG_CACHE[key]) return INTEREST_IMG_CACHE[key];
-  // 아직 캐시 없으면 interests에서 url 찾아 로드
-  const item = INTERESTS.find(i=>i.key===key);
-  if(item) preloadInterestImg(key, item.icon_url);
-  return null;
-}
 
 const AVATAR_CACHE = {};
 function loadAvatarImg(url){
@@ -2083,17 +2059,17 @@ function drawFilled(cx,cy,s,num,room){
     mctx.fillStyle='#fff'; mctx.textAlign='center'; mctx.textBaseline='middle';
     mctx.fillText(num, bx, by);
   }
-  // 관심사 아이콘 (뱃지 오른쪽 하단)
+  // 관심사 뱃지 (뱃지 오른쪽 하단) — unavatar.io/x/{twitterId}
   if(room.interest){
     const iR = bRBase * 0.35;
     const ix = bx + bR * 0.65, iy = by + bR * 0.65;
-    const iImg = getInterestImgForMap(room.interest);
+    const iUrl = `https://unavatar.io/x/${room.interest}`;
+    const iImg = loadAvatarImg(iUrl); // AVATAR_CACHE 재사용
     mctx.beginPath(); mctx.arc(ix,iy,iR+1.5,0,Math.PI*2);
     mctx.fillStyle='white'; mctx.fill();
     if(iImg){
       drawCircleImg(mctx, iImg, ix, iy, iR);
     } else {
-      // 로드 전 플레이스홀더
       mctx.beginPath(); mctx.arc(ix,iy,iR,0,Math.PI*2);
       mctx.fillStyle='rgba(200,200,200,0.8)'; mctx.fill();
     }
@@ -2666,6 +2642,52 @@ async function confirmTileBuy(){
   openMakeRoom();
 }
 
+// ══════════════════════════════════════
+// 완성 팝업 3단계 스텝 네비게이션
+// ══════════════════════════════════════
+function doneStep1Next(){
+  const twEl = document.getElementById('tw-id');
+  const twitterId = twEl.value.replace('@','').trim();
+  if(!twitterId){ twEl.classList.add('err'); twEl.focus(); return; }
+  // 중복 체크 메시지가 에러 상태면 차단
+  const msg = document.getElementById('tw-check-msg');
+  if(msg && msg.classList.contains('tw-check-err')) return;
+  document.getElementById('done-step1').style.display='none';
+  document.getElementById('done-step2').style.display='block';
+}
+function doneStep2Back(){
+  document.getElementById('done-step2').style.display='none';
+  document.getElementById('done-step1').style.display='block';
+}
+function doneStep2Next(){
+  // 관심사 저장
+  const intEl = document.getElementById('interest-id');
+  SEL_INTEREST = (intEl ? intEl.value.replace('@','').trim() : '') || '';
+  document.getElementById('done-step2').style.display='none';
+  document.getElementById('done-step3').style.display='block';
+}
+function doneStep3Back(){
+  document.getElementById('done-step3').style.display='none';
+  document.getElementById('done-step2').style.display='block';
+}
+
+// 관심사 트위터 아이디 미리보기
+let _intPreviewTimer = null;
+function updateInterestPreview(){
+  const intEl = document.getElementById('interest-id');
+  const preview = document.getElementById('interest-preview');
+  if(!intEl || !preview) return;
+  const val = intEl.value.replace('@','').trim();
+  if(!val){ preview.innerHTML = ''; return; }
+  clearTimeout(_intPreviewTimer);
+  _intPreviewTimer = setTimeout(()=>{
+    const url = `https://unavatar.io/x/${val}`;
+    preview.innerHTML = `
+      <img class="interest-preview-img" src="${url}" onerror="this.style.display='none'" alt="">
+      <span style="font-size:12px;color:var(--hdk);font-weight:600;">@${val}</span>`;
+  }, 500);
+}
+
 // ── Twitter ID 실시간 중복 체크 ──
 let _twCheckTimer = null;
 let _twCheckValid = false; // 현재 입력값이 사용 가능한지
@@ -2898,7 +2920,6 @@ startStarAnim(); // 별 반짝임 시작
 renderRoom(); updateProg(); resizeMap();
 initAuth();    // Google 로그인 상태 복원
 loadAssets();  // Supabase에서 에셋 로드
-loadInterests(); // Supabase에서 관심사 목록 로드
 loadRooms();   // Supabase에서 기존 방 로드
 subscribeRooms(); // Supabase Realtime 구독
 </script>
