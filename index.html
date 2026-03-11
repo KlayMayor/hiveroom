@@ -600,7 +600,7 @@ header{
 </div>
 
 <!-- 빈 타일 사이드 패널 -->
-<div id="empty-panel" style="position:fixed;left:-340px;top:50px;width:320px;height:calc(100vh - 50px);background:#fff;box-shadow:4px 0 24px rgba(0,0,0,.12);z-index:500;display:flex;flex-direction:column;transition:left .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;">
+<div id="empty-panel" style="position:fixed;left:-340px;top:50px;width:320px;height:calc(100vh - 50px);background:#fff;box-shadow:4px 0 24px rgba(0,0,0,.12);z-index:490;display:flex;flex-direction:column;transition:left .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;">
   <button class="rp-close" onclick="closeEmptyPanel()">✕</button>
   <div style="padding:24px 20px 16px;text-align:center;background:var(--hlt);border-bottom:1px solid var(--border);">
     <div style="font-size:40px;margin-bottom:8px;">🏕️</div>
@@ -946,6 +946,34 @@ async function startEditRoom(room){
 
   // 7. renderRoom (벽지/바닥/가구/장식 모두 표시)
   await renderRoom();
+}
+
+function showRoomSelect(rooms, mode){
+  const grid = document.getElementById('rs-grid');
+  grid.innerHTML = '';
+  if(!rooms || rooms.length === 0){
+    grid.innerHTML = '<div class="rs-empty">소유한 방이 없어요.<br>맵에서 빈 타일을 클릭해 방을 만들어보세요!</div>';
+    document.getElementById('room-select-ov').classList.add('show');
+    return;
+  }
+  rooms.forEach(room => {
+    const item = document.createElement('div');
+    item.className = 'rs-item';
+    const imgUrl = `${SUPA_URL}/storage/v1/object/public/room-pic/${room.room_number}/room.jpg`;
+    item.innerHTML = `
+      <img src="${imgUrl}" alt="${room.room_number}번" onerror="this.style.background='#F0EBE0';this.removeAttribute('src')">
+      <div class="rs-item-num">${room.room_number}번 방</div>
+    `;
+    item.onclick = () => {
+      closeRoomSelect();
+      if(mode === 'edit') startEditRoom(room);
+    };
+    grid.appendChild(item);
+  });
+  document.getElementById('room-select-ov').classList.add('show');
+}
+function closeRoomSelect(){
+  document.getElementById('room-select-ov').classList.remove('show');
 }
 
 function resetConsole(){
@@ -2416,6 +2444,7 @@ let PANEL_ROOM_NUM = null;
 function openRoomPanel(num){
   const room = ROOMS[num];
   if(!room) return;
+  closeEmptyPanel(); // 빈 타일 패널 닫기
   PANEL_ROOM_NUM = num;
   const zCfg = getZoneConfig(num);
   const imgUrl = `${SUPA_URL}/storage/v1/object/public/room-pic/${num}/room.jpg?t=${Date.now()}`;
@@ -2526,7 +2555,8 @@ function openEmptyPanel(num){
     document.getElementById('ep-buy-btn').style.display = 'none';
     document.getElementById('ep-insufficient').style.display = 'none';
     document.getElementById('ep-login-msg').style.display = 'block';
-    closeRoomPanel();
+    document.getElementById('room-panel').classList.remove('open');
+    PANEL_ROOM_NUM = null;
     document.getElementById('empty-panel').style.left = '0';
     return;
   }
@@ -2552,7 +2582,8 @@ function openEmptyPanel(num){
     insuf.style.display = (!canBuy) ? 'block' : 'none';
   }
   // 빈 패널 열고, 방 패널 닫기
-  closeRoomPanel();
+  document.getElementById('room-panel').classList.remove('open');
+  PANEL_ROOM_NUM = null;
   document.getElementById('empty-panel').style.left = '0';
 }
 function closeEmptyPanel(){
