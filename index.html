@@ -1827,7 +1827,8 @@ let SHOW_ROOM_NUMBERS = false; // Room No. 토글 상태
 const mCV=document.getElementById('map-cv');
 const mctx=mCV.getContext('2d');
 let mW=0,mH=0,HEX=58,mScale=1,mOX=0,mOY=0;
-let isDrag=false,dSt={x:0,y:0},dOff={x:0,y:0};
+let isDrag=false,_dragMoved=false,dSt={x:0,y:0},dOff={x:0,y:0};
+const DRAG_THRESHOLD=5; // 5px 이상 움직여야 드래그로 판정
 
 // ── 우주 배경 별 데이터 (1회 생성) ──
 const STARS = Array.from({length: 280}, () => ({
@@ -2635,9 +2636,16 @@ function startBadgeAnim(){
 }
 
 mCV.addEventListener('wheel',e=>{e.preventDefault();mScale=Math.max(.3,Math.min(3,mScale*(e.deltaY>0?.9:1.1)));drawMap();},{passive:false});
-mCV.addEventListener('mousedown',e=>{isDrag=true;dSt={x:e.clientX,y:e.clientY};dOff={x:mOX,y:mOY};mCV.classList.add('drag');});
+mCV.addEventListener('mousedown',e=>{isDrag=true;_dragMoved=false;dSt={x:e.clientX,y:e.clientY};dOff={x:mOX,y:mOY};});
 window.addEventListener('mousemove',e=>{
-  if(isDrag){mOX=dOff.x+(e.clientX-dSt.x);mOY=dOff.y+(e.clientY-dSt.y);drawMap();return;}
+  if(isDrag){
+    const dx=e.clientX-dSt.x, dy=e.clientY-dSt.y;
+    if(!_dragMoved && Math.sqrt(dx*dx+dy*dy)>DRAG_THRESHOLD){
+      _dragMoved=true; mCV.classList.add('drag');
+    }
+    if(_dragMoved){mOX=dOff.x+dx;mOY=dOff.y+dy;drawMap();}
+    return;
+  }
   // 뱃지 호버 감지
   const rect=mCV.getBoundingClientRect();
   const mx=e.clientX-rect.left, my=e.clientY-rect.top;
@@ -2658,7 +2666,7 @@ window.addEventListener('mousemove',e=>{
 });
 window.addEventListener('mouseup',()=>{isDrag=false;mCV.classList.remove('drag');});
 mCV.addEventListener('click',e=>{
-  if(isDrag) return;
+  if(_dragMoved){ _dragMoved=false; return; } // 드래그 후 클릭 무시
   const rect=mCV.getBoundingClientRect();
   const mx=e.clientX-rect.left, my=e.clientY-rect.top;
   const s=HEX*mScale;
