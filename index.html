@@ -667,6 +667,7 @@ header{
         <input class="tw-input" id="tw-id" type="text" placeholder="@없이 입력 (예: hiveroom_user)" maxlength="50"
           oninput="onTwitterIdInput(this)">
         <div id="tw-check-msg" style="font-size:11px;margin-top:5px;min-height:16px;"></div>
+        <div id="tw-preview" style="margin-top:8px;min-height:40px;display:flex;align-items:center;gap:10px;"></div>
       </div>
       <div class="done-btns" style="margin-top:12px;">
         <button class="done-main-btn" onclick="doneStep1Next()">다음 →</button>
@@ -2697,7 +2698,12 @@ function onTwitterIdInput(el){
   el.classList.remove('ok','err');
   clearTimeout(_twCheckTimer);
 
-  if(!val){ msg.textContent=''; return; }
+  if(!val){
+    msg.textContent='';
+    const prev = document.getElementById('tw-preview');
+    if(prev) prev.innerHTML = '';
+    return;
+  }
 
   // 형식 체크 (영문/숫자/언더스코어, 4~15자)
   if(!/^[A-Za-z0-9_]{1,50}$/.test(val)){
@@ -2726,11 +2732,16 @@ function onTwitterIdInput(el){
         msg.textContent='❌ 이미 다른 유저가 사용 중인 Twitter ID예요';
         el.classList.remove('ok'); el.classList.add('err');
         _twCheckValid = false;
+        const prev = document.getElementById('tw-preview');
+        if(prev) prev.innerHTML = '';
       } else {
         msg.className='tw-check-ok';
         msg.textContent='✅ 사용 가능한 Twitter ID예요';
         el.classList.remove('err'); el.classList.add('ok');
         _twCheckValid = true;
+        // 프로필 미리보기
+        const prev = document.getElementById('tw-preview');
+        if(prev) prev.innerHTML = `<img class="interest-preview-img" src="https://unavatar.io/x/${val}" onerror="this.style.display='none'" alt=""><span style="font-size:12px;color:var(--hdk);font-weight:600;">@${val}</span>`;
       }
     } catch(e){
       msg.className='tw-check-ing'; msg.textContent='⚠️ 확인 실패, 계속 진행 가능';
