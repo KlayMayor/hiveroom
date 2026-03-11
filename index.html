@@ -776,6 +776,20 @@ async function refreshSession(refresh_token){
   return false;
 }
 
+// ── 토큰 자동 갱신 ──
+async function getValidToken(){
+  const saved = localStorage.getItem('hr_session');
+  if(!saved) return null;
+  const session = JSON.parse(saved);
+  // 만료 5분 전이면 미리 갱신
+  const expiresSoon = session.expires_at && (session.expires_at - Date.now()/1000) < 300;
+  if(expiresSoon && session.refresh_token){
+    const ok = await refreshSession(session.refresh_token);
+    if(ok) return CURRENT_USER?.token || null;
+  }
+  return session.access_token || null;
+}
+
 async function fetchUserFromToken(token){
   const res = await fetch(`${SUPA_URL}/auth/v1/user`, {
     headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${token}`}
@@ -2406,9 +2420,10 @@ async function confirmInvest(){
   const btn = document.getElementById('invest-confirm-btn');
   btn.disabled = true; btn.textContent = '처리 중...';
   // Edge Function으로 서버 검증 처리
+  const _investToken = await getValidToken();
   const efRes = await fetch(`${EDGE_URL}/invest-room`, {
     method: 'POST',
-    headers: { 'Authorization': `Bearer ${CURRENT_USER.token}`, 'Content-Type': 'application/json' },
+    headers: { 'Authorization': `Bearer ${_investToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ room_number: INVEST_ROOM.room_number, amount: amt })
   });
   let efData;
@@ -2514,9 +2529,10 @@ async function confirmBuyRoom(){
   if(MY_BALANCE < price){ alert('잔액이 부족합니다'); return; }
   const btn = document.getElementById('rp-buy-btn');
   btn.disabled = true; btn.textContent = '처리 중...';
+  const _buyToken = await getValidToken();
   const efRes = await fetch(`${EDGE_URL}/buy-room`, {
     method: 'POST',
-    headers: { 'Authorization': `Bearer ${CURRENT_USER.token}`, 'Content-Type': 'application/json' },
+    headers: { 'Authorization': `Bearer ${_buyToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ room_number: PANEL_ROOM_NUM })
   });
   const efData = await efRes.json();
@@ -2627,9 +2643,10 @@ async function confirmTileBuy(){
   }
 
   // Edge Function: create-room (서버에서 잔액 차감 + room_balances 초기화)
+  const _tileToken = await getValidToken();
   const efRes = await fetch(`${EDGE_URL}/create-room`, {
     method: 'POST',
-    headers: { 'Authorization': `Bearer ${CURRENT_USER.token}`, 'Content-Type': 'application/json' },
+    headers: { 'Authorization': `Bearer ${_tileToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ room_number: num, zone_price: zonePrice })
   });
   const efData = await efRes.json();
