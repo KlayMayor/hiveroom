@@ -214,6 +214,10 @@ header{
 .tw-input{width:100%;padding:9px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:13px;font-family:'Noto Sans KR',sans-serif;outline:none;transition:border-color .15s;box-sizing:border-box;}
 .tw-input:focus{border-color:var(--honey);}
 .tw-input.err{border-color:#E05050;}
+.tw-input.ok{border-color:#4CAF50;}
+.tw-check-ok{color:#4CAF50;font-weight:600;}
+.tw-check-err{color:#E05050;font-weight:600;}
+.tw-check-ing{color:var(--muted);}
 .interest-wrap{margin:10px 0;text-align:left;}
 .interest-wrap label{font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;}
 .interest-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;}
@@ -561,7 +565,9 @@ header{
     <div class="done-desc" id="done-desc">나만의 방을 맵에 등록할까요?</div>
     <div class="tw-input-wrap">
       <label>🐦 Twitter(X) ID</label>
-      <input class="tw-input" id="tw-id" type="text" placeholder="@없이 입력 (예: hiveroom_user)" maxlength="50">
+      <input class="tw-input" id="tw-id" type="text" placeholder="@없이 입력 (예: hiveroom_user)" maxlength="50"
+        oninput="onTwitterIdInput(this)">
+      <div id="tw-check-msg" style="font-size:11px;margin-top:5px;min-height:16px;"></div>
     </div>
     <div class="interest-wrap">
       <label>✨ 관심사 선택 (선택사항)</label>
@@ -1448,6 +1454,27 @@ async function registerRoom(){
   const twitterId = twEl.value.replace('@','').trim();
   if(!twitterId){ twEl.classList.add('err'); twEl.focus(); return; }
   twEl.classList.remove('err');
+
+  // Twitter ID 중복 최종 확인 (수정 모드는 본인 방 제외)
+  {
+    // 다른 구글 email이 이 twitter_id를 쓰는지 확인
+    const chkRes = await fetch(
+      `${SUPA_URL}/rest/v1/rooms?twitter_id=eq.${encodeURIComponent(twitterId)}&select=email`,
+      { headers:{ 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }
+    );
+    const chkData = await chkRes.json();
+    const myEmail = CURRENT_USER?.email || '';
+    const blockedByOther = (chkData||[]).some(r => r.email && r.email.toLowerCase() !== myEmail.toLowerCase());
+    if(blockedByOther){
+      twEl.classList.add('err');
+      const msg = document.getElementById('tw-check-msg');
+      if(msg){ msg.className='tw-check-err'; msg.textContent='❌ 이미 다른 유저가 사용 중인 Twitter ID예요'; }
+      alert(`이미 다른 유저가 사용 중인 Twitter ID입니다: @${twitterId}
+다른 ID를 사용해주세요.`);
+      rb.disabled=false; rb.textContent='✅ 맵에 등록하기';
+      return;
+    }
+  }
 
   const isEdit = !!EDIT_ROOM_NUM;
   const rb=document.getElementById('reg-btn'); rb.disabled=true; rb.textContent='⏳ 처리 중...';
@@ -2397,6 +2424,59 @@ async function buyRoom(){
   btn.disabled = false; btn.textContent = '구매하기';
 }
 function closeBuySuccess(){ document.getElementById('buy-success-ov').classList.remove('show'); }
+
+// ── Twitter ID 실시간 중복 체크 ──
+let _twCheckTimer = null;
+let _twCheckValid = false; // 현재 입력값이 사용 가능한지
+
+function onTwitterIdInput(el){
+  const val = el.value.replace('@','').trim();
+  const msg = document.getElementById('tw-check-msg');
+  _twCheckValid = false;
+  el.classList.remove('ok','err');
+  clearTimeout(_twCheckTimer);
+
+  if(!val){ msg.textContent=''; return; }
+
+  // 형식 체크 (영문/숫자/언더스코어, 4~15자)
+  if(!/^[A-Za-z0-9_]{1,50}$/.test(val)){
+    msg.className='tw-check-err'; msg.textContent='❌ 영문, 숫자, _ 만 사용 가능해요';
+    el.classList.add('err'); return;
+  }
+
+  msg.className='tw-check-ing'; msg.textContent='🔍 확인 중...';
+
+  _twCheckTimer = setTimeout(async () => {
+    try {
+      const isEdit = !!EDIT_ROOM_NUM;
+      // 수정 모드: 본인 방의 현재 twitter_id는 중복 허용
+      const url = `${SUPA_URL}/rest/v1/rooms?twitter_id=eq.${encodeURIComponent(val)}&select=room_number,email`;
+      const res = await fetch(url, {
+        headers:{ 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+      });
+      const data = await res.json();
+
+      // 다른 구글 email이 이미 이 twitter_id를 사용 중인지 확인
+      const myEmail = CURRENT_USER?.email || '';
+      const usedByOther = (data||[]).some(r => r.email && r.email.toLowerCase() !== myEmail.toLowerCase());
+
+      if(usedByOther){
+        msg.className='tw-check-err';
+        msg.textContent='❌ 이미 다른 유저가 사용 중인 Twitter ID예요';
+        el.classList.remove('ok'); el.classList.add('err');
+        _twCheckValid = false;
+      } else {
+        msg.className='tw-check-ok';
+        msg.textContent='✅ 사용 가능한 Twitter ID예요';
+        el.classList.remove('err'); el.classList.add('ok');
+        _twCheckValid = true;
+      }
+    } catch(e){
+      msg.className='tw-check-ing'; msg.textContent='⚠️ 확인 실패, 계속 진행 가능';
+      _twCheckValid = true; // 네트워크 오류 시 통과 (DB에서 최종 차단)
+    }
+  }, 500); // 0.5초 debounce
+}
 
 function toggleRoomNumbers(){
   SHOW_ROOM_NUMBERS = !SHOW_ROOM_NUMBERS;
