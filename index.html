@@ -241,7 +241,7 @@ header{
 .h-login-btn img{width:18px;height:18px;border-radius:50%;}
 
 /* ── 프로필 버튼 + 드롭다운 ── */
-.h-profile-wrap{margin-left:auto;position:relative;}
+.h-profile-wrap{margin-left:8px;position:relative;}
 .h-profile-btn{
   width:36px;height:36px;border-radius:50%;border:2.5px solid var(--honey);
   overflow:hidden;cursor:pointer;background:#eee;
@@ -355,6 +355,30 @@ header{
 .rs-empty{font-size:13px;color:var(--muted);text-align:center;padding:30px;width:100%;}
 .rs-close{margin-top:16px;padding:10px;border:none;background:var(--border);border-radius:12px;cursor:pointer;font-size:12px;font-weight:700;font-family:'Noto Sans KR',sans-serif;color:var(--text);}
 .rs-close:hover{background:#DDD;}
+
+/* ── 카운트다운 타이머 ── */
+.h-timers{display:none;align-items:center;gap:6px;margin-left:auto;}
+.h-timers.show{display:flex;}
+.h-timer-block{display:flex;align-items:center;gap:4px;background:#F8F5F0;border:1px solid var(--border);border-radius:12px;padding:4px 10px;font-size:11px;font-weight:700;color:var(--hdk);white-space:nowrap;position:relative;}
+.h-timer-block .t-label{font-size:9px;font-weight:600;color:var(--muted);margin-right:2px;}
+.h-timer-val{font-family:'Jua',sans-serif;font-size:12px;color:var(--hdk);letter-spacing:0.5px;}
+.h-timer-info{width:14px;height:14px;border-radius:50%;background:var(--border);color:var(--muted);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:default;flex-shrink:0;}
+.h-timer-tooltip{
+  display:none;position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);
+  background:rgba(30,20,10,.88);color:#fff;font-size:10px;font-weight:500;
+  padding:7px 10px;border-radius:10px;white-space:nowrap;z-index:400;
+  line-height:1.5;pointer-events:none;
+}
+.h-timer-block:hover .h-timer-tooltip{display:block;}
+
+/* ── 도움말 팝업 ── */
+#help-ov{display:none;position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);align-items:center;justify-content:center;}
+#help-ov.show{display:flex;}
+.help-box{background:#fff;border-radius:20px;width:min(680px,94vw);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(0,0,0,.25);overflow:hidden;animation:popin .35s cubic-bezier(.34,1.56,.64,1);}
+.help-head{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--border);background:var(--hlt);}
+.help-title{font-family:'Jua',sans-serif;font-size:18px;color:var(--hdk);}
+.help-close{width:30px;height:30px;border-radius:50%;border:none;background:var(--border);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;}
+.help-iframe{flex:1;border:none;width:100%;min-height:500px;}
 </style>
 </head>
 <body>
@@ -372,10 +396,27 @@ header{
   <button class="h-login-btn" id="login-btn" onclick="signInGoogle()">
     <img src="https://www.google.com/favicon.ico" alt="G"> LOG IN
   </button>
-  <!-- 로그인 후 -->
-  <!-- HIVE 잔액 (로그인 후) -->
-  <div class="h-hive-badge" id="hive-badge" style="display:none;">
-    🍯 <span id="hive-bal">—</span> HIVE
+  <!-- 로그인 후: 타이머 + HIVE잔액 + 프로필 -->
+  <div class="h-timers" id="h-timers">
+    <!-- Daily Wage 카운트다운 -->
+    <div class="h-timer-block">
+      <span class="t-label">Daily</span>
+      <span class="h-timer-val" id="timer-daily">--:--:--</span>
+      <div class="h-timer-info">!</div>
+      <div class="h-timer-tooltip">유저는 매일 1 HIVE 기본소득을 지급 받습니다.</div>
+    </div>
+    <!-- Monthly Tax 카운트다운 -->
+    <div class="h-timer-block">
+      <span class="t-label">Tax</span>
+      <span class="h-timer-val" id="timer-tax">--:--:--:--</span>
+      <div class="h-timer-info">!</div>
+      <div class="h-timer-tooltip">소유한 방의 가치가 ZONE에 따라<br>매달 3, 2 or 1 HIVE 씩 하락합니다.</div>
+    </div>
+    <div class="h-sep"></div>
+    <!-- HIVE 잔액 -->
+    <div class="h-hive-badge" id="hive-badge">
+      🍯 <span id="hive-bal">—</span> HIVE
+    </div>
   </div>
   <div class="h-profile-wrap" id="profile-wrap" style="display:none;">
     <div class="h-profile-btn" id="profile-btn" onclick="toggleMenu()">
@@ -390,10 +431,22 @@ header{
       <button class="h-dd-btn" onclick="openEditRoom()">✏️ 방 수정하기</button>
       <button class="h-dd-btn" onclick="openEstate()">🏘️ 부동산 관리하기</button>
       <div class="h-dd-sep"></div>
+      <button class="h-dd-btn" onclick="openHelp()">❓ 도움말</button>
       <button class="h-dd-btn logout" onclick="signOut()">🚪 로그아웃</button>
     </div>
   </div>
 </header>
+
+<!-- 도움말 팝업 -->
+<div id="help-ov">
+  <div class="help-box">
+    <div class="help-head">
+      <div class="help-title">❓ HiveRoom 도움말</div>
+      <button class="help-close" onclick="closeHelp()">✕</button>
+    </div>
+    <iframe class="help-iframe" id="help-iframe" src="help.html"></iframe>
+  </div>
+</div>
 
 <!-- MAP: 항상 배경 전체 -->
 <div class="map-wrap" id="map-wrap">
@@ -736,14 +789,16 @@ function setLoggedIn(user){
   document.getElementById('profile-img').src = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=F2B830&color=fff`;
   document.getElementById('dd-name').textContent = user.name;
   document.getElementById('dd-email').textContent = user.email;
-  document.getElementById('hive-badge').style.display='flex';
+  document.getElementById('h-timers').classList.add('show');
   loadMyBalance();
+  startTimers();
 }
 function setLoggedOut(){
   document.getElementById('login-btn').style.display='flex';
   document.getElementById('profile-wrap').style.display='none';
-  document.getElementById('hive-badge').style.display='none';
+  document.getElementById('h-timers').classList.remove('show');
   MY_BALANCE = null;
+  stopTimers();
   closeMenu();
 }
 function toggleMenu(){
@@ -2476,6 +2531,68 @@ function onTwitterIdInput(el){
       _twCheckValid = true; // 네트워크 오류 시 통과 (DB에서 최종 차단)
     }
   }, 500); // 0.5초 debounce
+}
+
+// ══════════════════════════════════════
+// 카운트다운 타이머
+// ══════════════════════════════════════
+let _timerInterval = null;
+
+function getNextDailyWage(){
+  const now = new Date();
+  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+  return next - now; // ms
+}
+
+function getNextMonthlyTax(){
+  const now = new Date();
+  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  return next - now; // ms
+}
+
+function fmtHMS(ms){
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
+
+function fmtDHMS(ms){
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return `${String(d).padStart(2,'0')}:${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
+
+function tickTimers(){
+  document.getElementById('timer-daily').textContent = fmtHMS(getNextDailyWage());
+  document.getElementById('timer-tax').textContent   = fmtDHMS(getNextMonthlyTax());
+}
+
+function startTimers(){
+  tickTimers();
+  _timerInterval = setInterval(tickTimers, 1000);
+}
+
+function stopTimers(){
+  clearInterval(_timerInterval);
+  _timerInterval = null;
+  document.getElementById('timer-daily').textContent = '--:--:--';
+  document.getElementById('timer-tax').textContent   = '--:--:--:--';
+}
+
+// ══════════════════════════════════════
+// 도움말
+// ══════════════════════════════════════
+function openHelp(){
+  closeMenu();
+  document.getElementById('help-ov').classList.add('show');
+}
+function closeHelp(){
+  document.getElementById('help-ov').classList.remove('show');
 }
 
 function toggleRoomNumbers(){
