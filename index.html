@@ -965,7 +965,6 @@ async function startEditRoom(room){
   if(twEl) twEl.value = room.twitter_id || '';
   // 관심사 복원
   SEL_INTEREST = room.interest || '';
-  buildInterestGrid();
 
   // 4. 콘솔 열기
   document.getElementById('console').classList.add('open');
@@ -1596,7 +1595,6 @@ function showDone(){
   if(!EDIT_ROOM_NUM){
     SEL_INTEREST = '';
   }
-  buildInterestGrid(); // 최신 목록으로 그리드 갱신
   const dc=document.getElementById('done-cv');
   dc.getContext('2d').drawImage(RCV,0,0,700,700,0,0,160,160);
   const wa=SEL.wall?ASSETS.wall.find(a=>a.id===SEL.wall)?.name:null;
