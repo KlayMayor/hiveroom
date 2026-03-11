@@ -2064,7 +2064,7 @@ async function loadResidentCount(){
     if(!res.ok) return;
     const data = await res.json();
     // 고유 이메일 수 = 실제 가입자 수
-    const unique = new Set(data.map(r => r.email)).size;
+    const unique = new Set(data.map(r => r.email).filter(e => e && e.trim() !== '')).size;
     document.getElementById('cnt').textContent = unique;
   } catch(e){ console.warn('가입자 수 로드 실패:', e); }
 }
