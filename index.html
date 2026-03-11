@@ -2306,7 +2306,7 @@ async function loadMyBalance(){
   try {
     const res = await fetch(
       `${SUPA_URL}/rest/v1/user_balances?user_email=eq.${encodeURIComponent(CURRENT_USER.email)}&select=balance`,
-      { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${CURRENT_USER.token}` } }
+      { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${await getValidToken()}` } }
     );
     if(!res.ok) return;
     const data = await res.json();
@@ -2326,7 +2326,7 @@ async function initUserBalance(){
     method: 'POST',
     headers: {
       'apikey': SUPA_KEY,
-      'Authorization': `Bearer ${CURRENT_USER.token}`,
+      'Authorization': `Bearer ${await getValidToken()}`,
       'Content-Type': 'application/json',
       'Prefer': 'return=representation'
     },
@@ -2352,7 +2352,7 @@ async function openEstate(){
   if(!CURRENT_USER){ alert('로그인이 필요해요!'); return; }
   const res = await fetch(
     `${SUPA_URL}/rest/v1/rooms?email=eq.${encodeURIComponent(CURRENT_USER.email)}&order=room_number.asc&select=room_number`,
-    { headers:{ 'apikey':SUPA_KEY, 'Authorization':`Bearer ${CURRENT_USER.token||SUPA_KEY}` } }
+    { headers:{ 'apikey':SUPA_KEY, 'Authorization':`Bearer ${await getValidToken() || SUPA_KEY}` } }
   );
   const rooms = await res.json();
   const grid = document.getElementById('estate-grid');
@@ -2633,7 +2633,7 @@ async function confirmTileBuy(){
   // ── 중복 구매 방지: DB에서 현재 상태 재확인 ──
   const chkRes = await fetch(
     `${SUPA_URL}/rest/v1/rooms?room_number=eq.${num}&select=room_number,occupied`,
-    { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${CURRENT_USER.token}` } }
+    { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${await getValidToken()}` } }
   );
   const chkData = await chkRes.json();
   if(chkData && chkData.length > 0 && chkData[0].occupied === 'Y'){
