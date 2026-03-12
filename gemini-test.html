@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gemini 이미지 생성 테스트</title>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --honey: #F2B830;
+    --hdk: #A87800;
+    --bg: #FDFAF4;
+    --card: #fff;
+    --border: #EDE8DC;
+    --text: #2A2015;
+    --muted: #8A7A60;
+    --hlt: #FFF8E8;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 32px 16px;
+  }
+  .container {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+  .header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .header h1 {
+    font-family: 'Jua', sans-serif;
+    font-size: 26px;
+    color: var(--hdk);
+    margin-bottom: 6px;
+  }
+  .header p {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    border: 1.5px solid var(--border);
+    padding: 24px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.04);
+  }
+  .card-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  input[type=text], input[type=password], textarea, select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    font-size: 13px;
+    font-family: 'Noto Sans KR', sans-serif;
+    outline: none;
+    background: var(--bg);
+    transition: border-color .15s;
+    color: var(--text);
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--honey); }
+  textarea { resize: vertical; min-height: 90px; line-height: 1.6; }
+  .row { display: flex; gap: 10px; align-items: flex-end; }
+  .row > * { flex: 1; }
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 13px;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Jua', sans-serif;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all .15s;
+    margin-top: 4px;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--honey), #E8A020);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(242,184,48,.4);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(242,184,48,.5); }
+  .btn-primary:disabled { background: #DDD; color: #AAA; box-shadow: none; transform: none; cursor: not-allowed; }
+  .btn-secondary {
+    background: var(--hlt);
+    color: var(--hdk);
+    border: 1.5px solid var(--border);
+    font-size: 13px;
+    margin-top: 8px;
+  }
+  .btn-secondary:hover { background: #FFF0C0; }
+
+  /* 결과 영역 */
+  .result-area {
+    display: none;
+    text-align: center;
+  }
+  .result-area.show { display: block; }
+  .result-img-wrap {
+    position: relative;
+    display: inline-block;
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,.12);
+    margin-bottom: 14px;
+  }
+  .result-img-wrap img {
+    display: block;
+    width: 100%;
+    max-width: 400px;
+    height: auto;
+    border-radius: var(--radius);
+  }
+  .hex-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .hex-mask {
+    width: 200px;
+    height: 200px;
+    opacity: .15;
+  }
+
+  /* 상태 표시 */
+  .status-box {
+    display: none;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 12px;
+    margin-top: 12px;
+    line-height: 1.6;
+  }
+  .status-box.show { display: block; }
+  .status-loading { background: #F0F8FF; border: 1px solid #C0D8F0; color: #3A6FA0; }
+  .status-error   { background: #FFF0F0; border: 1px solid #F0C0C0; color: #A03030; }
+  .status-success { background: #F0FFF4; border: 1px solid #A0E0B0; color: #207040; }
+
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid #C0D8F0;
+    border-top-color: #3A6FA0;
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .meta-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .meta-badge {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: var(--hlt);
+    color: var(--hdk);
+    font-weight: 600;
+  }
+  .hint {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 6px;
+    line-height: 1.7;
+    background: var(--hlt);
+    padding: 8px 12px;
+    border-radius: 10px;
+  }
+  .model-tag {
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-weight: 700;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .tag-free { background: #E8FFE8; color: #208040; }
+  .tag-paid { background: #FFF0E8; color: #A04020; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <h1>🍯 Gemini 이미지 생성 테스트</h1>
+    <p>HiveRoom 연동 전 API 동작 확인용</p>
+  </div>
+
+  <!-- API 키 -->
+  <div class="card">
+    <div class="card-title">🔑 API 설정</div>
+    <label>Gemini API Key</label>
+    <input type="password" id="api-key" placeholder="AIza...">
+    <div class="hint" style="margin-top:8px;">
+      🔗 <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--hdk);">Google AI Studio</a>에서 무료 발급 가능해요.<br>
+      이 페이지는 로컬에서만 사용하며 키가 전송되지 않아요.
+    </div>
+
+    <label style="margin-top:14px;">모델 선택</label>
+    <select id="model-select">
+      <option value="gemini-2.0-flash-preview-image-generation">gemini-2.0-flash-preview-image-generation <span>— 무료 한도 내 이미지 생성</span></option>
+      <option value="imagen-3.0-generate-001">imagen-3.0-generate-001 — 유료 고품질</option>
+    </select>
+    <div class="hint" style="margin-top:6px;">
+      ✅ <b>Flash</b><span class="model-tag tag-free">FREE</span> — 무료 한도 내 사용 가능, 텍스트+이미지 혼합 출력<br>
+      💰 <b>Imagen 3</b><span class="model-tag tag-paid">PAID</span> — 고품질 이미지 전용, $0.03~0.04/장
+    </div>
+  </div>
+
+  <!-- 프롬프트 -->
+  <div class="card">
+    <div class="card-title">✏️ 프롬프트</div>
+    <label>이미지 설명 (영어 권장)</label>
+    <textarea id="prompt">isometric kawaii room interior, cozy bedroom, pastel colors, small furniture, cute decorations, soft lighting, top-down view, flat design, white background, 1024x1024</textarea>
+
+    <label style="margin-top:12px;">빠른 선택</label>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">
+      <button class="btn btn-secondary" style="width:auto;padding:5px 12px;margin:0;font-size:11px;"
+        onclick="setPrompt('isometric kawaii bedroom interior, pastel pink walls, cute furniture, soft lighting, top-down angle, white background')">🛏️ 침실</button>
+      <button class="btn btn-secondary" style="width:auto;padding:5px 12px;margin:0;font-size:11px;"
+        onclick="setPrompt('isometric kawaii living room, cozy sofa, bookshelf, plants, warm lighting, pastel colors, top-down view, white background')">🛋️ 거실</button>
+      <button class="btn btn-secondary" style="width:auto;padding:5px 12px;margin:0;font-size:11px;"
+        onclick="setPrompt('isometric kawaii study room, desk with computer, bookshelf, stationery, soft pastel colors, top-down view, white background')">💻 서재</button>
+      <button class="btn btn-secondary" style="width:auto;padding:5px 12px;margin:0;font-size:11px;"
+        onclick="setPrompt('isometric kawaii cafe interior, coffee bar, small tables, plants, warm lighting, pastel colors, top-down view, white background')">☕ 카페</button>
+    </div>
+  </div>
+
+  <!-- 생성 버튼 -->
+  <button class="btn btn-primary" id="gen-btn" onclick="generateImage()">✨ 이미지 생성하기</button>
+
+  <!-- 상태 -->
+  <div class="status-box" id="status-box"></div>
+
+  <!-- 결과 -->
+  <div class="card result-area" id="result-area" style="margin-top:16px;">
+    <div class="card-title">🎨 생성 결과</div>
+    <div class="result-img-wrap">
+      <img id="result-img" src="" alt="생성된 이미지">
+    </div>
+    <div class="meta-row" id="meta-row"></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-secondary" style="margin:0;" onclick="downloadImg()">⬇️ 다운로드</button>
+      <button class="btn btn-secondary" style="margin:0;" onclick="generateImage()">🔄 다시 생성</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function setPrompt(text){
+  document.getElementById('prompt').value = text;
+}
+
+function showStatus(type, msg){
+  const el = document.getElementById('status-box');
+  el.className = `status-box show status-${type}`;
+  el.innerHTML = type === 'loading'
+    ? `<span class="spinner"></span>${msg}`
+    : msg;
+}
+function hideStatus(){
+  document.getElementById('status-box').classList.remove('show');
+}
+
+async function generateImage(){
+  const key    = document.getElementById('api-key').value.trim();
+  const model  = document.getElementById('model-select').value;
+  const prompt = document.getElementById('prompt').value.trim();
+
+  if(!key)    { showStatus('error', '❌ API 키를 입력해주세요.'); return; }
+  if(!prompt) { showStatus('error', '❌ 프롬프트를 입력해주세요.'); return; }
+
+  const btn = document.getElementById('gen-btn');
+  btn.disabled = true;
+  document.getElementById('result-area').classList.remove('show');
+  showStatus('loading', '이미지 생성 중... (5~15초 소요)');
+
+  try {
+    let imageBase64 = null;
+    let mimeType = 'image/png';
+    let usedModel = model;
+
+    if(model === 'imagen-3.0-generate-001'){
+      // ── Imagen 3 (유료) ──
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${key}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            instances: [{ prompt }],
+            parameters: {
+              sampleCount: 1,
+              aspectRatio: '1:1',
+              outputOptions: { mimeType: 'image/jpeg' }
+            }
+          })
+        }
+      );
+      if(!res.ok){
+        const err = await res.json();
+        throw new Error(err?.error?.message || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      imageBase64 = data?.predictions?.[0]?.bytesBase64Encoded;
+      mimeType = data?.predictions?.[0]?.mimeType || 'image/jpeg';
+
+    } else {
+      // ── Gemini 2.0 Flash (무료) ──
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{ text: prompt }]
+            }],
+            generationConfig: {
+              responseModalities: ['TEXT', 'IMAGE'],
+            }
+          })
+        }
+      );
+      if(!res.ok){
+        const err = await res.json();
+        throw new Error(err?.error?.message || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      // 이미지 파트 찾기
+      const parts = data?.candidates?.[0]?.content?.parts || [];
+      const imgPart = parts.find(p => p.inlineData?.mimeType?.startsWith('image/'));
+      if(!imgPart) throw new Error('이미지가 반환되지 않았어요. 모델이 텍스트만 반환했을 수 있어요.');
+      imageBase64 = imgPart.inlineData.data;
+      mimeType = imgPart.inlineData.mimeType;
+    }
+
+    if(!imageBase64) throw new Error('이미지 데이터가 없어요.');
+
+    // 결과 표시
+    const src = `data:${mimeType};base64,${imageBase64}`;
+    document.getElementById('result-img').src = src;
+    document.getElementById('meta-row').innerHTML = `
+      <span class="meta-badge">모델: ${usedModel.split('-').slice(0,3).join('-')}</span>
+      <span class="meta-badge">형식: ${mimeType}</span>
+      <span class="meta-badge">✅ 생성 완료</span>
+    `;
+    document.getElementById('result-area').classList.add('show');
+    showStatus('success', '✅ 이미지 생성 성공! HiveRoom 연동이 가능해요.');
+
+    // 전역 저장 (다운로드용)
+    window._lastImgSrc = src;
+    window._lastMime = mimeType;
+
+  } catch(e){
+    showStatus('error', `❌ 오류: ${e.message}`);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function downloadImg(){
+  if(!window._lastImgSrc) return;
+  const a = document.createElement('a');
+  a.href = window._lastImgSrc;
+  a.download = `gemini_room_${Date.now()}.${window._lastMime === 'image/jpeg' ? 'jpg' : 'png'}`;
+  a.click();
+}
+</script>
+</body>
+</html>
