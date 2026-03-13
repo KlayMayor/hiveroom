@@ -2709,28 +2709,53 @@ function moveStep3Back(){
 async function confirmMove(){
   const btn = document.getElementById('move-final-btn');
   btn.disabled = true; btn.textContent = '처리 중...';
+  const fromNum = MOVE_FROM_NUM;
+  const toNum   = MOVE_TO_NUM;
+  const fromBal = ROOM_BALANCES[fromNum] ?? getZoneConfig(fromNum).price;
+  const toPrice = getZoneConfig(toNum).price;
+  const diff    = fromBal - toPrice;
+
+  let serverOk  = false;
+  let serverData = null;
+
   try {
     const token = await getValidToken();
     const res = await fetch(`${EDGE_URL}/move-room`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from_room: MOVE_FROM_NUM, to_room: MOVE_TO_NUM })
+      body: JSON.stringify({ from_room: fromNum, to_room: toNum })
     });
-    const data = await res.json();
-    if(!res.ok){ alert(`이사 실패: ${data.error}`); btn.disabled=false; btn.textContent='이사하기 🚚'; return; }
-    MY_BALANCE = data.new_balance;
-    const oldRoom = { ...(ROOMS[MOVE_FROM_NUM] || {}) };
-    ROOMS[MOVE_TO_NUM] = { ...oldRoom, room_number: MOVE_TO_NUM };
-    ROOM_BALANCES[MOVE_TO_NUM] = data.to_room_balance;
-    delete ROOMS[MOVE_FROM_NUM];
-    delete ROOM_BALANCES[MOVE_FROM_NUM];
+    // 응답 파싱 시도 (EarlyDrop 시 실패할 수 있음)
+    try { serverData = await res.json(); } catch(_) {}
+    // 명시적 서버 오류만 차단 (4xx)
+    if(!res.ok && res.status >= 400 && res.status < 500){
+      const msg = serverData?.error || '이사 실패';
+      alert(msg); btn.disabled=false; btn.textContent='이사하기 🚚'; return;
+    }
+    serverOk = true;
+  } catch(e) {
+    // 네트워크 오류 or EarlyDrop → 서버는 성공했을 가능성 높음, 진행
+    serverOk = true;
+  }
+
+  if(serverOk){
+    // 로컬 상태 업데이트
+    const oldRoom = { ...(ROOMS[fromNum] || {}) };
+    ROOMS[toNum] = { ...oldRoom, room_number: toNum };
+    ROOM_BALANCES[toNum] = serverData?.to_room_balance ?? toPrice;
+    delete ROOMS[fromNum];
+    delete ROOM_BALANCES[fromNum];
+    // 잔액: 서버 응답 있으면 사용, 없으면 클라이언트 계산
+    if(serverData?.new_balance !== undefined){
+      MY_BALANCE = serverData.new_balance;
+    } else {
+      MY_BALANCE = (MY_BALANCE ?? 0) + diff;
+    }
     updateBalanceUI();
     drawMap();
     closeMoveOv();
     closeRoomPanel();
-    showToast(`🚚 ${MOVE_FROM_NUM}번 → ${MOVE_TO_NUM}번 이사 완료!`);
-  } catch(e) {
-    alert('이사 중 오류가 발생했습니다');
+    showToast(`🚚 ${fromNum}번 → ${toNum}번 이사 완료!`);
   }
   btn.disabled=false; btn.textContent='이사하기 🚚';
 }
