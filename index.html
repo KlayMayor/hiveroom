@@ -1706,7 +1706,17 @@ function showDone(){
   updateInterestPreview();
   document.getElementById('done-ov').classList.add('show');
 }
-function closeDone(){document.getElementById('done-ov').classList.remove('show');}
+function closeDone(){
+  document.getElementById('done-ov').classList.remove('show');
+  // 처리 중 stuck 방지: 버튼 상태 리셋
+  const rb = document.getElementById('reg-btn');
+  if(rb && rb.textContent.includes('처리 중')){
+    rb.disabled = false;
+    rb.textContent = '✅ 맵에 등록하기';
+    rb.onclick = registerRoom;
+  }
+  document.getElementById('png-prog').classList.remove('show');
+}
 
 async function registerRoom(){
   const twEl = document.getElementById('tw-id');
@@ -1809,21 +1819,35 @@ async function registerRoom(){
     interest: SEL_INTEREST || ''
   };
   const insRes = await fetch(
-    isEdit
-      ? `${SUPA_URL}/rest/v1/rooms?room_number=eq.${targetNum}`
-      : `${SUPA_URL}/rest/v1/rooms`,
+    `${SUPA_URL}/rest/v1/rooms?room_number=eq.${targetNum}`,
     {
-      method: isEdit ? 'PATCH' : 'POST',
+      method: 'PATCH',
       headers: {
         'apikey': SUPA_KEY,
         'Authorization': `Bearer ${await getValidToken() || SUPA_KEY}`,
         'Content-Type': 'application/json',
-        'Prefer': isEdit ? 'return=minimal' : 'return=minimal,resolution=merge-duplicates',
+        'Prefer': 'return=minimal',
       },
-      body: JSON.stringify(isEdit ? dbPayload : { room_number: targetNum, ...dbPayload }),
+      body: JSON.stringify(dbPayload),
     }
   );
-  if(!insRes.ok){ alert('DB 오류: ' + await insRes.text()); rb.disabled=false; rb.textContent='✅ 맵에 등록하기'; return; }
+  // PATCH 영향 행이 0이면 (row 없음) → POST INSERT
+  if(!insRes.ok || insRes.status === 404){
+    const insRes2 = await fetch(
+      `${SUPA_URL}/rest/v1/rooms`,
+      {
+        method: 'POST',
+        headers: {
+          'apikey': SUPA_KEY,
+          'Authorization': `Bearer ${await getValidToken() || SUPA_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal,resolution=merge-duplicates',
+        },
+        body: JSON.stringify({ room_number: targetNum, ...dbPayload }),
+      }
+    );
+    if(!insRes2.ok){ alert('DB 오류: ' + await insRes2.text()); rb.disabled=false; rb.textContent='✅ 맵에 등록하기'; return; }
+  }
 
   // 신규: 이미 confirmTileBuy에서 create-room EF 호출 완료 (잔액 차감, room_balances 세팅)
   // isEdit: 잔액 변동 없음
