@@ -409,8 +409,8 @@ header{
 #move-map-banner.on{display:block;}
 .rp-move-btn{width:100%;margin-top:8px;padding:11px;border-radius:14px;border:1.5px solid #F2B830;background:#FFF8E8;color:#B87000;font-size:14px;font-weight:700;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:all .2s;}
 .rp-move-btn:hover{background:#F2B830;color:#fff;}
-.rp-link-btn{width:100%;margin-top:6px;padding:9px;border-radius:14px;border:1.5px solid #D0CCC8;background:#FAFAF8;color:#888;font-size:12px;font-weight:600;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:all .2s;}
-.rp-link-btn:hover{border-color:#F2B830;color:#B87000;background:#FFF8E8;}
+.rp-link-btn{width:100%;margin-top:6px;padding:9px;border-radius:14px;border:none;background:#000;color:#fff;font-size:13px;font-weight:700;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:all .2s;letter-spacing:.3px;}
+.rp-link-btn:hover{background:#222;transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,0,0,.25);}
 </style>
 </head>
 <body>
@@ -629,7 +629,7 @@ header{
     <div class="rp-insufficient" id="rp-insufficient" style="display:none">잔액이 부족합니다</div>
     <div class="rp-own-badge" id="rp-own-badge" style="display:none">내 방입니다</div>
     <button class="rp-move-btn" id="rp-move-btn" onclick="openMoveOv()" style="display:none">🚚 이사하기</button>
-    <button class="rp-link-btn" id="rp-link-btn" onclick="copyRoomLink(PANEL_ROOM_NUM)">🔗 이 방 링크 복사</button>
+    <button class="rp-link-btn" id="rp-link-btn" onclick="postToX(PANEL_ROOM_NUM)" style="display:none">Post to 𝕏</button>
   </div>
 </div>
 
@@ -2627,15 +2627,18 @@ function openRoomPanel(num){
     insuf.style.display = 'none';
     ownBadge.style.display = 'block';
     document.getElementById('rp-move-btn').style.display = 'block';
+    document.getElementById('rp-link-btn').style.display = 'block';
   } else if(room.reserved){
     buyBtn.style.display = 'none';
     insuf.style.display = 'none';
     ownBadge.style.display = 'none';
     document.getElementById('rp-move-btn').style.display = 'none';
+    document.getElementById('rp-link-btn').style.display = 'none';
   } else {
     buyBtn.style.display = 'block';
     ownBadge.style.display = 'none';
     document.getElementById('rp-move-btn').style.display = 'none';
+    document.getElementById('rp-link-btn').style.display = 'block';
     buyBtn.disabled = !canBuy || !CURRENT_USER;
     insuf.style.display = (!CURRENT_USER || (!canBuy && !isOwnFinal && !room.reserved)) ? 'block' : 'none';
     if(!CURRENT_USER) insuf.textContent = '로그인이 필요합니다';
@@ -2645,6 +2648,7 @@ function openRoomPanel(num){
 }
 function closeRoomPanel(){
   document.getElementById('room-panel').classList.remove('open');
+  document.getElementById('rp-link-btn').style.display = 'none';
   PANEL_ROOM_NUM = null;
 }
 // ── 채워진 방 구매 ──
@@ -3180,7 +3184,6 @@ mCV.addEventListener('wheel',e=>{
   mOY = my - mH/2 - (my - mH/2 - mOY) * ratio;
   mScale = newScale;
   drawMap();
-  updateUrlHash();
 },{passive:false});
 mCV.addEventListener('mousedown',e=>{isDrag=true;_dragMoved=false;dSt={x:e.clientX,y:e.clientY};dOff={x:mOX,y:mOY};});
 window.addEventListener('mousemove',e=>{
@@ -3327,33 +3330,19 @@ function applyUrlHash(){
   }
 }
 
-function updateUrlHash(){
-  // 현재 화면 중앙에 가장 가까운 타일 번호 찾기
-  let closest=null, minDist=Infinity;
-  for(let num=1;num<=1027;num++){
-    const pos=SLOT_POS[num]; if(!pos) continue;
-    const{x:cx,y:cy}=ap(pos.q,pos.r);
-    const d=Math.sqrt((cx-mW/2)**2+(cy-mH/2)**2);
-    if(d<minDist){minDist=d;closest=num;}
-  }
-  if(closest){
-    const z = Math.round(mScale*100)/100;
-    const newHash = `#room=${closest}&zoom=${z}`;
-    history.replaceState(null,'',newHash);
-  }
-}
 
-// 드래그/줌 종료 시 URL 업데이트
+// 드래그 종료
 window.addEventListener('mouseup',()=>{
   isDrag=false; mCV.classList.remove('drag');
-  updateUrlHash();
 });
 
-function copyRoomLink(num){
-  const pos = SLOT_POS[num]; if(!pos) return;
-  const z = Math.round(mScale*100)/100;
-  const url = `${location.origin}${location.pathname}#room=${num}&zoom=${z}`;
-  navigator.clipboard.writeText(url).then(()=>showToast(`🔗 ${num}번 방 링크 복사됨!`));
+function postToX(num){
+  const room = ROOMS[num];
+  const handle = room?.twitterId ? `@${room.twitterId}` : `Room ${num}`;
+  const url = `${location.origin}${location.pathname}#room=${num}&zoom=2`;
+  const text = `🍯 Just found ${handle} at HiveRoom ${num} !!\n🏠 Check this out and make your room before all the good spots are taken!\n👉 ${url}`;
+  const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+  window.open(xUrl, '_blank', 'width=600,height=450');
 }
 </script>
 </body>
