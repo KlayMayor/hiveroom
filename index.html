@@ -3239,18 +3239,9 @@ mCV.addEventListener('click',e=>{
       return;
     }
   }
-  // 헥사곤 타일 클릭 → 사이드 패널
-  for(let num=1;num<=1000;num++){
-    const room=ROOMS[num]; if(!room) continue;
-    const pos=SLOT_POS[num]; if(!pos) continue;
-    const{x:cx,y:cy}=ap(pos.q,pos.r);
-    if(Math.sqrt((mx-cx)**2+(my-cy)**2)<s*0.92){
-      openRoomPanel(num);
-      return;
-    }
-  }
-  // 빈 타일 클릭 → 이사하기 맵 선택 모드 처리
+  // 맵 선택 모드 중에는 패널 열기 차단
   if(MOVE_MAP_SELECT){
+    // 빈 타일만 선택 가능
     for(let num=1;num<=1027;num++){
       if(ROOMS[num]) continue;
       const pos=SLOT_POS[num]; if(!pos) continue;
@@ -3262,14 +3253,23 @@ mCV.addEventListener('click',e=>{
         document.getElementById('move-map-btn').classList.remove('active');
         document.getElementById('move-map-hint').classList.remove('on');
         document.getElementById('move-map-banner').classList.remove('on');
-        // 팝업 다시 표시
         document.getElementById('move-ov').style.opacity = '1';
         document.getElementById('move-ov').style.pointerEvents = '';
         return;
       }
     }
-    // 빈 타일 아닌 곳 클릭 → 팝업 유지
+    // 채워진 방 또는 빈 곳 클릭 → 모드 유지, 아무것도 열지 않음
     return;
+  }
+  // 헥사곤 타일 클릭 → 사이드 패널
+  for(let num=1;num<=1000;num++){
+    const room=ROOMS[num]; if(!room) continue;
+    const pos=SLOT_POS[num]; if(!pos) continue;
+    const{x:cx,y:cy}=ap(pos.q,pos.r);
+    if(Math.sqrt((mx-cx)**2+(my-cy)**2)<s*0.92){
+      openRoomPanel(num);
+      return;
+    }
   }
   // 빈 타일 클릭 → openEmptyPanel
   for(let num=1;num<=1027;num++){
