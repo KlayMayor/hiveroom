@@ -405,6 +405,8 @@ header{
 .move-btn-ok:disabled{background:#D0CECA;cursor:not-allowed;}
 .move-map-hint{font-size:11px;color:#F2B830;margin-top:6px;font-weight:600;display:none;}
 .move-map-hint.on{display:block;}
+#move-map-banner{display:none;position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:860;background:rgba(242,184,48,.95);color:#5A3800;padding:10px 22px;border-radius:20px;font-size:13px;font-weight:700;font-family:'Jua',sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.2);pointer-events:none;}
+#move-map-banner.on{display:block;}
 .rp-move-btn{width:100%;margin-top:8px;padding:11px;border-radius:14px;border:1.5px solid #F2B830;background:#FFF8E8;color:#B87000;font-size:14px;font-weight:700;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:all .2s;}
 .rp-move-btn:hover{background:#F2B830;color:#fff;}
 </style>
@@ -685,6 +687,9 @@ header{
     <button class="buy-success-btn" onclick="closeBuySuccess()">확인</button>
   </div>
 </div>
+
+<!-- 이사하기 맵 선택 안내 배너 -->
+<div id="move-map-banner">🗺 빈 타일을 클릭하세요 — ESC로 취소</div>
 
 <!-- 이사하기 모달 -->
 <div id="move-ov">
@@ -1850,7 +1855,7 @@ async function goToMap(roomNum){
   document.getElementById('cnt').textContent = Object.keys(ROOMS).length;
   _pendingTileNum = null;
   closeDone(); closeConsole();
-  // 해당 방 슬롯으로 맵 이동
+  // 해당 방 슬롯으로 맵 이동 (타일을 화면 중앙에 위치)
   const pos = SLOT_POS[roomNum];
   if(pos){
     const s = HEX * mScale;
@@ -2638,7 +2643,10 @@ function openMoveOv(){
   document.getElementById('move-ov').classList.add('show');
 }
 function closeMoveOv(){
-  document.getElementById('move-ov').classList.remove('show');
+  const ov = document.getElementById('move-ov');
+  ov.classList.remove('show');
+  ov.style.opacity = '1';
+  ov.style.pointerEvents = '';
   MOVE_MAP_SELECT = false;
   document.getElementById('move-map-btn').classList.remove('active');
   document.getElementById('move-map-hint').classList.remove('on');
@@ -2647,6 +2655,14 @@ function toggleMoveMapSelect(){
   MOVE_MAP_SELECT = !MOVE_MAP_SELECT;
   document.getElementById('move-map-btn').classList.toggle('active', MOVE_MAP_SELECT);
   document.getElementById('move-map-hint').classList.toggle('on', MOVE_MAP_SELECT);
+  document.getElementById('move-map-banner').classList.toggle('on', MOVE_MAP_SELECT);
+  if(MOVE_MAP_SELECT){
+    document.getElementById('move-ov').style.opacity = '0';
+    document.getElementById('move-ov').style.pointerEvents = 'none';
+  } else {
+    document.getElementById('move-ov').style.opacity = '1';
+    document.getElementById('move-ov').style.pointerEvents = '';
+  }
 }
 function moveStep1Next(){
   const val = parseInt(document.getElementById('move-target-input').value);
@@ -3079,7 +3095,19 @@ function startBadgeAnim(){
   BADGE_RAF = requestAnimationFrame(tick);
 }
 
-mCV.addEventListener('wheel',e=>{e.preventDefault();mScale=Math.max(.3,Math.min(3,mScale*(e.deltaY>0?.9:1.1)));drawMap();},{passive:false});
+mCV.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const rect = mCV.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const factor = e.deltaY > 0 ? 0.9 : 1.1;
+  const newScale = Math.max(.3, Math.min(3, mScale * factor));
+  // 마우스 커서 위치를 중심으로 zoom
+  mOX = mx - (mx - mOX) * (newScale / mScale) - mW/2 + mW/2;
+  mOY = my - (my - mOY) * (newScale / mScale) - mH/2 + mH/2;
+  mScale = newScale;
+  drawMap();
+},{passive:false});
 mCV.addEventListener('mousedown',e=>{isDrag=true;_dragMoved=false;dSt={x:e.clientX,y:e.clientY};dOff={x:mOX,y:mOY};});
 window.addEventListener('mousemove',e=>{
   if(isDrag){
@@ -3147,9 +3175,14 @@ mCV.addEventListener('click',e=>{
         MOVE_MAP_SELECT = false;
         document.getElementById('move-map-btn').classList.remove('active');
         document.getElementById('move-map-hint').classList.remove('on');
+        document.getElementById('move-map-banner').classList.remove('on');
+        // 팝업 다시 표시
+        document.getElementById('move-ov').style.opacity = '1';
+        document.getElementById('move-ov').style.pointerEvents = '';
         return;
       }
     }
+    // 빈 타일 아닌 곳 클릭 → 팝업 유지
     return;
   }
   // 빈 타일 클릭 → openEmptyPanel
@@ -3170,6 +3203,17 @@ mCV.addEventListener('click',e=>{
 
 // 초기화
 window.addEventListener('resize',resizeMap);
+// ESC → 이사하기 맵 선택 모드 취소
+window.addEventListener('keydown', e=>{
+  if(e.key === 'Escape' && MOVE_MAP_SELECT){
+    MOVE_MAP_SELECT = false;
+    document.getElementById('move-map-btn').classList.remove('active');
+    document.getElementById('move-map-hint').classList.remove('on');
+    document.getElementById('move-map-banner').classList.remove('on');
+    document.getElementById('move-ov').style.opacity = '1';
+    document.getElementById('move-ov').style.pointerEvents = '';
+  }
+});
 startStarAnim(); // 별 반짝임 시작
 renderRoom(); updateProg(); resizeMap();
 initAuth();    // Google 로그인 상태 복원
