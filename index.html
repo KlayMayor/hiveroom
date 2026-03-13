@@ -409,6 +409,8 @@ header{
 #move-map-banner.on{display:block;}
 .rp-move-btn{width:100%;margin-top:8px;padding:11px;border-radius:14px;border:1.5px solid #F2B830;background:#FFF8E8;color:#B87000;font-size:14px;font-weight:700;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:all .2s;}
 .rp-move-btn:hover{background:#F2B830;color:#fff;}
+.rp-link-btn{width:100%;margin-top:6px;padding:9px;border-radius:14px;border:1.5px solid #D0CCC8;background:#FAFAF8;color:#888;font-size:12px;font-weight:600;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:all .2s;}
+.rp-link-btn:hover{border-color:#F2B830;color:#B87000;background:#FFF8E8;}
 </style>
 </head>
 <body>
@@ -627,6 +629,7 @@ header{
     <div class="rp-insufficient" id="rp-insufficient" style="display:none">잔액이 부족합니다</div>
     <div class="rp-own-badge" id="rp-own-badge" style="display:none">내 방입니다</div>
     <button class="rp-move-btn" id="rp-move-btn" onclick="openMoveOv()" style="display:none">🚚 이사하기</button>
+    <button class="rp-link-btn" id="rp-link-btn" onclick="copyRoomLink(PANEL_ROOM_NUM)">🔗 이 방 링크 복사</button>
   </div>
 </div>
 
@@ -3177,6 +3180,7 @@ mCV.addEventListener('wheel',e=>{
   mOY = my - mH/2 - (my - mH/2 - mOY) * ratio;
   mScale = newScale;
   drawMap();
+  updateUrlHash();
 },{passive:false});
 mCV.addEventListener('mousedown',e=>{isDrag=true;_dragMoved=false;dSt={x:e.clientX,y:e.clientY};dOff={x:mOX,y:mOY};});
 window.addEventListener('mousemove',e=>{
@@ -3297,8 +3301,60 @@ startStarAnim(); // 별 반짝임 시작
 renderRoom(); updateProg(); resizeMap();
 initAuth();    // Google 로그인 상태 복원
 loadAssets();  // Supabase에서 에셋 로드
-loadRooms();   // Supabase에서 기존 방 로드
+loadRooms().then(()=>{ applyUrlHash(); }); // URL 해시 적용 (방 로드 후)
 subscribeRooms(); // Supabase Realtime 구독
+
+// ── URL 해시 네비게이션 ──
+// 형식: #room=211  또는  #room=211&zoom=1.5
+function applyUrlHash(){
+  const hash = location.hash.replace('#','');
+  if(!hash) return;
+  const params = Object.fromEntries(hash.split('&').map(p=>p.split('=')));
+  const roomNum = parseInt(params.room);
+  const zoom    = parseFloat(params.zoom);
+  if(!isNaN(zoom) && zoom >= 0.3 && zoom <= 3) mScale = zoom;
+  if(!isNaN(roomNum) && roomNum >= 1 && roomNum <= 1027){
+    const pos = SLOT_POS[roomNum];
+    if(pos){
+      const s = HEX * mScale;
+      mOX = -(s * Math.sqrt(3) * (pos.q + pos.r / 2));
+      mOY = -(s * 1.5 * pos.r);
+      drawMap();
+      // 방이 있으면 패널 열기
+      if(ROOMS[roomNum]) setTimeout(()=>openRoomPanel(roomNum), 400);
+      else               setTimeout(()=>openEmptyPanel(roomNum), 400);
+    }
+  }
+}
+
+function updateUrlHash(){
+  // 현재 화면 중앙에 가장 가까운 타일 번호 찾기
+  let closest=null, minDist=Infinity;
+  for(let num=1;num<=1027;num++){
+    const pos=SLOT_POS[num]; if(!pos) continue;
+    const{x:cx,y:cy}=ap(pos.q,pos.r);
+    const d=Math.sqrt((cx-mW/2)**2+(cy-mH/2)**2);
+    if(d<minDist){minDist=d;closest=num;}
+  }
+  if(closest){
+    const z = Math.round(mScale*100)/100;
+    const newHash = `#room=${closest}&zoom=${z}`;
+    history.replaceState(null,'',newHash);
+  }
+}
+
+// 드래그/줌 종료 시 URL 업데이트
+window.addEventListener('mouseup',()=>{
+  isDrag=false; mCV.classList.remove('drag');
+  updateUrlHash();
+});
+
+function copyRoomLink(num){
+  const pos = SLOT_POS[num]; if(!pos) return;
+  const z = Math.round(mScale*100)/100;
+  const url = `${location.origin}${location.pathname}#room=${num}&zoom=${z}`;
+  navigator.clipboard.writeText(url).then(()=>showToast(`🔗 ${num}번 방 링크 복사됨!`));
+}
 </script>
 </body>
 </html>
