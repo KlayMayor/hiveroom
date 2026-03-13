@@ -372,6 +372,41 @@ header{
 .help-title{font-family:'Jua',sans-serif;font-size:18px;color:var(--hdk);}
 .help-close{width:30px;height:30px;border-radius:50%;border:none;background:var(--border);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;}
 .help-iframe{flex:1;border:none;width:100%;min-height:500px;}
+
+/* ── 이사하기 ── */
+#move-ov{display:none;position:fixed;inset:0;z-index:850;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);align-items:center;justify-content:center;}
+#move-ov.show{display:flex;}
+.move-box{background:#fff;border-radius:20px;width:min(420px,94vw);box-shadow:0 32px 80px rgba(0,0,0,.25);animation:popin .35s cubic-bezier(.34,1.56,.64,1);overflow:hidden;}
+.move-head{background:linear-gradient(135deg,#F2B830,#E07820);padding:18px 22px;display:flex;align-items:center;justify-content:space-between;}
+.move-head-title{font-family:'Jua',sans-serif;font-size:17px;color:#fff;}
+.move-head-close{width:28px;height:28px;border-radius:50%;border:none;background:rgba(255,255,255,.25);color:#fff;cursor:pointer;font-size:14px;}
+.move-body{padding:20px 22px;}
+.move-step{display:none;}.move-step.on{display:block;}
+.move-label{font-size:12px;color:#888;margin-bottom:6px;font-weight:600;}
+.move-input-row{display:flex;gap:8px;align-items:center;}
+.move-num-input{flex:1;padding:10px 14px;border:1.5px solid #E0DDD8;border-radius:12px;font-size:16px;font-family:'Jua',sans-serif;outline:none;}
+.move-num-input:focus{border-color:#F2B830;}
+.move-map-btn{padding:10px 14px;border:1.5px solid #E0DDD8;border-radius:12px;background:#FAFAF8;font-size:12px;cursor:pointer;white-space:nowrap;font-weight:600;color:#555;}
+.move-map-btn.active{border-color:#F2B830;background:#FFF8E8;color:#B87000;}
+.move-confirm-text{font-family:'Jua',sans-serif;font-size:16px;color:#3A3530;text-align:center;padding:10px 0 16px;}
+.move-sim-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #F0EDE8;font-size:13px;}
+.move-sim-row:last-child{border-bottom:none;}
+.move-sim-lbl{color:#888;}
+.move-sim-val{font-weight:700;color:#3A3530;}
+.move-sim-val.pos{color:#2A8A4A;}
+.move-sim-val.neg{color:#C44;}
+.move-sim-total{background:#FFF8E8;border-radius:12px;padding:12px 16px;margin-top:12px;display:flex;justify-content:space-between;align-items:center;}
+.move-sim-total-lbl{font-size:13px;color:#888;}
+.move-sim-total-val{font-family:'Jua',sans-serif;font-size:18px;color:#B87000;}
+.move-warn{background:#FFF0F0;border-radius:10px;padding:10px 14px;font-size:12px;color:#C44;text-align:center;margin-top:10px;font-weight:600;}
+.move-btns{display:flex;gap:8px;margin-top:18px;}
+.move-btn-cancel{flex:1;padding:12px;border-radius:12px;border:1.5px solid #E0DDD8;background:#fff;font-size:14px;cursor:pointer;font-weight:600;}
+.move-btn-ok{flex:1;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,#F2B830,#E07820);color:#fff;font-size:14px;font-weight:700;cursor:pointer;}
+.move-btn-ok:disabled{background:#D0CECA;cursor:not-allowed;}
+.move-map-hint{font-size:11px;color:#F2B830;margin-top:6px;font-weight:600;display:none;}
+.move-map-hint.on{display:block;}
+.rp-move-btn{width:100%;margin-top:8px;padding:11px;border-radius:14px;border:1.5px solid #F2B830;background:#FFF8E8;color:#B87000;font-size:14px;font-weight:700;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:all .2s;}
+.rp-move-btn:hover{background:#F2B830;color:#fff;}
 </style>
 </head>
 <body>
@@ -589,6 +624,7 @@ header{
     <button class="rp-buy-btn" id="rp-buy-btn" onclick="requestBuyRoom()">구매하기</button>
     <div class="rp-insufficient" id="rp-insufficient" style="display:none">잔액이 부족합니다</div>
     <div class="rp-own-badge" id="rp-own-badge" style="display:none">내 방입니다</div>
+    <button class="rp-move-btn" id="rp-move-btn" onclick="openMoveOv()" style="display:none">🚚 이사하기</button>
   </div>
 </div>
 
@@ -647,6 +683,53 @@ header{
     <div class="buy-success-title">구매 완료!</div>
     <div class="buy-success-desc">타일을 성공적으로 구매했어요.<br>방 꾸미기 패널에서<br>나만의 방을 완성해보세요! 🍯</div>
     <button class="buy-success-btn" onclick="closeBuySuccess()">확인</button>
+  </div>
+</div>
+
+<!-- 이사하기 모달 -->
+<div id="move-ov">
+  <div class="move-box">
+    <div class="move-head">
+      <div class="move-head-title">🚚 이사하기</div>
+      <button class="move-head-close" onclick="closeMoveOv()">✕</button>
+    </div>
+    <div class="move-body">
+
+      <!-- STEP 1: 방 번호 입력 -->
+      <div class="move-step on" id="move-step1">
+        <div class="move-label">이사할 빈 방 번호</div>
+        <div class="move-input-row">
+          <input class="move-num-input" id="move-target-input" type="number" min="1" max="1027" placeholder="방 번호 입력">
+          <button class="move-map-btn" id="move-map-btn" onclick="toggleMoveMapSelect()">🗺 맵에서 선택</button>
+        </div>
+        <div class="move-map-hint" id="move-map-hint">맵에서 빈 타일을 클릭하세요</div>
+        <div class="move-btns">
+          <button class="move-btn-cancel" onclick="closeMoveOv()">취소</button>
+          <button class="move-btn-ok" onclick="moveStep1Next()">다음 →</button>
+        </div>
+      </div>
+
+      <!-- STEP 2: 이사 확인 -->
+      <div class="move-step" id="move-step2">
+        <div class="move-confirm-text" id="move-confirm-text"></div>
+        <div class="move-btns">
+          <button class="move-btn-cancel" onclick="moveStep2Back()">← 뒤로</button>
+          <button class="move-btn-ok" onclick="moveStep2Next()">Yes, 계속</button>
+        </div>
+      </div>
+
+      <!-- STEP 3: 거래 시뮬레이션 -->
+      <div class="move-step" id="move-step3">
+        <div id="move-sim-rows"></div>
+        <div id="move-sim-total" class="move-sim-total" style="display:none;"></div>
+        <div id="move-warn" class="move-warn" style="display:none;"></div>
+        <div class="move-btns">
+          <button class="move-btn-cancel" onclick="moveStep3Back()">← 뒤로</button>
+          <button class="move-btn-ok" id="move-final-btn" onclick="confirmMove()">이사하기 🚚</button>
+        </div>
+      </div>
+
+    </div>
   </div>
 </div>
 
@@ -2468,13 +2551,16 @@ function openRoomPanel(num){
     buyBtn.style.display = 'none';
     insuf.style.display = 'none';
     ownBadge.style.display = 'block';
+    document.getElementById('rp-move-btn').style.display = 'block';
   } else if(room.reserved){
     buyBtn.style.display = 'none';
     insuf.style.display = 'none';
     ownBadge.style.display = 'none';
+    document.getElementById('rp-move-btn').style.display = 'none';
   } else {
     buyBtn.style.display = 'block';
     ownBadge.style.display = 'none';
+    document.getElementById('rp-move-btn').style.display = 'none';
     buyBtn.disabled = !canBuy || !CURRENT_USER;
     insuf.style.display = (!CURRENT_USER || (!canBuy && !isOwnFinal && !room.reserved)) ? 'block' : 'none';
     if(!CURRENT_USER) insuf.textContent = '로그인이 필요합니다';
@@ -2531,6 +2617,123 @@ async function confirmBuyRoom(){
   btn.disabled = false; btn.textContent = '구매하기';
 }
 function closeBuySuccess(){ document.getElementById('buy-success-ov').classList.remove('show'); }
+
+// ── 이사하기 ──
+let MOVE_FROM_NUM = null;
+let MOVE_TO_NUM   = null;
+let MOVE_MAP_SELECT = false;
+
+function openMoveOv(){
+  if(!PANEL_ROOM_NUM) return;
+  MOVE_FROM_NUM = PANEL_ROOM_NUM;
+  MOVE_TO_NUM   = null;
+  MOVE_MAP_SELECT = false;
+  document.getElementById('move-target-input').value = '';
+  document.getElementById('move-map-hint').classList.remove('on');
+  document.getElementById('move-map-btn').classList.remove('active');
+  ['move-step1','move-step2','move-step3'].forEach(id=>{
+    document.getElementById(id).classList.remove('on');
+  });
+  document.getElementById('move-step1').classList.add('on');
+  document.getElementById('move-ov').classList.add('show');
+}
+function closeMoveOv(){
+  document.getElementById('move-ov').classList.remove('show');
+  MOVE_MAP_SELECT = false;
+  document.getElementById('move-map-btn').classList.remove('active');
+  document.getElementById('move-map-hint').classList.remove('on');
+}
+function toggleMoveMapSelect(){
+  MOVE_MAP_SELECT = !MOVE_MAP_SELECT;
+  document.getElementById('move-map-btn').classList.toggle('active', MOVE_MAP_SELECT);
+  document.getElementById('move-map-hint').classList.toggle('on', MOVE_MAP_SELECT);
+}
+function moveStep1Next(){
+  const val = parseInt(document.getElementById('move-target-input').value);
+  if(!val || val < 1 || val > 1027){ alert('유효한 방 번호를 입력하세요 (1~1027)'); return; }
+  if(ROOMS[val]){ alert(`${val}번은 이미 사용 중인 방입니다`); return; }
+  if(val === MOVE_FROM_NUM){ alert('현재 방과 같은 번호입니다'); return; }
+  MOVE_TO_NUM = val;
+  MOVE_MAP_SELECT = false;
+  document.getElementById('move-map-btn').classList.remove('active');
+  document.getElementById('move-map-hint').classList.remove('on');
+  document.getElementById('move-confirm-text').textContent =
+    `${MOVE_FROM_NUM}번에서 ${MOVE_TO_NUM}번으로 이사 하시겠습니까?`;
+  document.getElementById('move-step1').classList.remove('on');
+  document.getElementById('move-step2').classList.add('on');
+}
+function moveStep2Back(){
+  document.getElementById('move-step2').classList.remove('on');
+  document.getElementById('move-step1').classList.add('on');
+}
+function moveStep2Next(){
+  const fromBal = ROOM_BALANCES[MOVE_FROM_NUM] ?? getZoneConfig(MOVE_FROM_NUM).price;
+  const toPrice = getZoneConfig(MOVE_TO_NUM).price;
+  const myBal   = MY_BALANCE ?? 0;
+  const diff    = fromBal - toPrice;
+  const canMove = diff >= 0 || (myBal + diff) >= 0;
+  const extraNeeded = diff < 0 ? Math.abs(diff) : 0;
+  const refund      = diff > 0 ? diff : 0;
+
+  const rows = [
+    { lbl: `내 방 (${MOVE_FROM_NUM}번) 현재 가치`, val: `${fromBal.toLocaleString()} HIVE` },
+    { lbl: `이사할 방 (${MOVE_TO_NUM}번) ZONE 가격`, val: `${toPrice.toLocaleString()} HIVE` },
+    { lbl: '내 HIVE 잔액', val: `${myBal.toLocaleString()} HIVE` },
+  ];
+  document.getElementById('move-sim-rows').innerHTML =
+    rows.map(r=>`<div class="move-sim-row"><span class="move-sim-lbl">${r.lbl}</span><span class="move-sim-val">${r.val}</span></div>`).join('');
+
+  const totalEl = document.getElementById('move-sim-total');
+  const warnEl  = document.getElementById('move-warn');
+  if(diff >= 0){
+    totalEl.style.display = 'flex';
+    totalEl.innerHTML = `<span class="move-sim-total-lbl">차액 환급</span><span class="move-sim-total-val">+${refund.toLocaleString()} HIVE</span>`;
+    warnEl.style.display = 'none';
+  } else if(canMove){
+    totalEl.style.display = 'flex';
+    totalEl.innerHTML = `<span class="move-sim-total-lbl">추가 차감 (잔액에서)</span><span class="move-sim-total-val" style="color:#C44">-${extraNeeded.toLocaleString()} HIVE</span>`;
+    warnEl.style.display = 'none';
+  } else {
+    totalEl.style.display = 'none';
+    warnEl.style.display = 'block';
+    warnEl.textContent = `잔액 부족으로 이사할 수 없습니다. 필요 추가 금액: ${(toPrice - fromBal - myBal).toLocaleString()} HIVE`;
+  }
+  document.getElementById('move-final-btn').disabled = !canMove;
+  document.getElementById('move-step2').classList.remove('on');
+  document.getElementById('move-step3').classList.add('on');
+}
+function moveStep3Back(){
+  document.getElementById('move-step3').classList.remove('on');
+  document.getElementById('move-step2').classList.add('on');
+}
+async function confirmMove(){
+  const btn = document.getElementById('move-final-btn');
+  btn.disabled = true; btn.textContent = '처리 중...';
+  try {
+    const token = await getValidToken();
+    const res = await fetch(`${EDGE_URL}/move-room`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from_room: MOVE_FROM_NUM, to_room: MOVE_TO_NUM })
+    });
+    const data = await res.json();
+    if(!res.ok){ alert(`이사 실패: ${data.error}`); btn.disabled=false; btn.textContent='이사하기 🚚'; return; }
+    MY_BALANCE = data.new_balance;
+    const oldRoom = { ...(ROOMS[MOVE_FROM_NUM] || {}) };
+    ROOMS[MOVE_TO_NUM] = { ...oldRoom, room_number: MOVE_TO_NUM };
+    ROOM_BALANCES[MOVE_TO_NUM] = data.to_room_balance;
+    delete ROOMS[MOVE_FROM_NUM];
+    delete ROOM_BALANCES[MOVE_FROM_NUM];
+    updateBalanceUI();
+    drawMap();
+    closeMoveOv();
+    closeRoomPanel();
+    showToast(`🚚 ${MOVE_FROM_NUM}번 → ${MOVE_TO_NUM}번 이사 완료!`);
+  } catch(e) {
+    alert('이사 중 오류가 발생했습니다');
+  }
+  btn.disabled=false; btn.textContent='이사하기 🚚';
+}
 
 // ── 빈 타일 패널 ──
 let EMPTY_PANEL_NUM = null;
@@ -2906,6 +3109,23 @@ mCV.addEventListener('click',e=>{
       openRoomPanel(num);
       return;
     }
+  }
+  // 빈 타일 클릭 → 이사하기 맵 선택 모드 처리
+  if(MOVE_MAP_SELECT){
+    for(let num=1;num<=1027;num++){
+      if(ROOMS[num]) continue;
+      const pos=SLOT_POS[num]; if(!pos) continue;
+      const{x:cx,y:cy}=ap(pos.q,pos.r);
+      if(Math.sqrt((mx-cx)**2+(my-cy)**2)<s*0.92){
+        document.getElementById('move-target-input').value = num;
+        MOVE_TO_NUM = num;
+        MOVE_MAP_SELECT = false;
+        document.getElementById('move-map-btn').classList.remove('active');
+        document.getElementById('move-map-hint').classList.remove('on');
+        return;
+      }
+    }
+    return;
   }
   // 빈 타일 클릭 → openEmptyPanel
   for(let num=1;num<=1027;num++){
