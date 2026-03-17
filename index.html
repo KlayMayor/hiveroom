@@ -208,7 +208,10 @@ header{
 .png-fsize{font-size:10px;color:var(--muted);margin-top:2px;}
 .png-dl{font-size:10px;color:var(--hdk);text-decoration:underline;cursor:pointer;margin-top:4px;display:inline-block;}
 .done-btns{display:flex;gap:9px;justify-content:center;margin-top:16px;}
-.done-main-btn{padding:11px 24px;border-radius:20px;background:linear-gradient(135deg,var(--honey),var(--accent));color:#fff;border:none;font-size:12.5px;font-weight:700;font-family:'Noto Sans KR',sans-serif;cursor:pointer;}
+.done-main-btn{padding:11px 24px;border-radius:20px;background:linear-gradient(135deg,var(--honey),var(--accent));color:#fff;border:none;font-size:12.5px;font-weight:700;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:all .18s;}
+.done-main-btn:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(224,120,32,.35);}
+.done-sub-btn{padding:10px 18px;border-radius:20px;background:#F5F0E8;border:1.5px solid var(--border);color:var(--muted);font-size:12px;font-weight:700;font-family:'Noto Sans KR',sans-serif;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .18s;}
+.done-sub-btn:hover{background:var(--hlt);border-color:var(--honey);color:var(--hdk);}
 .tw-input-wrap{margin:10px 0;text-align:left;}
 .tw-input-wrap label{font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;}
 .tw-input{width:100%;padding:9px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:13px;font-family:'Noto Sans KR',sans-serif;outline:none;transition:border-color .15s;box-sizing:border-box;}
@@ -784,7 +787,7 @@ header{
       </div>
       <div class="done-btns" style="margin-top:12px;">
         <button class="done-main-btn" onclick="doneStep1Next()">다음 →</button>
-        <button class="done-sub-btn" onclick="closeDone()">계속 수정</button>
+        <button class="done-sub-btn" onclick="closeDone()">✏️ 계속 수정</button>
       </div>
     </div>
 
@@ -801,7 +804,7 @@ header{
       </div>
       <div class="done-btns" style="margin-top:12px;">
         <button class="done-main-btn" onclick="doneStep2Next()">다음 →</button>
-        <button class="done-sub-btn" onclick="doneStep2Back()">← 뒤로</button>
+        <button class="done-sub-btn" onclick="doneStep2Back()">◀ 뒤로</button>
       </div>
     </div>
 
@@ -826,7 +829,7 @@ header{
     </div>
     <div class="done-btns">
       <button class="done-main-btn" id="reg-btn" onclick="registerRoom()">✅ 맵에 등록하기</button>
-      <button class="done-sub-btn" onclick="doneStep3Back()">← 뒤로</button>
+      <button class="done-sub-btn" onclick="doneStep3Back()">◀ 뒤로</button>
     </div>
     </div>
   </div>
@@ -2260,39 +2263,6 @@ const NEBULAS = Array.from({length: 5}, () => ({
   a: Math.random() * 0.07 + 0.03
 }));
 let starTick = 0;
-// ── Twitter 사용자 이름 캐시 ──
-const TWITTER_NAME_CACHE = {}; // { twitterId: displayName }
-
-async function fetchTwitterDisplayName(twitterId){
-  if(!twitterId) return null;
-  if(TWITTER_NAME_CACHE[twitterId] !== undefined) return TWITTER_NAME_CACHE[twitterId];
-  TWITTER_NAME_CACHE[twitterId] = null; // 중복 요청 방지
-  try {
-    // allorigins 프록시를 통해 nitter에서 displayName 파싱
-    const nitterInstances = [
-      'https://nitter.net',
-      'https://nitter.privacyredirect.com',
-      'https://nitter.poast.org',
-    ];
-    for(const base of nitterInstances){
-      try {
-        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(base+'/'+twitterId)}`;
-        const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(5000) });
-        if(!res.ok) continue;
-        const html = await res.text();
-        if(!html) continue;
-        // nitter HTML: <a class="profile-card-fullname" ...>DisplayName</a>
-        const m = html.match(/profile-card-fullname[^>]*>\s*([^<]+)</);
-        if(m && m[1].trim()){
-          TWITTER_NAME_CACHE[twitterId] = m[1].trim();
-          return TWITTER_NAME_CACHE[twitterId];
-        }
-      } catch(e){ continue; }
-    }
-  } catch(e){}
-  TWITTER_NAME_CACHE[twitterId] = null;
-  return null;
-}
 let MAP_HOVER={num:null,bx:0,by:0,bR:0}; // 호버 중인 방 뱃지
 let HOVER_TILE=null; // 호버 중인 타일 번호 (glow 효과용)
 let BADGE_SCALE={}; // 각 방 뱃지 현재 스케일 (1.0 ~ 2.0)
@@ -2482,14 +2452,9 @@ function drawFilled(cx,cy,s,num,room){
       mctx.fillStyle='rgba(200,200,200,0.8)'; mctx.fill();
     }
   }
-  // 호버 중이면 사용자 이름 툴팁 표시
+  // 호버 중이면 @트위터ID 툴팁 표시
   if(MAP_HOVER.num===num){
-    // displayName 캐시 확인, 없으면 비동기 fetch 후 다음 프레임에 표시
-    const cached = TWITTER_NAME_CACHE[room.twitterId];
-    const label = (cached && cached !== null) ? cached : `@${room.twitterId}`;
-    if(cached === undefined && room.twitterId){
-      fetchTwitterDisplayName(room.twitterId); // 비동기로 가져오기 시작
-    }
+    const label = `@${room.twitterId}`;
     mctx.font=`bold ${Math.max(9,s*.13)}px 'Noto Sans KR',sans-serif`;
     const lw = mctx.measureText(label).width + 16;
     const lh = Math.max(18, s*.2);
