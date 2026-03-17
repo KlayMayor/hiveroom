@@ -627,17 +627,26 @@ header{
   <button class="rp-close" onclick="closeRoomPanel()">✕</button>
   <img class="rp-img" id="rp-img" src="" alt="">
   <div class="rp-body">
-    <div class="rp-num" id="rp-num">— 번 방</div>
-    <div class="rp-zone" id="rp-zone"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <div>
+        <div class="rp-num" id="rp-num">— 번 방</div>
+        <div class="rp-zone" id="rp-zone"></div>
+      </div>
+      <!-- 소유자 아바타 + 관심사 뱃지 -->
+      <div id="rp-avatar-wrap" style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+        <div style="position:relative;width:52px;height:52px;">
+          <img id="rp-avatar-img" src="" alt="" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid var(--honey);display:none;">
+          <img id="rp-interest-img" src="" alt="" style="width:20px;height:20px;border-radius:50%;object-fit:cover;border:1.5px solid #fff;position:absolute;bottom:0;right:0;display:none;">
+        </div>
+        <span id="rp-owner" style="font-size:10px;color:var(--muted);"></span>
+      </div>
+    </div>
     <div class="rp-row"><span class="rp-lbl">현재 가치</span><span class="rp-val" id="rp-value">—</span></div>
-    <div class="rp-row"><span class="rp-lbl">소유자</span><span class="rp-val" id="rp-owner">—</span></div>
-    <div class="rp-row"><span class="rp-lbl">내 잔액</span><span class="rp-val" id="rp-mybal">—</span></div>
     <button class="rp-buy-btn" id="rp-buy-btn" onclick="requestBuyRoom()">구매하기</button>
     <div class="rp-insufficient" id="rp-insufficient" style="display:none">잔액이 부족합니다</div>
     <div class="rp-own-badge" id="rp-own-badge" style="display:none">내 방입니다</div>
     <button class="rp-move-btn" id="rp-edit-btn" onclick="openEditRoomFromPanel()" style="display:none;margin-top:8px;">✏️ 방 수정하기</button>
     <button class="rp-move-btn" id="rp-move-btn" onclick="openMoveOv()" style="display:none">🚚 이사하기</button>
-    <button class="rp-link-btn" id="rp-link-btn" onclick="postToX(PANEL_ROOM_NUM)" style="display:none">Post to 𝕏</button>
     <button class="rp-buy-btn" id="rp-attend-btn" onclick="openAttendanceQuiz()" style="display:none;background:linear-gradient(135deg,#4A8A50,#2E6B35);margin-top:8px;">📅 출석체크 (+5 HIVE)</button>
   </div>
 </div>
@@ -2084,6 +2093,12 @@ async function goToMap(roomNum){
   const t=document.getElementById('toast'); t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'), 3000);
 }
+function showToast(msg, duration=3000){
+  const t=document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>{ t.classList.remove('show'); t.textContent='✅ 방이 맵에 등록됐어요!'; }, duration);
+}
 function dlPng(){if(!pngUrl)return;const a=document.createElement('a');a.href=pngUrl;a.download='room_slot4.jpg';a.click();}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
@@ -2820,12 +2835,30 @@ function openRoomPanel(num){
   zoneEl.textContent = zCfg.label;
   zoneEl.className = `rp-zone rp-zone-${getZone(num)}`;
   const tilePrice = ROOM_BALANCES[num] ?? room.tileValue ?? 0;
-  document.getElementById('rp-value').textContent = `${tilePrice.toLocaleString()} HIVE`;
-  document.getElementById('rp-owner').textContent = room.twitterId ? `@${room.twitterId}` : '—';
+
+  // reserved: 거래불가 / 일반: HIVE 가격
+  document.getElementById('rp-value').textContent = room.reserved ? '거래불가' : `${tilePrice.toLocaleString()} HIVE`;
+
+  // 소유자 아바타 + 관심사 뱃지
+  const avatarImg  = document.getElementById('rp-avatar-img');
+  const interestImg = document.getElementById('rp-interest-img');
+  const ownerEl    = document.getElementById('rp-owner');
+  if(room.twitterId){
+    avatarImg.src = `https://unavatar.io/x/${room.twitterId}`;
+    avatarImg.style.display = 'block';
+    ownerEl.textContent = `@${room.twitterId}`;
+  } else {
+    avatarImg.style.display = 'none';
+    ownerEl.textContent = '';
+  }
+  if(room.interest){
+    interestImg.src = `https://unavatar.io/x/${room.interest}`;
+    interestImg.style.display = 'block';
+  } else {
+    interestImg.style.display = 'none';
+  }
+
   const myBal = MY_BALANCE !== null ? MY_BALANCE : 0;
-  document.getElementById('rp-mybal').textContent = `${myBal.toLocaleString()} HIVE`;
-  // isOwn: rooms.email(=소유자 이메일)과 내 이메일 비교
-  // ownerEmail = row.email (loadRooms에서 설정) = 현재 소유자
   const isOwnFinal = !!(
     CURRENT_USER &&
     CURRENT_USER.email &&
@@ -2843,7 +2876,6 @@ function openRoomPanel(num){
     ownBadge.style.display = 'block';
     document.getElementById('rp-edit-btn').style.display = 'block';
     document.getElementById('rp-move-btn').style.display = 'block';
-    document.getElementById('rp-link-btn').style.display = 'none';
     document.getElementById('rp-attend-btn').style.display = 'none';
   } else if(room.reserved){
     buyBtn.style.display = 'none';
@@ -2851,28 +2883,24 @@ function openRoomPanel(num){
     ownBadge.style.display = 'none';
     document.getElementById('rp-edit-btn').style.display = 'none';
     document.getElementById('rp-move-btn').style.display = 'none';
-    document.getElementById('rp-link-btn').style.display = 'none';
-    // 출석체크는 로그인한 유저에게만 표시
+    // 출석체크: 로그인 유저에게 표시, 방마다 별도 쿨타임
     document.getElementById('rp-attend-btn').style.display = CURRENT_USER ? 'block' : 'none';
   } else {
     buyBtn.style.display = 'block';
     ownBadge.style.display = 'none';
     document.getElementById('rp-edit-btn').style.display = 'none';
     document.getElementById('rp-move-btn').style.display = 'none';
-    document.getElementById('rp-link-btn').style.display = 'block';
     document.getElementById('rp-attend-btn').style.display = 'none';
     buyBtn.disabled = !canBuy || !CURRENT_USER;
     insuf.style.display = (!CURRENT_USER || (!canBuy && !isOwnFinal && !room.reserved)) ? 'block' : 'none';
     if(!CURRENT_USER) insuf.textContent = '로그인이 필요합니다';
     else insuf.textContent = '잔액이 부족합니다';
-    // 쿨타임 체크
     checkBuyCooltime(num, buyBtn);
   }
   document.getElementById('room-panel').classList.add('open');
 }
 function closeRoomPanel(){
   document.getElementById('room-panel').classList.remove('open');
-  document.getElementById('rp-link-btn').style.display = 'none';
   document.getElementById('rp-edit-btn').style.display = 'none';
   document.getElementById('rp-attend-btn').style.display = 'none';
   PANEL_ROOM_NUM = null;
@@ -2951,25 +2979,32 @@ function checkBuyCooltime(roomNum, buyBtn){
 function _afterCreateRoom(roomNum){ setCooltime(roomNum, 'new'); }
 function _afterBuyRoom(roomNum){   setCooltime(roomNum, 'buy'); }
 
-// ── 출석체크 퀴즈 ──
+// ── 출석체크 퀴즈 (방마다 별도, UTC 자정 기준) ──
 let _attendQuizAnswer = null;
 function openAttendanceQuiz(){
   if(!CURRENT_USER){ alert('로그인이 필요합니다.'); return; }
+  if(!PANEL_ROOM_NUM){ alert('방을 선택해주세요.'); return; }
+  // UTC 기준 오늘 날짜 + 방번호로 키 생성 → 방마다 별도 쿨타임
+  const todayUTC = new Date().toISOString().split('T')[0]; // YYYY-MM-DD UTC
+  const todayKey = `attend_${CURRENT_USER.email}_room${PANEL_ROOM_NUM}_${todayUTC}`;
+  if(localStorage.getItem(todayKey)){
+    alert(`오늘 이 방에서 이미 출석체크를 완료했어요!\n내일(UTC 기준 00:00) 다시 도전하세요 🍯`);
+    return;
+  }
   const a = Math.floor(Math.random()*9)+1;
   const b = Math.floor(Math.random()*9)+1;
   _attendQuizAnswer = a + b;
-  const ans = prompt(`📅 출석체크 퀴즈\n\n${a} + ${b} = ?\n\n정답을 입력하세요 (5 HIVE 지급)`);
+  const _attendRoomNum = PANEL_ROOM_NUM;
+  const ans = prompt(`📅 출석체크 퀴즈 — ${_attendRoomNum}번 방\n\n${a} + ${b} = ?\n\n정답을 입력하세요 (5 HIVE 지급)`);
   if(ans === null) return;
   if(parseInt(ans) === _attendQuizAnswer){
-    claimAttendance();
+    claimAttendance(todayKey);
   } else {
     alert(`❌ 오답입니다! 정답은 ${_attendQuizAnswer}이었어요.`);
   }
 }
 
-async function claimAttendance(){
-  // 오늘 날짜 기준 중복 지급 방지
-  const todayKey = `attend_${CURRENT_USER.email}_${new Date().toISOString().split('T')[0]}`;
+async function claimAttendance(todayKey){
   if(localStorage.getItem(todayKey)){
     alert('오늘은 이미 출석체크를 완료했어요! 내일 다시 도전하세요 🍯');
     return;
