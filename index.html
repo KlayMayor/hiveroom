@@ -634,8 +634,8 @@ header{
       </div>
       <!-- 소유자 아바타 + 관심사 뱃지 -->
       <div id="rp-avatar-wrap" style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-        <div style="position:relative;width:52px;height:52px;">
-          <img id="rp-avatar-img" src="" alt="" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid var(--honey);display:none;">
+        <div style="position:relative;width:52px;height:52px;cursor:pointer;" onclick="if(document.getElementById('rp-avatar-img').style.display!=='none'){const tid=document.getElementById('rp-owner').textContent.replace('@','').trim();if(tid)window.open('https://x.com/'+tid,'_blank');}">
+          <img id="rp-avatar-img" src="" alt="" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid var(--honey);display:none;transition:opacity .15s;" onmouseover="this.style.opacity='.75'" onmouseout="this.style.opacity='1'">
           <img id="rp-interest-img" src="" alt="" style="width:20px;height:20px;border-radius:50%;object-fit:cover;border:1.5px solid #fff;position:absolute;bottom:0;right:0;display:none;">
         </div>
         <span id="rp-owner" style="font-size:10px;color:var(--muted);"></span>
