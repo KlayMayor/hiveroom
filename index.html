@@ -3641,12 +3641,12 @@ window.addEventListener('mousemove',e=>{
     if(_dragMoved){mOX=dOff.x+dx;mOY=dOff.y+dy;drawMap();}
     return;
   }
-  // 뱃지 호버 감지
+  // 뱃지 호버 감지 (전체 방 1~1027)
   const rect=mCV.getBoundingClientRect();
   const mx=e.clientX-rect.left, my=e.clientY-rect.top;
   const s=HEX*mScale;
   let found=null;
-  for(let num=1;num<=50;num++){
+  for(let num=1;num<=1027;num++){
     const room=ROOMS[num]; if(!room) continue;
     const pos=SLOT_POS[num]; if(!pos) continue;
     const{x:cx,y:cy}=ap(pos.q,pos.r);
@@ -3675,7 +3675,7 @@ mCV.addEventListener('click',e=>{
   const mx=e.clientX-rect.left, my=e.clientY-rect.top;
   const s=HEX*mScale;
   // 트위터 뱃지 클릭 우선
-  for(let num=1;num<=1000;num++){
+  for(let num=1;num<=1027;num++){
     const room=ROOMS[num]; if(!room) continue;
     const pos=SLOT_POS[num]; if(!pos) continue;
     const{x:cx,y:cy}=ap(pos.q,pos.r);
