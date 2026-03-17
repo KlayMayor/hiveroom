@@ -684,7 +684,8 @@ header{
   <div style="background:#fff;border-radius:20px;padding:28px 32px;max-width:320px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.25);animation:popin .3s cubic-bezier(.34,1.56,.64,1);">
     <div style="font-size:36px;margin-bottom:12px;">🏠</div>
     <div style="font-family:'Jua',sans-serif;font-size:17px;color:#A87800;margin-bottom:8px;">구매 확인</div>
-    <div style="font-size:13px;color:#555;line-height:1.7;margin-bottom:20px;">방 구매 후 되돌릴 수 없습니다.<br>구매 하시겠습니까?</div>
+    <div style="font-size:13px;color:#555;line-height:1.7;margin-bottom:6px;">방 구매 후 되돌릴 수 없습니다.<br>구매 하시겠습니까?</div>
+    <div id="buy-confirm-price" style="font-size:15px;font-weight:700;color:#A87800;margin-bottom:16px;background:#FFF8E8;border-radius:10px;padding:8px 0;">— HIVE 차감</div>
     <div style="display:flex;gap:10px;justify-content:center;">
       <button onclick="confirmBuyRoom()" style="flex:1;padding:10px;background:#F2B830;border:none;border-radius:12px;font-family:'Jua',sans-serif;font-size:14px;color:#fff;cursor:pointer;">Yes</button>
       <button onclick="cancelBuyRoom()" style="flex:1;padding:10px;background:#EEE;border:none;border-radius:12px;font-family:'Jua',sans-serif;font-size:14px;color:#666;cursor:pointer;">No</button>
@@ -2830,8 +2831,16 @@ async function confirmInvest(){
   let efData;
   try { efData = await efRes.json(); } catch(e) { efData = {}; }
   if(!efRes.ok){
-    alert(`투자 실패 (${efRes.status}): ${efData.error || JSON.stringify(efData)}`);
     btn.disabled = false; btn.textContent = '투자하기';
+    if(efRes.status === 409){
+      // 투자 시점에 소유권이 넘어간 경우 → 맵 갱신 후 패널 닫기
+      alert(`투자 실패: ${efData.error || '방이 이미 다른 유저에게 판매되었습니다.'}\n맵을 갱신합니다.`);
+      await loadRooms();
+      closeInvest();
+      closeRoomPanel();
+    } else {
+      alert(`투자 실패 (${efRes.status}): ${efData.error || JSON.stringify(efData)}`);
+    }
     return;
   }
   const newRoomBal = efData.new_room_balance;
@@ -3095,9 +3104,15 @@ function postToXAfterReg(){
 
 
 function requestBuyRoom(){
-  // 확인 팝업 표시
-  const ov = document.getElementById('buy-confirm-ov');
-  ov.style.display = 'flex';
+  if(!PANEL_ROOM_NUM) return;
+  const roomBal = ROOM_BALANCES[PANEL_ROOM_NUM];
+  const quotedPrice = (roomBal != null && roomBal > 0)
+    ? roomBal : getZoneConfig(PANEL_ROOM_NUM).price;
+  // 팝업에 견적 가격 표시
+  document.getElementById('buy-confirm-price').textContent = `${quotedPrice.toLocaleString()} HIVE 차감`;
+  // 견적 가격을 팝업에 저장 (confirmBuyRoom에서 mismatch 체크에 사용)
+  document.getElementById('buy-confirm-ov').dataset.quotedPrice = quotedPrice;
+  document.getElementById('buy-confirm-ov').style.display = 'flex';
 }
 function cancelBuyRoom(){
   document.getElementById('buy-confirm-ov').style.display = 'none';
@@ -3107,22 +3122,38 @@ async function confirmBuyRoom(){
   if(!CURRENT_USER || PANEL_ROOM_NUM === null) return;
   const room = ROOMS[PANEL_ROOM_NUM];
   if(!room || room.reserved) return;
-  const roomBal = ROOM_BALANCES[PANEL_ROOM_NUM];
-  const price = (roomBal != null && roomBal > 0)
-    ? roomBal : getZoneConfig(PANEL_ROOM_NUM).price;
-  if(MY_BALANCE < price){ alert('잔액이 부족합니다'); return; }
+  // 견적 가격 (팝업에 표시됐던 금액)
+  const quotedPrice = parseInt(document.getElementById('buy-confirm-ov').dataset.quotedPrice || '0');
+  if(!quotedPrice){ alert('가격 정보 오류. 다시 시도해주세요.'); return; }
+  if(MY_BALANCE < quotedPrice){ alert('잔액이 부족합니다'); return; }
   const btn = document.getElementById('rp-buy-btn');
   btn.disabled = true; btn.textContent = '처리 중...';
   const _buyToken = await getValidToken();
   const efRes = await fetch(`${EDGE_URL}/buy-room`, {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${_buyToken}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ room_number: PANEL_ROOM_NUM })
+    body: JSON.stringify({ room_number: PANEL_ROOM_NUM, quoted_price: quotedPrice })
   });
   const efData = await efRes.json();
   if(!efRes.ok){
-    alert(`구매 실패: ${efData.error}`);
-    btn.disabled = false; btn.textContent = '구매하기'; return;
+    btn.disabled = false; btn.textContent = '구매하기';
+    if(efRes.status === 409){
+      if(efData.error === 'PRICE_MISMATCH'){
+        // 투자로 인해 가격이 올라감 → 최신 가격으로 패널 갱신 후 재시도 안내
+        const actualPrice = efData.actual_price;
+        ROOM_BALANCES[PANEL_ROOM_NUM] = actualPrice;
+        document.getElementById('rp-value').textContent = `${actualPrice.toLocaleString()} HIVE`;
+        alert(`⚠️ 가격이 변경되었습니다!\n견적: ${quotedPrice.toLocaleString()} HIVE → 실제: ${actualPrice.toLocaleString()} HIVE\n\n'구매하기'를 다시 클릭해주세요.`);
+      } else {
+        // 다른 유저가 이미 구매함
+        alert(`구매 실패: ${efData.error}`);
+        await loadRooms();
+        closeRoomPanel();
+      }
+    } else {
+      alert(`구매 실패: ${efData.error}`);
+    }
+    return;
   }
   MY_BALANCE = efData.new_buyer_balance;
   ROOM_BALANCES[PANEL_ROOM_NUM] = efData.price;
