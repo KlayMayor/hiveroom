@@ -2290,6 +2290,9 @@ async function fetchTwitterDisplayName(twitterId){
       } catch(e){ continue; }
     }
   } catch(e){}
+  TWITTER_NAME_CACHE[twitterId] = null;
+  return null;
+}
 let MAP_HOVER={num:null,bx:0,by:0,bR:0}; // 호버 중인 방 뱃지
 let HOVER_TILE=null; // 호버 중인 타일 번호 (glow 효과용)
 let BADGE_SCALE={}; // 각 방 뱃지 현재 스케일 (1.0 ~ 2.0)
