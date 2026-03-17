@@ -2263,6 +2263,28 @@ const NEBULAS = Array.from({length: 5}, () => ({
   a: Math.random() * 0.07 + 0.03
 }));
 let starTick = 0;
+// ── fxTwitter 사용자 이름 캐시 ──
+const FX_NAME_CACHE = {}; // { twitterId: displayName | null }
+
+async function fetchFxTwitterName(twitterId){
+  if(!twitterId) return null;
+  if(FX_NAME_CACHE[twitterId] !== undefined) return FX_NAME_CACHE[twitterId];
+  FX_NAME_CACHE[twitterId] = null; // 중복 요청 방지
+  try {
+    const res = await fetch(`https://api.fxtwitter.com/${twitterId}`, {
+      signal: AbortSignal.timeout(6000)
+    });
+    if(!res.ok){ FX_NAME_CACHE[twitterId] = null; return null; }
+    const data = await res.json();
+    const name = data?.user?.name || null;
+    FX_NAME_CACHE[twitterId] = name;
+    return name;
+  } catch(e){
+    FX_NAME_CACHE[twitterId] = null;
+    return null;
+  }
+}
+
 let MAP_HOVER={num:null,bx:0,by:0,bR:0}; // 호버 중인 방 뱃지
 let HOVER_TILE=null; // 호버 중인 타일 번호 (glow 효과용)
 let BADGE_SCALE={}; // 각 방 뱃지 현재 스케일 (1.0 ~ 2.0)
@@ -2452,9 +2474,13 @@ function drawFilled(cx,cy,s,num,room){
       mctx.fillStyle='rgba(200,200,200,0.8)'; mctx.fill();
     }
   }
-  // 호버 중이면 @트위터ID 툴팁 표시
+  // 호버 중이면 사용자이름 툴팁 표시 (fxTwitter name → 없으면 @twitterId)
   if(MAP_HOVER.num===num){
-    const label = `@${room.twitterId}`;
+    const cached = FX_NAME_CACHE[room.twitterId];
+    if(cached === undefined && room.twitterId){
+      fetchFxTwitterName(room.twitterId); // 백그라운드 fetch 시작
+    }
+    const label = (cached && cached !== null) ? cached : `@${room.twitterId}`;
     mctx.font=`bold ${Math.max(9,s*.13)}px 'Noto Sans KR',sans-serif`;
     const lw = mctx.measureText(label).width + 16;
     const lh = Math.max(18, s*.2);
