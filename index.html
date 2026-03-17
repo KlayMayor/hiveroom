@@ -634,8 +634,11 @@ header{
       </div>
       <!-- 소유자 아바타 + 관심사 뱃지 -->
       <div id="rp-avatar-wrap" style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-        <div style="position:relative;width:52px;height:52px;cursor:pointer;" onclick="if(document.getElementById('rp-avatar-img').style.display!=='none'){const tid=document.getElementById('rp-owner').textContent.replace('@','').trim();if(tid)window.open('https://x.com/'+tid,'_blank');}">
-          <img id="rp-avatar-img" src="" alt="" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid var(--honey);display:none;transition:opacity .15s;" onmouseover="this.style.opacity='.75'" onmouseout="this.style.opacity='1'">
+        <div style="position:relative;width:52px;height:52px;cursor:pointer;"
+          onclick="if(document.getElementById('rp-avatar-img').style.display!=='none'){const tid=document.getElementById('rp-owner').textContent.replace('@','').trim();if(tid)window.open('https://x.com/'+tid,'_blank');}"
+          onmouseover="this.querySelector('#rp-avatar-img').style.transform='scale(1.3)'"
+          onmouseout="this.querySelector('#rp-avatar-img').style.transform='scale(1)'">
+          <img id="rp-avatar-img" src="" alt="" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid var(--honey);display:none;transition:transform .18s cubic-bezier(.34,1.56,.64,1);transform-origin:center;">
           <img id="rp-interest-img" src="" alt="" style="width:20px;height:20px;border-radius:50%;object-fit:cover;border:1.5px solid #fff;position:absolute;bottom:0;right:0;display:none;">
         </div>
         <span id="rp-owner" style="font-size:10px;color:var(--muted);"></span>
@@ -646,6 +649,7 @@ header{
     <div class="rp-insufficient" id="rp-insufficient" style="display:none">잔액이 부족합니다</div>
     <div class="rp-own-badge" id="rp-own-badge" style="display:none">내 방입니다</div>
     <button class="rp-move-btn" id="rp-edit-btn" onclick="openEditRoomFromPanel()" style="display:none;margin-top:8px;">✏️ 방 수정하기</button>
+    <button class="rp-move-btn" id="rp-invest-btn" onclick="openInvestFromPanel()" style="display:none;margin-top:6px;background:#FFF0E8;border-color:#E07820;color:#C05010;">📈 방 가치 올리기</button>
     <button class="rp-move-btn" id="rp-move-btn" onclick="openMoveOv()" style="display:none">🚚 이사하기</button>
     <button class="rp-buy-btn" id="rp-attend-btn" onclick="openAttendanceQuiz()" style="display:none;background:linear-gradient(135deg,#4A8A50,#2E6B35);margin-top:8px;">📅 출석체크 (+5 HIVE)</button>
   </div>
@@ -1949,17 +1953,20 @@ async function registerRoom(){
   pg.classList.add('show'); st.textContent='📦 JPEG 생성 중...'; bar.style.width='0%';
   await sleep(100);
 
-  // 1. JPEG 생성 — 선택 테두리 숨기고 렌더 후 크롭
+  // 1. JPEG 생성 — 선택 테두리 숨기고 렌더 후 크롭 (1400×1400 고해상도)
   const _prevCtrl = {...CTRL_SEL};
   CTRL_SEL = {cat:null, id:null}; // 주황 테두리 제거
   await renderRoom();              // 테두리 없이 재렌더
   const cropSize = RS * 2;
   const cropX = RCX - cropSize / 2;
   const cropY = RCY - cropSize / 2;
-  const off=document.createElement('canvas'); off.width=cropSize; off.height=cropSize;
+  const OUTPUT_SIZE = 700; // 저장 해상도
+  const off=document.createElement('canvas'); off.width=OUTPUT_SIZE; off.height=OUTPUT_SIZE;
   const octx=off.getContext('2d');
-  octx.fillStyle='#fff'; octx.fillRect(0,0,cropSize,cropSize);
-  octx.drawImage(RCV, cropX, cropY, cropSize, cropSize, 0, 0, cropSize, cropSize);
+  octx.imageSmoothingEnabled = true;
+  octx.imageSmoothingQuality = 'high';
+  octx.fillStyle='#fff'; octx.fillRect(0,0,OUTPUT_SIZE,OUTPUT_SIZE);
+  octx.drawImage(RCV, cropX, cropY, cropSize, cropSize, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
   pngUrl = off.toDataURL('image/jpeg', 0.92);
   CTRL_SEL = _prevCtrl; // 원복
   bar.style.width='20%'; await sleep(100);
@@ -2253,6 +2260,36 @@ const NEBULAS = Array.from({length: 5}, () => ({
   a: Math.random() * 0.07 + 0.03
 }));
 let starTick = 0;
+// ── Twitter 사용자 이름 캐시 ──
+const TWITTER_NAME_CACHE = {}; // { twitterId: displayName }
+
+async function fetchTwitterDisplayName(twitterId){
+  if(!twitterId) return null;
+  if(TWITTER_NAME_CACHE[twitterId] !== undefined) return TWITTER_NAME_CACHE[twitterId];
+  TWITTER_NAME_CACHE[twitterId] = null; // 중복 요청 방지
+  try {
+    // allorigins 프록시를 통해 nitter에서 displayName 파싱
+    const nitterInstances = [
+      'https://nitter.net',
+      'https://nitter.privacyredirect.com',
+      'https://nitter.poast.org',
+    ];
+    for(const base of nitterInstances){
+      try {
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(base+'/'+twitterId)}`;
+        const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(5000) });
+        if(!res.ok) continue;
+        const html = await res.text();
+        if(!html) continue;
+        // nitter HTML: <a class="profile-card-fullname" ...>DisplayName</a>
+        const m = html.match(/profile-card-fullname[^>]*>\s*([^<]+)</);
+        if(m && m[1].trim()){
+          TWITTER_NAME_CACHE[twitterId] = m[1].trim();
+          return TWITTER_NAME_CACHE[twitterId];
+        }
+      } catch(e){ continue; }
+    }
+  } catch(e){}
 let MAP_HOVER={num:null,bx:0,by:0,bR:0}; // 호버 중인 방 뱃지
 let HOVER_TILE=null; // 호버 중인 타일 번호 (glow 효과용)
 let BADGE_SCALE={}; // 각 방 뱃지 현재 스케일 (1.0 ~ 2.0)
@@ -2442,9 +2479,14 @@ function drawFilled(cx,cy,s,num,room){
       mctx.fillStyle='rgba(200,200,200,0.8)'; mctx.fill();
     }
   }
-  // 호버 중이면 트위터ID 툴팁 표시
+  // 호버 중이면 사용자 이름 툴팁 표시
   if(MAP_HOVER.num===num){
-    const label = `@${room.twitterId}`;
+    // displayName 캐시 확인, 없으면 비동기 fetch 후 다음 프레임에 표시
+    const cached = TWITTER_NAME_CACHE[room.twitterId];
+    const label = (cached && cached !== null) ? cached : `@${room.twitterId}`;
+    if(cached === undefined && room.twitterId){
+      fetchTwitterDisplayName(room.twitterId); // 비동기로 가져오기 시작
+    }
     mctx.font=`bold ${Math.max(9,s*.13)}px 'Noto Sans KR',sans-serif`;
     const lw = mctx.measureText(label).width + 16;
     const lh = Math.max(18, s*.2);
@@ -2875,6 +2917,7 @@ function openRoomPanel(num){
     insuf.style.display = 'none';
     ownBadge.style.display = 'block';
     document.getElementById('rp-edit-btn').style.display = 'block';
+    document.getElementById('rp-invest-btn').style.display = 'block';
     document.getElementById('rp-move-btn').style.display = 'block';
     document.getElementById('rp-attend-btn').style.display = 'none';
   } else if(room.reserved){
@@ -2882,6 +2925,7 @@ function openRoomPanel(num){
     insuf.style.display = 'none';
     ownBadge.style.display = 'none';
     document.getElementById('rp-edit-btn').style.display = 'none';
+    document.getElementById('rp-invest-btn').style.display = 'none';
     document.getElementById('rp-move-btn').style.display = 'none';
     // 출석체크: 로그인 유저에게 표시, 방마다 별도 쿨타임
     document.getElementById('rp-attend-btn').style.display = CURRENT_USER ? 'block' : 'none';
@@ -2889,6 +2933,7 @@ function openRoomPanel(num){
     buyBtn.style.display = 'block';
     ownBadge.style.display = 'none';
     document.getElementById('rp-edit-btn').style.display = 'none';
+    document.getElementById('rp-invest-btn').style.display = 'none';
     document.getElementById('rp-move-btn').style.display = 'none';
     document.getElementById('rp-attend-btn').style.display = 'none';
     buyBtn.disabled = !canBuy || !CURRENT_USER;
@@ -2902,8 +2947,19 @@ function openRoomPanel(num){
 function closeRoomPanel(){
   document.getElementById('room-panel').classList.remove('open');
   document.getElementById('rp-edit-btn').style.display = 'none';
+  document.getElementById('rp-invest-btn').style.display = 'none';
   document.getElementById('rp-attend-btn').style.display = 'none';
   PANEL_ROOM_NUM = null;
+}
+
+// ── 방 가치 올리기 (패널에서 투자 팝업 열기) ──
+function openInvestFromPanel(){
+  if(!PANEL_ROOM_NUM) return;
+  const num = PANEL_ROOM_NUM;
+  const room = ROOMS[num];
+  if(!room) return;
+  // openInvest expects a room object with room_number
+  openInvest({ room_number: num, ...room });
 }
 
 // ── 방 수정하기 (패널에서 진입) ──
