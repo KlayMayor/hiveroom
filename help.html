@@ -9,7 +9,7 @@
   :root{
     --honey:#F2B830; --hdk:#A87800; --hlt:#FFF8E8;
     --accent:#E07820; --text:#2D2D2D; --muted:#888;
-    --border:#EDE5D8; --bg:#FAFAF8;
+    --border:#EDE5D8; --bg:#FAFAF8; --green:#4A8A50;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);font-size:13px;line-height:1.7;padding:24px;}
@@ -23,7 +23,7 @@
   .section-title span{font-size:18px;}
 
   .card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;}
-  .card-title{font-weight:700;color:var(--hdk);margin-bottom:6px;font-size:13px;}
+  .card-title{font-weight:700;color:var(--hdk);margin-bottom:6px;font-size:13px;display:flex;align-items:center;gap:6px;}
   .card p{color:var(--text);font-size:12.5px;line-height:1.8;}
 
   .zone-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px;}
@@ -37,11 +37,17 @@
   .z3{background:#EEF8EE;color:#3A7A3A;border:1px solid #A8D8A8;}
 
   .tip{background:var(--hlt);border-left:3px solid var(--honey);padding:8px 12px;border-radius:0 8px 8px 0;font-size:12px;color:var(--hdk);margin-top:8px;}
+  .tip-green{background:#F0FBF0;border-left:3px solid var(--green);padding:8px 12px;border-radius:0 8px 8px 0;font-size:12px;color:#2E6B35;margin-top:8px;}
 
   .step{display:flex;gap:12px;margin-bottom:10px;}
   .step-num{width:24px;height:24px;border-radius:50%;background:var(--honey);color:#fff;font-family:'Jua',sans-serif;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;}
   .step-body{flex:1;}
   .step-body b{color:var(--hdk);}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  @media(max-width:480px){.grid2{grid-template-columns:1fr;}}
+
+  .inline-badge{display:inline-flex;align-items:center;gap:3px;background:#F5F0E8;border:1px solid var(--border);border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700;color:var(--hdk);}
 </style>
 </head>
 <body>
@@ -50,8 +56,9 @@
 <div class="section">
   <div class="section-title"><span>🍯</span> HiveRoom이란?</div>
   <div class="card">
-    <p>HiveRoom은 <b>육각형 타일 맵</b> 위에 나만의 방을 꾸미고, <b>HIVE 경제</b>를 통해 타일을 사고팔 수 있는 소셜 인테리어 플랫폼입니다.<br>
-    방을 만들고, 투자하고, 거래하며 나만의 공간을 키워보세요!</p>
+    <p>HiveRoom은 <b>육각 타일 맵</b> 위에 큐브 방을 꾸미고,<br>
+    <b>HIVE 토큰 경제</b>를 통해 타일을 사고팔 수 있는 소셜 인테리어 플랫폼입니다.<br>
+    나의 공간을 만들고 키우며 커뮤니티 친구와 모이면 마을을 이룰 수도 있습니다!</p>
   </div>
 </div>
 
@@ -64,15 +71,23 @@
   </div>
   <div class="step">
     <div class="step-num">2</div>
-    <div class="step-body"><b>300 HIVE 지급</b> — 최초 로그인 시 300 HIVE 자동 지급</div>
+    <div class="step-body"><b>300 HIVE 지급</b> — 최초 로그인 시 정착 지원금 300 HIVE 자동 지급</div>
   </div>
   <div class="step">
     <div class="step-num">3</div>
-    <div class="step-body"><b>방 만들기</b> — 프로필 메뉴 → 방 만들기에서 벽지·바닥·가구를 선택해 방을 꾸미세요</div>
+    <div class="step-body"><b>빈 타일 클릭</b> — 맵에서 빈 타일을 클릭하면 방 만들기 패널이 열립니다</div>
   </div>
   <div class="step">
     <div class="step-num">4</div>
-    <div class="step-body"><b>맵에 등록</b> — Twitter(X) ID 입력 후 맵에 등록하면 HiveRoom 지도에 내 방이 나타납니다</div>
+    <div class="step-body"><b>타일 구매</b> — ZONE에 따른 비용을 지불하면 방 꾸미기 화면이 열립니다</div>
+  </div>
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-body"><b>방 꾸미기</b> — 벽지·바닥·가구·장식·아이템을 선택해 방을 꾸미세요</div>
+  </div>
+  <div class="step">
+    <div class="step-num">6</div>
+    <div class="step-body"><b>맵에 등록</b> — Twitter(X) ID와 관심사를 입력하고 맵에 등록하면 HiveRoom 지도에 내 방이 나타납니다</div>
   </div>
   <div class="tip">💡 방 만들기 비용은 ZONE에 따라 다릅니다. 잔액이 부족하면 방을 만들 수 없어요!</div>
 </div>
@@ -81,7 +96,7 @@
 <div class="section">
   <div class="section-title"><span>🗺️</span> ZONE & 가격</div>
   <div class="card">
-    <p>타일은 중앙(1번)에서 외곽으로 갈수록 ZONE이 낮아지고 가격이 저렴해집니다.</p>
+    <p>타일은 중앙(1번)에서 외곽으로 갈수록 ZONE 번호가 높아지고 가격이 저렴해집니다.</p>
     <table class="zone-table" style="margin-top:10px;">
       <tr>
         <th>ZONE</th><th>방 번호</th><th>테두리 색</th><th>생성 비용</th><th>월 세금</th>
@@ -102,7 +117,7 @@
       </tr>
       <tr>
         <td><span class="badge z3">ZONE 3</span></td>
-        <td>92 ~ 1000번</td>
+        <td>92 ~ 1027번</td>
         <td>🟢 연두색</td>
         <td>100 HIVE</td>
         <td>1 HIVE/월</td>
@@ -111,55 +126,91 @@
   </div>
 </div>
 
-<!-- 4. HIVE 경제 -->
+<!-- 4. 방 꾸미기 -->
+<div class="section">
+  <div class="section-title"><span>🎨</span> 방 꾸미기</div>
+  <div class="card">
+    <div class="card-title">🖼 에셋 탭 구성</div>
+    <p>
+      <b>벽지</b> — 방의 벽면 패턴을 선택합니다<br>
+      <b>바닥</b> — 방의 바닥재를 선택합니다<br>
+      <b>가구</b> — 소파·침대·테이블 등 가구를 배치합니다<br>
+      <b>장식</b> — 조명·창문·벽 소품 등 장식품을 배치합니다<br>
+      <b>아이템</b> — 바닥·데스크 소품 등 아이템을 배치합니다
+    </p>
+    <div class="tip">💡 가구·장식·아이템은 같은 아이템을 최대 2개까지 중복 선택할 수 있어요!</div>
+  </div>
+  <div class="card">
+    <div class="card-title">🔧 아이템 컨트롤</div>
+    <p>
+      배치된 아이템을 클릭하면 컨트롤 오버레이가 나타납니다.<br>
+      <b>크기</b> 슬라이더로 크기 조절 · <b>⇄</b> 버튼으로 좌우 반전<br>
+      <b>↑↓</b> 버튼으로 레이어 순서 변경 (가구·장식·아이템 간 이동 가능)<br>
+      <b>해제</b> — 선택 해제 (아이템은 유지) · <b>삭제</b> — 미리보기에서 제거
+    </p>
+    <div class="tip">💡 아이템을 드래그해서 원하는 위치로 자유롭게 이동할 수 있어요!</div>
+  </div>
+</div>
+
+<!-- 5. HIVE 경제 -->
 <div class="section">
   <div class="section-title"><span>💰</span> HIVE 경제</div>
-  <div class="card">
-    <div class="card-title">🎁 기본소득 (Daily Wage)</div>
-    <p>매일 UTC 00:00에 모든 유저에게 <b>1 HIVE</b>가 자동 지급됩니다.<br>
-    상단 타이머에서 다음 지급까지 남은 시간을 확인할 수 있어요.</p>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">🎁 기본소득 (Daily Wage)</div>
+      <p>매일 UTC 00:00에 모든 유저에게 <b>10 HIVE</b>가 자동 지급됩니다.<br>
+      상단 타이머에서 다음 지급까지 남은 시간을 확인하세요.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">📅 출석체크</div>
+      <p>맵에서 <b>Reserved(예약) 방</b>을 찾아 클릭하세요.<br>
+      간단한 덧셈 퀴즈를 풀면 <b>5 HIVE</b>를 지급받습니다.<br>
+      방마다 하루 1회 (UTC 기준) 참여 가능합니다.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">🏠 방 생성</div>
+      <p>방을 만들면 ZONE에 따른 비용이 차감되고 타일 가치로 적립됩니다.<br>
+      구매 후 <b>36시간</b> 동안 다른 유저가 구매할 수 없습니다.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">📈 타일 투자</div>
+      <p>내 방 패널의 <b>방 가치 올리기</b> 버튼으로 HIVE를 투자해 타일 가치를 높이세요.<br>
+      가치가 높을수록 구매자는 더 높은 가격을 지불해야 됩니다.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">🔄 타일 구매</div>
+      <p>다른 유저 방 클릭 → 구매 확인창에서 금액 확인 후 구매.<br>
+      구매 완료 시 <b>판매자에게 HIVE 자동 송금</b>.<br>
+      구매 후 <b>1시간</b> 쿨타임이 적용됩니다.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">🏦 월세 (Monthly Tax)</div>
+      <p>매월 1일 UTC 00:00에 소유 타일 가치가 ZONE별로 하락합니다.<br>
+      타일 가치가 0 아래로는 내려가지 않습니다.<br>
+      <span style="color:var(--accent);font-weight:600;">(다른 유저에게 매각 당하지 않도록 HIVE를 투자해 타일 가치를 유지하세요.)</span></p>
+    </div>
   </div>
-  <div class="card">
-    <div class="card-title">🏠 방 생성</div>
-    <p>방을 만들면 ZONE에 따른 비용이 내 잔액에서 차감되고,<br>
-    해당 타일의 가치(room balance)로 적립됩니다.</p>
-  </div>
-  <div class="card">
-    <div class="card-title">📈 타일 투자</div>
-    <p>내가 소유한 타일에 추가 HIVE를 투자해 타일 가치를 높일 수 있습니다.<br>
-    가치가 높은 타일은 더 높은 가격에 판매할 수 있어요.</p>
-  </div>
-  <div class="card">
-    <div class="card-title">🔄 타일 구매</div>
-    <p>맵에서 다른 유저의 방을 클릭하면 사이드 패널이 열립니다.<br>
-    잔액이 타일 가치 이상이면 구매하기 버튼이 활성화됩니다.<br>
-    구매 시 타일 소유권이 이전되고, <b>판매자에게 HIVE가 자동 송금</b>됩니다.</p>
-  </div>
-  <div class="card">
-    <div class="card-title">🏦 월세 (Monthly Tax)</div>
-    <p>매월 1일 UTC 00:00에 소유한 타일의 가치가 ZONE에 따라 하락합니다.<br>
-    타일 가치가 0 아래로 내려가지는 않습니다.</p>
-    <div class="tip">💡 타일에 꾸준히 투자해 가치를 유지하세요!</div>
-  </div>
+  <div style="background:#FFF0F0;border-left:3px solid #E05050;padding:8px 12px;border-radius:0 8px 8px 0;font-size:12px;color:#C03030;margin-top:8px;font-weight:600;">!! 다른 유저의 내 방 구매를 막을 수 없습니다. 내 방을 매각 당하지 않기 위해 HIVE를 투자해 타일 가치를 높이세요.</div>
+  <div class="tip-green" style="margin-top:6px;">✅ 구매 시 화면에 표시된 금액과 실제 결제 금액이 다르면(투자로 가격 변동 시) 구매가 거절되고 최신 가격이 표시됩니다. 다시 구매하기를 클릭해 확인하세요.</div>
 </div>
 
-<!-- 5. 부동산 관리 -->
+<!-- 6. 내 방 관리 -->
 <div class="section">
-  <div class="section-title"><span>🏘️</span> 부동산 관리</div>
+  <div class="section-title"><span>🏘️</span> 내 방 관리</div>
   <div class="card">
-    <p>프로필 메뉴 → <b>부동산 관리하기</b>에서 내가 소유한 모든 방의 현재 가치를 확인하고,<br>
+    <div class="card-title">✏️ 방 수정하기</div>
+    <p>맵에서 내 방을 클릭하면 나타나는 패널의 <b>방 수정하기</b> 버튼 또는<br>
+    프로필 메뉴 → <b>방 수정하기</b>에서 언제든지 인테리어를 변경할 수 있습니다.</p>
+  </div>
+  <div class="card">
+    <div class="card-title">🚚 이사하기</div>
+    <p>내 방 패널의 <b>이사하기</b> 버튼으로 다른 빈 타일로 방을 이동할 수 있습니다.<br>
+    이사 비용은 이동 전후 타일의 가격 차이만큼 차감 또는 환급됩니다.</p>
+  </div>
+  <div class="card">
+    <div class="card-title">🏦 부동산 관리</div>
+    <p>프로필 메뉴 → <b>부동산 관리하기</b>에서 내가 소유한 모든 방의 현재 가치를 확인하고<br>
     원하는 방에 HIVE를 추가 투자할 수 있습니다.</p>
-  </div>
-</div>
-
-<!-- 6. Twitter(X) ID -->
-<div class="section">
-  <div class="section-title"><span>🐦</span> Twitter(X) ID 규칙</div>
-  <div class="card">
-    <p>• 방에 등록한 Twitter ID는 맵에서 프로필 뱃지로 표시됩니다.<br>
-    • 뱃지 클릭 시 해당 Twitter 프로필로 이동합니다.<br>
-    • <b>다른 유저가 사용 중인 Twitter ID는 사용할 수 없습니다.</b><br>
-    • 같은 구글 계정으로 여러 방을 소유할 경우 동일한 Twitter ID를 사용할 수 있습니다.</p>
   </div>
 </div>
 
@@ -167,21 +218,74 @@
 <div class="section">
   <div class="section-title"><span>🔒</span> Reserved 타일</div>
   <div class="card">
-    <p>일부 특별한 타일은 <b>Reserved</b>로 지정되어 있어 구매하거나 소유할 수 없습니다.<br>
-    이 타일들은 HiveRoom 운영팀이 특별 공간이나 파트너 공간으로 활용합니다.</p>
+    <p>일부 타일은 <b>Reserved(예약)</b>로 지정되어 구매할 수 없습니다.<br>
+    반짝이는 <b>골드 shimmer 테두리</b>가 적용된 타일이 Reserved 타일입니다.<br>
+    이 타일을 클릭하면 <b>출석체크</b> 버튼이 나타납니다.<br>
+    맵 곳곳의 Reserved 타일을 찾아 매일 5 HIVE씩 획득하세요! 총 27개의 Reserved 타일이 있습니다. 🍯</p>
+    <div class="tip">💡 Reserved 타일은 방마다 하루 1회(UTC 기준) 출석체크가 가능합니다.</div>
   </div>
 </div>
 
-<!-- 8. 단축키 / 조작법 -->
+<!-- 8. Twitter(X) ID & 프로필 -->
+<div class="section">
+  <div class="section-title"><span>🐦</span> Twitter(X) ID & 프로필</div>
+  <div class="card">
+    <p>
+      • 방 등록 시 입력한 Twitter ID는 맵에서 <b>원형 프로필 뱃지</b>로 표시됩니다<br>
+      • 아바타에 마우스를 올리면 <b>@트위터ID</b>가 표시되고, 클릭하면 X 프로필로 이동합니다<br>
+      • <b>관심사 Twitter ID</b>를 입력하면 아바타 우측 하단에 작은 관심사 뱃지가 함께 표시됩니다<br>
+      • 방 패널에서도 소유자 아바타와 관심사 뱃지를 확인하고 클릭할 수 있습니다<br>
+      • <b>다른 유저가 사용 중인 Twitter ID는 등록할 수 없습니다</b>
+    </p>
+  </div>
+</div>
+
+<!-- 9. 쿨타임 -->
+<div class="section">
+  <div class="section-title"><span>⏳</span> 구매 쿨타임</div>
+  <div class="card">
+    <table class="zone-table">
+      <tr>
+        <th>상황</th><th>쿨타임</th><th>대상</th>
+      </tr>
+      <tr>
+        <td>빈 타일 구매 후 방 만들기 완료</td>
+        <td><b>36시간</b></td>
+        <td>해당 타일 (다른 유저 구매 불가)</td>
+      </tr>
+      <tr>
+        <td>채워진 방 구매 완료</td>
+        <td><b>1시간</b></td>
+        <td>해당 타일 (다른 유저 구매 불가)</td>
+      </tr>
+    </table>
+    <p style="margin-top:8px;font-size:12px;color:var(--muted);">쿨타임 중에는 구매하기 버튼이 비활성화되고 남은 시간이 표시됩니다.</p>
+  </div>
+</div>
+
+<!-- 10. 맵 조작법 -->
 <div class="section">
   <div class="section-title"><span>🖱️</span> 맵 조작법</div>
   <div class="card">
-    <p>• <b>마우스 휠</b> — 확대 / 축소<br>
-    • <b>클릭 후 드래그</b> — 맵 이동<br>
-    • <b>타일 클릭</b> — 방 정보 & 구매 패널 열기<br>
-    • <b>뱃지 클릭</b> — 해당 유저의 Twitter 프로필 열기<br>
-    • <b># Room No. 버튼</b> — 빈 타일 번호 표시/숨기기<br>
-    • <b>⌂ 버튼</b> — 맵 초기 위치로 리셋</p>
+    <p>
+      • <b>마우스 휠</b> — 확대 / 축소<br>
+      • <b>클릭 후 드래그</b> — 맵 이동<br>
+      • <b>빈 타일 클릭</b> — 방 만들기 패널 열기<br>
+      • <b>채워진 방 클릭</b> — 방 정보 & 구매 패널 열기<br>
+      • <b>아바타 뱃지 클릭</b> — 해당 유저의 Twitter(X) 프로필 열기<br>
+      • <span class="inline-badge"># Room No.</span> 버튼 — 빈 타일 번호 표시 / 숨기기<br>
+      • <span class="inline-badge">⌂</span> 버튼 — 맵 초기 위치로 리셋
+    </p>
+  </div>
+</div>
+
+<!-- 11. URL 공유 -->
+<div class="section">
+  <div class="section-title"><span>🔗</span> 방 URL 공유</div>
+  <div class="card">
+    <p>방 등록 완료 후 <b>POST to X</b> 버튼으로 입주 소식을 트위터에 공유할 수 있습니다.<br>
+    URL 형식: <code style="background:#F0EDE8;padding:1px 6px;border-radius:4px;font-size:11px;">hiveroom.vercel.app/#room=번호&zoom=2</code><br>
+    이 링크로 접속하면 해당 방이 맵 중앙에 자동으로 표시됩니다.</p>
   </div>
 </div>
 
