@@ -3590,10 +3590,11 @@ function resetView(){mScale=1;mOX=0;mOY=0;drawMap();}
 
 // ── 뱃지 스케일 애니메이션 ──
 function startBadgeAnim(){
-  if(BADGE_RAF) return; // 이미 실행 중
+  if(BADGE_RAF) cancelAnimationFrame(BADGE_RAF); // 기존 RAF 취소 후 재시작
+  BADGE_RAF = null;
   function tick(){
     let needMore = false;
-    for(let num=1;num<=50;num++){
+    for(let num=1;num<=1027;num++){
       if(!ROOMS[num]) continue;
       const target = MAP_HOVER.num===num ? 2.0 : 1.0;
       const cur = BADGE_SCALE[num] || 1.0;
@@ -3666,7 +3667,7 @@ window.addEventListener('mousemove',e=>{
   }
   mCV.style.cursor=found?'pointer':(HOVER_TILE?'pointer':'default');
   if(HOVER_TILE !== prevHover) drawMap(); // 호버 변경 시 맵 리드로우
-  if((found?.num||null)!==prevNum) startBadgeAnim();
+  if((found?.num||null)!==prevNum){ startBadgeAnim(); drawMap(); }
 });
 window.addEventListener('mouseup',()=>{isDrag=false;mCV.classList.remove('drag');});
 mCV.addEventListener('click',e=>{
