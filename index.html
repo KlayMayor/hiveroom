@@ -435,7 +435,7 @@ header{
       <span class="t-label">Daily Wage</span>
       <span class="h-timer-val" id="timer-daily">--:--:--</span>
       <div class="h-timer-info">!</div>
-      <div class="h-timer-tooltip">유저는 매일 1 HIVE 기본소득을 지급 받습니다.</div>
+      <div class="h-timer-tooltip">유저는 매일 10 HIVE 기본소득을 지급 받습니다.</div>
     </div>
     <!-- Monthly Tax 카운트다운 -->
     <div class="h-timer-block">
@@ -526,7 +526,9 @@ header{
               <button class="ctrl-btn" id="ctrl-flip-btn" title="좌우반전" onclick="onCtrlFlip()">⇄</button>
               <button class="ctrl-btn" id="ctrl-layer-up" title="앞으로" onclick="onCtrlLayerUp()">↑</button>
               <button class="ctrl-btn" id="ctrl-layer-dn" title="뒤로" onclick="onCtrlLayerDn()">↓</button>
-              <button class="ctrl-btn ctrl-del" title="선택해제" onclick="onCtrlDeselect()" style="color:#C44;">✕</button>
+              <div class="ctrl-sep"></div>
+              <button class="ctrl-btn" title="선택해제" onclick="onCtrlDeselect()" style="font-size:10px;width:44px;color:#666;">해제</button>
+              <button class="ctrl-btn" title="삭제" onclick="onCtrlDelete()" style="font-size:10px;width:36px;color:#C44;background:#FFF0F0;">삭제</button>
             </div>
           </div>
         </div>
@@ -542,6 +544,7 @@ header{
           <button class="atab"     onclick="switchTab(this,'floor')">🪵 바닥</button>
           <button class="atab"     onclick="switchTab(this,'furniture')">🛋 가구</button>
           <button class="atab"     onclick="switchTab(this,'walldeco')">✨ 장식</button>
+          <button class="atab"     onclick="switchTab(this,'item')">🎁 아이템</button>
         </div>
 
         <div class="asset-pane on" id="pane-wall">
@@ -559,6 +562,10 @@ header{
         <div class="asset-pane" id="pane-walldeco">
           <div class="agrid" id="grid-walldeco"></div>
           <div class="pane-sel-lbl none" id="sel-walldeco">미선택 (복수선택)</div>
+        </div>
+        <div class="asset-pane" id="pane-item">
+          <div class="agrid" id="grid-item"></div>
+          <div class="pane-sel-lbl none" id="sel-item">미선택 (복수선택)</div>
         </div>
 
       </div>
@@ -628,8 +635,10 @@ header{
     <button class="rp-buy-btn" id="rp-buy-btn" onclick="requestBuyRoom()">구매하기</button>
     <div class="rp-insufficient" id="rp-insufficient" style="display:none">잔액이 부족합니다</div>
     <div class="rp-own-badge" id="rp-own-badge" style="display:none">내 방입니다</div>
+    <button class="rp-move-btn" id="rp-edit-btn" onclick="openEditRoomFromPanel()" style="display:none;margin-top:8px;">✏️ 방 수정하기</button>
     <button class="rp-move-btn" id="rp-move-btn" onclick="openMoveOv()" style="display:none">🚚 이사하기</button>
     <button class="rp-link-btn" id="rp-link-btn" onclick="postToX(PANEL_ROOM_NUM)" style="display:none">Post to 𝕏</button>
+    <button class="rp-buy-btn" id="rp-attend-btn" onclick="openAttendanceQuiz()" style="display:none;background:linear-gradient(135deg,#4A8A50,#2E6B35);margin-top:8px;">📅 출석체크 (+5 HIVE)</button>
   </div>
 </div>
 
@@ -796,6 +805,11 @@ header{
         <div class="png-fsize">700 × 700 px · JPEG</div>
         <span class="png-dl" onclick="dlPng()">⬇ PNG 다운로드</span>
       </div>
+    </div>
+    <div id="post-x-wrap" style="display:none;margin:6px 0;">
+      <button onclick="postToXAfterReg()" style="width:100%;padding:10px;border-radius:12px;border:none;background:#000;color:#fff;font-size:13px;font-weight:700;font-family:'Noto Sans KR',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+        𝕏 POST to X — 입주 소식 알리기
+      </button>
     </div>
     <div class="done-btns">
       <button class="done-main-btn" id="reg-btn" onclick="registerRoom()">✅ 맵에 등록하기</button>
@@ -1014,8 +1028,8 @@ async function startEditRoom(room){
   EDIT_ROOM_NUM = room.room_number;
 
   // 1. 상태 초기화 (SEL/POS/SIZE/FLIP/LAYER 모두)
-  SEL.wall=null; SEL.floor=null; SEL.furniture=new Set(); SEL.walldeco=new Set();
-  ['furniture','walldeco'].forEach(cat=>{
+  SEL.wall=null; SEL.floor=null; SEL.furniture=new Set(); SEL.walldeco=new Set(); SEL.item=new Set();
+  ['furniture','walldeco','item'].forEach(cat=>{
     Object.keys(FLIP[cat]).forEach(k=>delete FLIP[cat][k]);
     Object.keys(POS[cat]).forEach(k=>delete POS[cat][k]);
     Object.keys(SIZE[cat]).forEach(k=>delete SIZE[cat][k]);
@@ -1032,22 +1046,27 @@ async function startEditRoom(room){
         SEL.floor = d.sel.floor || null;
         SEL.furniture = new Set(d.sel.furniture || []);
         SEL.walldeco  = new Set(d.sel.walldeco  || []);
+        SEL.item      = new Set(d.sel.item      || []);
       }
       if(d.pos){
         Object.assign(POS.furniture, d.pos.furniture || {});
         Object.assign(POS.walldeco,  d.pos.walldeco  || {});
+        Object.assign(POS.item,      d.pos.item      || {});
       }
       if(d.size){
         Object.assign(SIZE.furniture, d.size.furniture || {});
         Object.assign(SIZE.walldeco,  d.size.walldeco  || {});
+        Object.assign(SIZE.item,      d.size.item      || {});
       }
       if(d.flip){
         Object.assign(FLIP.furniture, d.flip.furniture || {});
         Object.assign(FLIP.walldeco,  d.flip.walldeco  || {});
+        Object.assign(FLIP.item,      d.flip.item      || {});
       }
       if(d.layerOrder){
         LAYER_ORDER.furniture = [...(d.layerOrder.furniture || [])];
         LAYER_ORDER.walldeco  = [...(d.layerOrder.walldeco  || [])];
+        LAYER_ORDER.item      = [...(d.layerOrder.item      || [])];
       }
     }catch(e){ console.warn('design_json 복원 실패', e); }
   }
@@ -1066,7 +1085,7 @@ async function startEditRoom(room){
   buildGrids();
 
   // 6. label 및 진행도 갱신
-  ['wall','floor','furniture','walldeco'].forEach(cat => refreshLabel(cat));
+  ['wall','floor','furniture','walldeco','item'].forEach(cat => refreshLabel(cat));
   updateProg();
 
   // 7. renderRoom (벽지/바닥/가구/장식 모두 표시)
@@ -1102,14 +1121,17 @@ function closeRoomSelect(){
 }
 
 function resetConsole(){
-  SEL.wall=null; SEL.floor=null; SEL.furniture=new Set(); SEL.walldeco=new Set();
+  SEL.wall=null; SEL.floor=null; SEL.furniture=new Set(); SEL.walldeco=new Set(); SEL.item=new Set();
   Object.keys(FLIP.furniture).forEach(k=>delete FLIP.furniture[k]);
   Object.keys(FLIP.walldeco).forEach(k=>delete FLIP.walldeco[k]);
+  Object.keys(FLIP.item).forEach(k=>delete FLIP.item[k]);
   Object.keys(POS.furniture).forEach(k=>delete POS.furniture[k]);
   Object.keys(POS.walldeco).forEach(k=>delete POS.walldeco[k]);
+  Object.keys(POS.item).forEach(k=>delete POS.item[k]);
   Object.keys(SIZE.furniture).forEach(k=>delete SIZE.furniture[k]);
   Object.keys(SIZE.walldeco).forEach(k=>delete SIZE.walldeco[k]);
-  LAYER_ORDER.furniture=[]; LAYER_ORDER.walldeco=[];
+  Object.keys(SIZE.item).forEach(k=>delete SIZE.item[k]);
+  LAYER_ORDER.furniture=[]; LAYER_ORDER.walldeco=[]; LAYER_ORDER.item=[];
   CTRL_SEL={cat:null,id:null};
   hideCtrl();
   buildGrids(); renderRoom(); updateProg();
@@ -1119,7 +1141,7 @@ function resetConsole(){
 // ══════════════════════════════════════
 // ASSET DB (Supabase Storage REST API)
 // ══════════════════════════════════════
-const ASSETS = { wall:[], floor:[], furniture:[], walldeco:[] };
+const ASSETS = { wall:[], floor:[], furniture:[], walldeco:[], item:[] };
 
 function fileToName(filename){
   return filename.replace(/\.(jpg|jpeg|png)$/i,'').replace(/[-_]/g,' ');
@@ -1157,6 +1179,7 @@ async function loadAssets(){
     {cat:'floor',     folder:'floor'},
     {cat:'furniture', folder:'furniture'},
     {cat:'walldeco',  folder:'deco'},
+    {cat:'item',      folder:'item'},
   ];
 
   await Promise.all(folders.map(async ({cat, folder})=>{
@@ -1182,11 +1205,11 @@ async function loadAssets(){
 // ══════════════════════════════════════
 // 상태
 // ══════════════════════════════════════
-const SEL = {wall:null, floor:null, furniture:new Set(), walldeco:new Set()};
-const FLIP = {furniture:{}, walldeco:{}};
-const POS  = {furniture:{}, walldeco:{}};
-const SIZE = {furniture:{}, walldeco:{}};
-const LAYER_ORDER = {furniture:[], walldeco:[]};  // 뒤→앞 순서 배열
+const SEL = {wall:null, floor:null, furniture:new Set(), walldeco:new Set(), item:new Set()};
+const FLIP = {furniture:{}, walldeco:{}, item:{}};
+const POS  = {furniture:{}, walldeco:{}, item:{}};
+const SIZE = {furniture:{}, walldeco:{}, item:{}};
+const LAYER_ORDER = {furniture:[], walldeco:[], item:[]};  // 뒤→앞 순서 배열
 let CTRL_SEL = {cat:null, id:null};
 let SEL_INTEREST = ''; // 관심사 Twitter ID (문자열)
 
@@ -1227,25 +1250,27 @@ function buildGrids() {
   buildG('grid-floor',     ASSETS.floor,     'floor',     false);
   buildG('grid-furniture', ASSETS.furniture, 'furniture', true);
   buildG('grid-walldeco',  ASSETS.walldeco,  'walldeco',  true);
+  buildG('grid-item',      ASSETS.item,      'item',      true);
 }
 function buildG(gid, list, cat, multi) {
   const g = document.getElementById(gid);
   g.innerHTML = list.length === 0
     ? `<div style="padding:20px;color:#CCC;font-size:12px;">로딩 중...</div>`
     : '';
+  const isWallFloor = (cat === 'wall' || cat === 'floor');
   list.forEach(a => {
     const d = document.createElement('div');
-    // 현재 SEL 상태에 따라 sel 클래스 적용
     const selected = multi ? SEL[cat].has(a.id) : SEL[cat] === a.id;
-    d.className='aitem' + (selected ? ' sel' : '');
+    // 벽/바닥만 선택 테두리 표시
+    const showSel = selected && (cat === 'wall' || cat === 'floor');
+    d.className='aitem' + (showSel ? ' sel' : '');
     d.dataset.id=a.id; d.dataset.cat=cat;
     d.innerHTML=`
-      <div class="athumb">
+      <div class="athumb" style="height:88px;">
         <img src="${a.url}" alt="${a.name}"
           style="width:100%;height:100%;object-fit:cover;"
           loading="lazy">
       </div>
-      <div class="aname">${a.name}</div>
     `;
     d.onclick=()=>pick(cat, a.id, multi);
     g.appendChild(d);
@@ -1268,7 +1293,7 @@ function hideCtrl(){
   renderRoom();
 }
 function positionCtrl(cat, id){
-  const pos = (cat==='furniture' ? POS.furniture[id] : POS.walldeco[id]);
+  const pos = POS[cat]?.[id];
   if(!pos) return;
   const scale = 400/700;
   const sx = pos.x * scale;
@@ -1303,53 +1328,151 @@ function onCtrlDeselect(){
   renderRoom();
 }
 
+// 중복 ID 구분을 위한 suffix 카운터
+const _pickCount = {};
 function pick(cat,id,multi){
   if(multi){
-    if(SEL[cat].has(id)){
-      SEL[cat].delete(id);
-      delete FLIP[cat]?.[id];
-      delete POS[cat]?.[id];
-      delete SIZE[cat]?.[id];
-      LAYER_ORDER[cat] = LAYER_ORDER[cat].filter(x=>x!==id);
-      if(CTRL_SEL.cat===cat && CTRL_SEL.id===id) hideCtrl();
+    // 가구/장식/아이템: 같은 아이템 최대 2개까지 허용
+    // id + suffix("", "_2") 방식으로 중복 처리
+    const base = id;
+    const id2  = id + '_dup2';
+    const hasPrimary = SEL[cat].has(base);
+    const hasDup     = SEL[cat].has(id2);
+
+    if(!hasPrimary){
+      // 첫 번째 선택
+      SEL[cat].add(base);
+      LAYER_ORDER[cat].push(base);
+      setTimeout(()=>showCtrl(cat,base), 50);
+    } else if(!hasDup){
+      // 두 번째 선택 (중복)
+      SEL[cat].add(id2);
+      LAYER_ORDER[cat].push(id2);
+      // id2는 base와 같은 에셋을 참조
+      if(!ASSETS[cat].find(a=>a.id===id2)){
+        const orig = ASSETS[cat].find(a=>a.id===base);
+        if(orig) ASSETS[cat].push({...orig, id:id2});
+      }
+      setTimeout(()=>showCtrl(cat,id2), 50);
     } else {
-      SEL[cat].add(id);
-      LAYER_ORDER[cat].push(id);
-      setTimeout(()=>showCtrl(cat,id), 50);
+      // 이미 2개 선택됨 → 첫 번째(base) 제거
+      SEL[cat].delete(base);
+      delete FLIP[cat]?.[base];
+      delete POS[cat]?.[base];
+      delete SIZE[cat]?.[base];
+      LAYER_ORDER[cat] = LAYER_ORDER[cat].filter(x=>x!==base);
+      if(CTRL_SEL.cat===cat && CTRL_SEL.id===base) hideCtrl();
     }
   } else {
     SEL[cat]=id;
   }
   refreshGrid(cat,multi); refreshLabel(cat); renderRoom(); updateProg();
 }
+function _getAllLayerIds(){
+  // 모든 레이어를 하나의 배열로 (furniture, walldeco, item 통합)
+  // 각 항목: {cat, id}
+  const all = [];
+  ['furniture','walldeco','item'].forEach(cat=>{
+    LAYER_ORDER[cat].forEach(id=>all.push({cat,id}));
+  });
+  return all;
+}
 function onCtrlLayerUp(){
-  const {cat,id}=CTRL_SEL; if(!cat||!id||!LAYER_ORDER[cat]) return;
-  const arr=LAYER_ORDER[cat], i=arr.indexOf(id);
-  if(i<arr.length-1){arr.splice(i,1);arr.splice(i+1,0,id);}
+  const {cat,id}=CTRL_SEL; if(!cat||!id) return;
+  // 통합 레이어에서 한 칸 앞으로
+  const all = _getAllLayerIds();
+  const idx = all.findIndex(x=>x.cat===cat&&x.id===id);
+  if(idx < 0 || idx >= all.length-1){ renderRoom(); return; }
+  const next = all[idx+1];
+  // 같은 cat이면 cat 배열 내에서 swap
+  if(next.cat === cat){
+    const arr=LAYER_ORDER[cat], i=arr.indexOf(id);
+    if(i<arr.length-1){arr.splice(i,1);arr.splice(i+1,0,id);}
+  } else {
+    // 다른 cat → cat 배열에서 제거 후 next.cat 배열의 next.id 앞에 삽입
+    LAYER_ORDER[cat] = LAYER_ORDER[cat].filter(x=>x!==id);
+    const tArr=LAYER_ORDER[next.cat];
+    const ti=tArr.indexOf(next.id);
+    tArr.splice(ti>=0?ti+1:tArr.length,0,id);
+    // cat 변경: CTRL_SEL 업데이트 & 에셋 이동
+    const assetIdx = ASSETS[cat].findIndex(a=>a.id===id);
+    if(assetIdx>=0){
+      const asset = ASSETS[cat].splice(assetIdx,1)[0];
+      asset.cat = next.cat;
+      ASSETS[next.cat].push(asset);
+    }
+    SEL[cat].delete(id); SEL[next.cat].add(id);
+    if(FLIP[cat]?.[id]!==undefined){FLIP[next.cat][id]=FLIP[cat][id];delete FLIP[cat][id];}
+    if(POS[cat]?.[id]){POS[next.cat][id]=POS[cat][id];delete POS[cat][id];}
+    if(SIZE[cat]?.[id]!==undefined){SIZE[next.cat][id]=SIZE[cat][id];delete SIZE[cat][id];}
+    CTRL_SEL={cat:next.cat,id};
+  }
   renderRoom();
 }
 function onCtrlLayerDn(){
-  const {cat,id}=CTRL_SEL; if(!cat||!id||!LAYER_ORDER[cat]) return;
-  const arr=LAYER_ORDER[cat], i=arr.indexOf(id);
-  if(i>0){arr.splice(i,1);arr.splice(i-1,0,id);}
+  const {cat,id}=CTRL_SEL; if(!cat||!id) return;
+  const all = _getAllLayerIds();
+  const idx = all.findIndex(x=>x.cat===cat&&x.id===id);
+  if(idx <= 0){ renderRoom(); return; }
+  const prev = all[idx-1];
+  if(prev.cat === cat){
+    const arr=LAYER_ORDER[cat], i=arr.indexOf(id);
+    if(i>0){arr.splice(i,1);arr.splice(i-1,0,id);}
+  } else {
+    LAYER_ORDER[cat] = LAYER_ORDER[cat].filter(x=>x!==id);
+    const tArr=LAYER_ORDER[prev.cat];
+    const ti=tArr.indexOf(prev.id);
+    tArr.splice(ti>=0?ti:0,0,id);
+    const assetIdx = ASSETS[cat].findIndex(a=>a.id===id);
+    if(assetIdx>=0){
+      const asset = ASSETS[cat].splice(assetIdx,1)[0];
+      asset.cat = prev.cat;
+      ASSETS[prev.cat].push(asset);
+    }
+    SEL[cat].delete(id); SEL[prev.cat].add(id);
+    if(FLIP[cat]?.[id]!==undefined){FLIP[prev.cat][id]=FLIP[cat][id];delete FLIP[cat][id];}
+    if(POS[cat]?.[id]){POS[prev.cat][id]=POS[cat][id];delete POS[cat][id];}
+    if(SIZE[cat]?.[id]!==undefined){SIZE[prev.cat][id]=SIZE[cat][id];delete SIZE[cat][id];}
+    CTRL_SEL={cat:prev.cat,id};
+  }
   renderRoom();
 }
+function onCtrlDelete(){
+  const {cat,id}=CTRL_SEL; if(!cat||!id) return;
+  SEL[cat].delete(id);
+  delete FLIP[cat]?.[id];
+  delete POS[cat]?.[id];
+  delete SIZE[cat]?.[id];
+  LAYER_ORDER[cat] = LAYER_ORDER[cat].filter(x=>x!==id);
+  // dup 에셋 정리
+  if(id.endsWith('_dup2')){
+    ASSETS[cat] = ASSETS[cat].filter(a=>a.id!==id);
+  }
+  hideCtrl();
+  refreshGrid(cat, true);
+  refreshLabel(cat);
+  renderRoom();
+  updateProg();
+}
 function refreshGrid(cat,multi){
+  const isWallFloor = cat==='wall'||cat==='floor';
   document.querySelectorAll(`[data-cat="${cat}"]`).forEach(el=>{
     const s=multi?SEL[cat].has(el.dataset.id):SEL[cat]===el.dataset.id;
-    el.classList.toggle('sel',s);
+    el.classList.toggle('sel', s && isWallFloor);
   });
 }
 function refreshLabel(cat){
   const el=document.getElementById('sel-'+cat);
+  if(!el) return;
   const s=SEL[cat]; let txt='',filled=false;
   if(cat==='wall'||cat==='floor'){if(s){const a=ASSETS[cat].find(x=>x.id===s);txt=a?a.name:'';filled=true;}}
   else{if(s.size>0){txt=`${s.size}개 선택됨`;filled=true;}}
-  el.textContent=txt||(cat==='furniture'||cat==='walldeco'?'미선택 (복수선택)':'미선택');
+  el.textContent=txt||(cat==='furniture'||cat==='walldeco'||cat==='item'?'미선택 (복수선택)':'미선택');
   el.classList.toggle('none',!filled);
 }
+}
 function updateProg(){
-  const done=[!!SEL.wall,!!SEL.floor,SEL.furniture.size>0,SEL.walldeco.size>0].filter(Boolean).length;
+  const done=[!!SEL.wall,!!SEL.floor,SEL.furniture.size>0,SEL.walldeco.size>0,SEL.item.size>0].filter(Boolean).length;
   document.getElementById('cpf').style.width=(done/4*100)+'%';
   document.getElementById('cpt').textContent=done+'/4';
   document.getElementById('finish-btn').classList.toggle('on',done>=2);
@@ -1439,19 +1562,22 @@ async function renderRoom(){
   dvctx.restore();
   rctx.drawImage(offDiv,0,0);
 
-  // 레이어2: 장식 (육각형 클립)
-  const offDeco=makeOff(); const dctx=offDeco.getContext('2d');
-  dctx.save(); hexClip(dctx,RCX,RCY,RS); dctx.clip();
-  await drawDecoCtx(dctx);
-  dctx.restore();
-  rctx.drawImage(offDeco,0,0);
-
-  // 레이어1: 가구 (육각형 클립)
-  const offFurn=makeOff(); const ufctx=offFurn.getContext('2d');
-  ufctx.save(); hexClip(ufctx,RCX,RCY,RS); ufctx.clip();
-  await drawFurnCtx(ufctx);
-  ufctx.restore();
-  rctx.drawImage(offFurn,0,0);
+  // 레이어2: 장식 + 아이템 + 가구 (통합 레이어 순서)
+  const offAll=makeOff(); const actx=offAll.getContext('2d');
+  actx.save(); hexClip(actx,RCX,RCY,RS); actx.clip();
+  // 통합 순서: furniture, walldeco, item 각 LAYER_ORDER를 합쳐서 순서대로 렌더
+  const allIds = _getAllLayerIds();
+  for(const {cat,id} of allIds){
+    if(cat==='furniture'){
+      await _drawOneItem(actx, 'furniture', id, 220, furnBaseCenter(), _furnSpreadPos);
+    } else if(cat==='walldeco'){
+      await _drawOneItem(actx, 'walldeco', id, 180, null, _decoSpreadPos);
+    } else if(cat==='item'){
+      await _drawOneItem(actx, 'item', id, 180, null, _decoSpreadPos);
+    }
+  }
+  actx.restore();
+  rctx.drawImage(offAll,0,0);
 
   // 외곽 테두리는 JPEG에 포함되지 않도록 renderRoom에서 제거
   // (맵에서는 drawFilled가 황금선으로 별도 표시)
@@ -1459,7 +1585,65 @@ async function renderRoom(){
 
 }
 
-function drawImgTile(ctx,img,x,y,w,h,scaleOverride){
+function _furnSpreadPos(i){
+  const bc=furnBaseCenter();
+  const slots=[
+    {dx:-110,dy:-60},{dx:110,dy:-60},{dx:-110,dy:80},{dx:110,dy:80},
+    {dx:0,dy:-60},{dx:0,dy:80},{dx:-110,dy:10},{dx:110,dy:10},
+    {dx:-55,dy:-120},{dx:55,dy:-120},{dx:-55,dy:120},{dx:55,dy:120},
+  ];
+  const s=slots[i%slots.length]||{dx:((i%4-1.5)*100),dy:(Math.floor(i/4)*80-40)};
+  return{x:bc.x+s.dx, y:bc.y+s.dy};
+}
+function _decoSpreadPos(i){
+  const v=rv(RCX,RCY,RS);
+  const C={x:RCX,y:RCY};
+  const lc=ctr(C,v[5],v[4],v[3]);
+  const rc=ctr(C,v[5],v[0],v[1]);
+  const bases=[
+    {x:lc.x-60,y:lc.y-80},{x:rc.x+60,y:rc.y-80},
+    {x:lc.x-60,y:lc.y+40},{x:rc.x+60,y:rc.y+40},
+    {x:RCX,y:lc.y-80},{x:RCX,y:rc.y+40},
+    {x:lc.x-60,y:RCY},{x:rc.x+60,y:RCY},
+  ];
+  return bases[i%bases.length]||{x:RCX+((i%4-1.5)*100),y:RCY+((Math.floor(i/4)-1)*80)};
+}
+async function _drawOneItem(ctx, cat, id, defaultSz, baseCenter, spreadFn){
+  const assetList = ASSETS[cat];
+  const d = assetList.find(a=>a.id===id); if(!d) return;
+  const posMap = POS[cat];
+  const idxInLayer = LAYER_ORDER[cat].indexOf(id);
+  if(!posMap[id]){
+    if(baseCenter){
+      // furniture style
+      const slots=[
+        {dx:-110,dy:-60},{dx:110,dy:-60},{dx:-110,dy:80},{dx:110,dy:80},
+        {dx:0,dy:-60},{dx:0,dy:80},{dx:-110,dy:10},{dx:110,dy:10},
+      ];
+      const s=slots[idxInLayer%slots.length]||{dx:0,dy:0};
+      posMap[id]={x:baseCenter.x+s.dx, y:baseCenter.y+s.dy};
+    } else {
+      posMap[id]={...spreadFn(idxInLayer)};
+    }
+  }
+  if(cat==='furniture') posMap[id]=clampToHex(posMap[id].x,posMap[id].y,70);
+  const pos=posMap[id];
+  const flipped=!!FLIP[cat]?.[id];
+  const sizeMul=SIZE[cat]?.[id]||1.0;
+  const isCtrl=CTRL_SEL.cat===cat&&CTRL_SEL.id===id;
+  const sz=Math.round(defaultSz*sizeMul);
+  const img=await loadImg(d.url);
+  ctx.save(); ctx.globalAlpha=1;
+  if(isCtrl){
+    ctx.beginPath();ctx.arc(pos.x,pos.y,sz/2+18,0,Math.PI*2);
+    ctx.strokeStyle='rgba(242,184,48,.95)';ctx.lineWidth=5;
+    ctx.setLineDash([10,5]);ctx.stroke();ctx.setLineDash([]);
+  }
+  ctx.translate(pos.x,pos.y);
+  if(flipped) ctx.scale(-1,1);
+  if(img) ctx.drawImage(img,-sz/2,-sz/2,sz,sz);
+  ctx.restore();
+}
   if(!img)return;
   const pat=ctx.createPattern(img,'repeat');
   if(!pat)return;
@@ -1588,10 +1772,10 @@ function cvCoord(e){
 // 클릭 위치에 가장 가까운 아이템 찾기 (hitRadius 내)
 function hitTest(cx,cy){
   const HIT=60;
-  // 가구 먼저
   const fItems=[...SEL.furniture].map(id=>({cat:'furniture',id,pos:POS.furniture[id]})).filter(x=>x.pos);
   const dItems=[...SEL.walldeco].map(id=>({cat:'walldeco',id,pos:POS.walldeco[id]})).filter(x=>x.pos);
-  for(const item of [...fItems,...dItems]){
+  const iItems=[...SEL.item].map(id=>({cat:'item',id,pos:POS.item[id]})).filter(x=>x.pos);
+  for(const item of [...fItems,...dItems,...iItems]){
     const dx=cx-item.pos.x, dy=cy-item.pos.y;
     if(Math.sqrt(dx*dx+dy*dy)<HIT) return item;
   }
@@ -1691,7 +1875,7 @@ function showDone(){
   dc.getContext('2d').drawImage(RCV,0,0,700,700,0,0,160,160);
   const wa=SEL.wall?ASSETS.wall.find(a=>a.id===SEL.wall)?.name:null;
   const fl=SEL.floor?ASSETS.floor.find(a=>a.id===SEL.floor)?.name:null;
-  document.getElementById('done-desc').innerHTML=`<b>${[wa,fl].filter(Boolean).join(' · ')||'나만의 방'}</b>을 맵에 등록할까요?`;
+  document.getElementById('done-desc').innerHTML = `이대로 맵에 등록할까요?`;
   pngUrl=null;
   document.getElementById('png-prog').classList.remove('show');
   document.getElementById('png-result').classList.remove('show');
@@ -1711,6 +1895,7 @@ function showDone(){
 }
 function closeDone(){
   document.getElementById('done-ov').classList.remove('show');
+  document.getElementById('post-x-wrap').style.display = 'none';
   // 처리 중 stuck 방지: 버튼 상태 리셋
   const rb = document.getElementById('reg-btn');
   if(rb && rb.textContent.includes('처리 중')){
@@ -1808,11 +1993,11 @@ async function registerRoom(){
   const email = CURRENT_USER?.email || '';
   const designJson = JSON.stringify({
     sel: { wall: SEL.wall, floor: SEL.floor,
-           furniture: [...SEL.furniture], walldeco: [...SEL.walldeco] },
-    pos: { furniture: {...POS.furniture}, walldeco: {...POS.walldeco} },
-    size: { furniture: {...SIZE.furniture}, walldeco: {...SIZE.walldeco} },
-    flip: { furniture: {...FLIP.furniture}, walldeco: {...FLIP.walldeco} },
-    layerOrder: { furniture: [...LAYER_ORDER.furniture], walldeco: [...LAYER_ORDER.walldeco] },
+           furniture: [...SEL.furniture], walldeco: [...SEL.walldeco], item: [...SEL.item] },
+    pos: { furniture: {...POS.furniture}, walldeco: {...POS.walldeco}, item: {...POS.item} },
+    size: { furniture: {...SIZE.furniture}, walldeco: {...SIZE.walldeco}, item: {...SIZE.item} },
+    flip: { furniture: {...FLIP.furniture}, walldeco: {...FLIP.walldeco}, item: {...FLIP.item} },
+    layerOrder: { furniture: [...LAYER_ORDER.furniture], walldeco: [...LAYER_ORDER.walldeco], item: [...LAYER_ORDER.item] },
   });
   const twitterAvatar = `https://unavatar.io/x/${twitterId}`;
   const zonePrice = 0; // 신규: create-room EF는 confirmTileBuy에서 이미 호출됨
@@ -1862,6 +2047,9 @@ async function registerRoom(){
   document.getElementById('png-thumb').src = pngUrl;
   document.getElementById('png-result').classList.add('show');
   document.querySelector('.png-fname').textContent = `room_${targetNum}.jpg`;
+  // POST to X 버튼 표시
+  _lastRegisteredNum = targetNum;
+  document.getElementById('post-x-wrap').style.display = 'block';
   rb.textContent='🗺 맵에서 확인하기'; rb.disabled=false; rb.onclick=()=>goToMap(targetNum);
 }
 async function goToMap(roomNum){
@@ -2020,7 +2208,7 @@ function getZone(num){
 function getZoneConfig(num){ return ZONE_CONFIG[getZone(num)]; }
 
 // ── 경제 상수 ──
-const DAILY_WAGE   = 1;   // 일당 HIVE
+const DAILY_WAGE   = 10;  // 일당 HIVE
 const INIT_BALANCE = 300; // 최초 가입 지급 HIVE
 let MY_BALANCE = null;    // 현재 유저 잔액
 const ROOM_BALANCES = {}; // { room_number: balance } 캐시
@@ -2152,7 +2340,33 @@ function drawFilled(cx,cy,s,num,room){
   // 외곽선
   const zCfg = getZoneConfig(num);
   const isHov = HOVER_TILE === num;
-  if(isHov){
+
+  // Reserved 방: 두꺼운 반사광 애니메이션 테두리
+  if(room.reserved){
+    const t = (Date.now() % 2000) / 2000; // 0~1 주기
+    mctx.save();
+    mHex(cx,cy,s+1);
+    // 반사광 그라디언트 (시간에 따라 각도 회전)
+    const angle = t * Math.PI * 2;
+    const gx1 = cx + Math.cos(angle) * s;
+    const gy1 = cy + Math.sin(angle) * s;
+    const gx2 = cx - Math.cos(angle) * s;
+    const gy2 = cy - Math.sin(angle) * s;
+    const grad = mctx.createLinearGradient(gx1,gy1,gx2,gy2);
+    grad.addColorStop(0,   'rgba(255,220,50,0.2)');
+    grad.addColorStop(0.35,'rgba(255,255,255,0.9)');
+    grad.addColorStop(0.5, 'rgba(255,240,100,1.0)');
+    grad.addColorStop(0.65,'rgba(255,255,255,0.9)');
+    grad.addColorStop(1,   'rgba(255,180,0,0.2)');
+    mctx.strokeStyle = grad;
+    mctx.lineWidth = 5;
+    mctx.shadowColor = 'rgba(255,220,50,0.8)';
+    mctx.shadowBlur = 14;
+    mctx.stroke();
+    mctx.restore();
+    // reserved 방도 twitterId/avatarUrl 있으면 뱃지 표시
+    if(!room.twitterId && !room.avatarUrl) return;
+  } else if(isHov){
     // 금속 반사 glow 효과
     mctx.save();
     mHex(cx,cy,s+2);
@@ -2424,7 +2638,7 @@ function drawEmptyGrid(cx,cy,s,alpha=0.55,num=null){
   }
 }
 
-// 별 반짝임 애니메이션 루프
+// 별 반짝임 + Reserved 애니메이션 루프
 let starRAF = null;
 function startStarAnim(){
   if(starRAF) return;
@@ -2626,32 +2840,174 @@ function openRoomPanel(num){
     buyBtn.style.display = 'none';
     insuf.style.display = 'none';
     ownBadge.style.display = 'block';
+    document.getElementById('rp-edit-btn').style.display = 'block';
     document.getElementById('rp-move-btn').style.display = 'block';
-    document.getElementById('rp-link-btn').style.display = 'block';
+    document.getElementById('rp-link-btn').style.display = 'none';
+    document.getElementById('rp-attend-btn').style.display = 'none';
   } else if(room.reserved){
     buyBtn.style.display = 'none';
     insuf.style.display = 'none';
     ownBadge.style.display = 'none';
+    document.getElementById('rp-edit-btn').style.display = 'none';
     document.getElementById('rp-move-btn').style.display = 'none';
     document.getElementById('rp-link-btn').style.display = 'none';
+    // 출석체크는 로그인한 유저에게만 표시
+    document.getElementById('rp-attend-btn').style.display = CURRENT_USER ? 'block' : 'none';
   } else {
     buyBtn.style.display = 'block';
     ownBadge.style.display = 'none';
+    document.getElementById('rp-edit-btn').style.display = 'none';
     document.getElementById('rp-move-btn').style.display = 'none';
     document.getElementById('rp-link-btn').style.display = 'block';
+    document.getElementById('rp-attend-btn').style.display = 'none';
     buyBtn.disabled = !canBuy || !CURRENT_USER;
     insuf.style.display = (!CURRENT_USER || (!canBuy && !isOwnFinal && !room.reserved)) ? 'block' : 'none';
     if(!CURRENT_USER) insuf.textContent = '로그인이 필요합니다';
     else insuf.textContent = '잔액이 부족합니다';
+    // 쿨타임 체크
+    checkBuyCooltime(num, buyBtn);
   }
   document.getElementById('room-panel').classList.add('open');
 }
 function closeRoomPanel(){
   document.getElementById('room-panel').classList.remove('open');
   document.getElementById('rp-link-btn').style.display = 'none';
+  document.getElementById('rp-edit-btn').style.display = 'none';
+  document.getElementById('rp-attend-btn').style.display = 'none';
   PANEL_ROOM_NUM = null;
 }
-// ── 채워진 방 구매 ──
+
+// ── 방 수정하기 (패널에서 진입) ──
+function openEditRoomFromPanel(){
+  if(!PANEL_ROOM_NUM) return;
+  const num = PANEL_ROOM_NUM;
+  closeRoomPanel();
+  openEditRoomByNum(num);
+}
+
+async function openEditRoomByNum(num){
+  if(!num) return;
+  // rooms 테이블에서 방 정보 조회
+  try {
+    const res = await fetch(
+      `${SUPA_URL}/rest/v1/rooms?room_number=eq.${num}&select=*`,
+      { headers:{ 'apikey':SUPA_KEY, 'Authorization':`Bearer ${await getValidToken()||SUPA_KEY}` } }
+    );
+    const rows = await res.json();
+    if(!rows||!rows.length){ alert('방 정보를 불러올 수 없습니다.'); return; }
+    await startEditRoom(rows[0]);
+  } catch(e){ alert('방 정보 로드 실패: '+e.message); }
+}
+
+// ── 구매 쿨타임 ──
+const COOLTIME_NEW_MS  = 36 * 60 * 60 * 1000; // 방 만들기 후 36시간
+const COOLTIME_BUY_MS  =  1 * 60 * 60 * 1000; // 구매 후 1시간
+const COOLTIME_KEY = 'hiveroom_cooltime'; // localStorage key: {roomNum: {type, endsAt}}
+
+function setCooltime(roomNum, type){
+  try {
+    const store = JSON.parse(localStorage.getItem(COOLTIME_KEY)||'{}');
+    const ms = type === 'new' ? COOLTIME_NEW_MS : COOLTIME_BUY_MS;
+    store[roomNum] = { type, endsAt: Date.now() + ms };
+    localStorage.setItem(COOLTIME_KEY, JSON.stringify(store));
+  } catch(e){}
+}
+
+function getCooltime(roomNum){
+  try {
+    const store = JSON.parse(localStorage.getItem(COOLTIME_KEY)||'{}');
+    const entry = store[roomNum];
+    if(!entry) return null;
+    if(Date.now() > entry.endsAt){
+      delete store[roomNum];
+      localStorage.setItem(COOLTIME_KEY, JSON.stringify(store));
+      return null;
+    }
+    return entry;
+  } catch(e){ return null; }
+}
+
+function checkBuyCooltime(roomNum, buyBtn){
+  const ct = getCooltime(roomNum);
+  if(!ct) return; // 쿨타임 없음
+  const remaining = ct.endsAt - Date.now();
+  if(remaining <= 0) return;
+  // 버튼 비활성화 + 카운트다운
+  buyBtn.disabled = true;
+  const tick = () => {
+    const r = ct.endsAt - Date.now();
+    if(r <= 0){ buyBtn.textContent = '구매하기'; buyBtn.disabled = false; return; }
+    const h = Math.floor(r/3600000).toString().padStart(2,'0');
+    const m = Math.floor((r%3600000)/60000).toString().padStart(2,'0');
+    const s = Math.floor((r%60000)/1000).toString().padStart(2,'0');
+    buyBtn.textContent = `⏳ 쿨타임 ${h}:${m}:${s}`;
+    setTimeout(tick, 1000);
+  };
+  tick();
+}
+
+// ── 구매 후 쿨타임 설정 (confirmTileBuy & confirmBuyRoom 완료 후 호출) ──
+function _afterCreateRoom(roomNum){ setCooltime(roomNum, 'new'); }
+function _afterBuyRoom(roomNum){   setCooltime(roomNum, 'buy'); }
+
+// ── 출석체크 퀴즈 ──
+let _attendQuizAnswer = null;
+function openAttendanceQuiz(){
+  if(!CURRENT_USER){ alert('로그인이 필요합니다.'); return; }
+  const a = Math.floor(Math.random()*9)+1;
+  const b = Math.floor(Math.random()*9)+1;
+  _attendQuizAnswer = a + b;
+  const ans = prompt(`📅 출석체크 퀴즈\n\n${a} + ${b} = ?\n\n정답을 입력하세요 (5 HIVE 지급)`);
+  if(ans === null) return;
+  if(parseInt(ans) === _attendQuizAnswer){
+    claimAttendance();
+  } else {
+    alert(`❌ 오답입니다! 정답은 ${_attendQuizAnswer}이었어요.`);
+  }
+}
+
+async function claimAttendance(){
+  // 오늘 날짜 기준 중복 지급 방지
+  const todayKey = `attend_${CURRENT_USER.email}_${new Date().toISOString().split('T')[0]}`;
+  if(localStorage.getItem(todayKey)){
+    alert('오늘은 이미 출석체크를 완료했어요! 내일 다시 도전하세요 🍯');
+    return;
+  }
+  try {
+    const token = await getValidToken();
+    const res = await fetch(`${SUPA_URL}/rest/v1/user_balances?user_email=eq.${encodeURIComponent(CURRENT_USER.email)}`, {
+      method: 'PATCH',
+      headers:{
+        'apikey': SUPA_KEY,
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify({ balance: MY_BALANCE + 5 })
+    });
+    if(res.ok){
+      MY_BALANCE += 5;
+      updateBalanceUI();
+      localStorage.setItem(todayKey, '1');
+      showToast('✅ 정답! 5 HIVE를 지급받았어요 🍯');
+    } else {
+      alert('지급 오류가 발생했습니다. 다시 시도해주세요.');
+    }
+  } catch(e){ alert('오류: '+e.message); }
+}
+
+// ── 등록 완료 후 POST to X ──
+let _lastRegisteredNum = null;
+function postToXAfterReg(){
+  const num = _lastRegisteredNum || EDIT_ROOM_NUM || _pendingTileNum;
+  if(!num) return;
+  const handle = CURRENT_USER?.email?.split('@')[0] || 'HiveRoom';
+  const url = `${location.origin}${location.pathname}#room=${num}&zoom=2`;
+  const text = `🍯 HiveRoom에 입주했어요!\n\n나만의 방을 꾸미고 맵에 등록했습니다.\n지금 바로 방문해보세요! 🏠\n👉 ${url}\n\n#HiveRoom #하이브룸 #입주완료`;
+  window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank', 'width=600,height=450');
+}
+
+
 function requestBuyRoom(){
   // 확인 팝업 표시
   const ov = document.getElementById('buy-confirm-ov');
@@ -2691,6 +3047,7 @@ async function confirmBuyRoom(){
   }
   if(room) room.ownerEmail = CURRENT_USER.email;
   updateBalanceUI();
+  _afterBuyRoom(PANEL_ROOM_NUM);
   closeRoomPanel();
   document.getElementById('buy-success-ov').classList.add('show');
   btn.disabled = false; btn.textContent = '구매하기';
@@ -2884,6 +3241,8 @@ function openEmptyPanel(num){
   document.getElementById('ep-mybal').textContent = `${myBal.toLocaleString()} HIVE`;
   const canBuy = CURRENT_USER && myBal >= price;
   const btn = document.getElementById('ep-buy-btn');
+  // 버그픽스: 이전 처리중 상태 초기화
+  btn.disabled = false; btn.textContent = '방 만들기';
   const insuf = document.getElementById('ep-insufficient');
   const loginMsg = document.getElementById('ep-login-msg');
   if(!CURRENT_USER){
@@ -2952,6 +3311,7 @@ async function confirmTileBuy(){
   MY_BALANCE = efData.new_balance;
   ROOM_BALANCES[num] = efData.room_balance;
   updateBalanceUI();
+  _afterCreateRoom(num);
   closeEmptyPanel();
   // 방 만들기 패널 열기 (기존 openMakeRoom 로직)
   EDIT_ROOM_NUM = null;
