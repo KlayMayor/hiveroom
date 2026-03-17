@@ -1470,7 +1470,6 @@ function refreshLabel(cat){
   el.textContent=txt||(cat==='furniture'||cat==='walldeco'||cat==='item'?'미선택 (복수선택)':'미선택');
   el.classList.toggle('none',!filled);
 }
-}
 function updateProg(){
   const done=[!!SEL.wall,!!SEL.floor,SEL.furniture.size>0,SEL.walldeco.size>0,SEL.item.size>0].filter(Boolean).length;
   document.getElementById('cpf').style.width=(done/4*100)+'%';
@@ -1644,6 +1643,8 @@ async function _drawOneItem(ctx, cat, id, defaultSz, baseCenter, spreadFn){
   if(img) ctx.drawImage(img,-sz/2,-sz/2,sz,sz);
   ctx.restore();
 }
+
+function drawImgTile(ctx,img,x,y,w,h,scaleOverride){
   if(!img)return;
   const pat=ctx.createPattern(img,'repeat');
   if(!pat)return;
