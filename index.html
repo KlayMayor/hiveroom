@@ -468,11 +468,11 @@ header{
   <!-- 로그인 후: 타이머 + HIVE잔액 + 프로필 -->
   <div class="h-timers" id="h-timers">
     <!-- Daily Wage 카운트다운 -->
-    <div class="h-timer-block">
+    <div class="h-timer-block" id="daily-wage-block" style="cursor:pointer;" onclick="claimDailyWage()" title="클릭하여 Daily Wage 수령">
       <span class="t-label">Daily Wage</span>
       <span class="h-timer-val" id="timer-daily">--:--:--</span>
       <div class="h-timer-info">!</div>
-      <div class="h-timer-tooltip">유저는 매일 10 HIVE 기본소득을 지급 받습니다.</div>
+      <div class="h-timer-tooltip">유저는 매일 10 HIVE 기본소득을 지급 받습니다.<br>타이머가 00:00:00이 되면 클릭하여 수령하세요!</div>
     </div>
     <!-- Monthly Tax 카운트다운 -->
     <div class="h-timer-block">
@@ -2838,13 +2838,25 @@ async function loadMyBalance(){
   if(!CURRENT_USER) return;
   try {
     const res = await fetch(
-      `${SUPA_URL}/rest/v1/user_balances?user_email=eq.${encodeURIComponent(CURRENT_USER.email)}&select=balance`,
+      `${SUPA_URL}/rest/v1/user_balances?user_email=eq.${encodeURIComponent(CURRENT_USER.email)}&select=balance,last_daily_wage`,
       { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${await getValidToken()}` } }
     );
     if(!res.ok) return;
     const data = await res.json();
     if(data && data.length > 0){
       MY_BALANCE = data[0].balance;
+      // 서버의 last_daily_wage 기준으로 타이머 상태 업데이트
+      const lastWage = data[0].last_daily_wage; // 'YYYY-MM-DD' or null
+      const todayUTC = new Date().toISOString().split('T')[0];
+      if(lastWage === todayUTC){
+        // 오늘 이미 수령 → 내일 UTC 00:00까지 카운트다운
+        const block = document.getElementById('daily-wage-block');
+        if(block){ block.style.cursor='default'; block.style.opacity='0.6'; block.title='오늘은 이미 수령했어요'; }
+      } else {
+        // 수령 가능 → 클릭 유도
+        const block = document.getElementById('daily-wage-block');
+        if(block){ block.style.cursor='pointer'; block.style.opacity='1'; block.title='클릭하여 Daily Wage 수령'; }
+      }
     } else {
       // 최초 가입: 300 HIVE 지급
       await initUserBalance();
@@ -3176,8 +3188,8 @@ let _attendQuizAnswer = null;
 function openAttendanceQuiz(){
   if(!CURRENT_USER){ alert('로그인이 필요합니다.'); return; }
   if(!PANEL_ROOM_NUM){ alert('방을 선택해주세요.'); return; }
-  // UTC 기준 오늘 날짜 + 방번호로 키 생성 → 방마다 별도 쿨타임
-  const todayUTC = new Date().toISOString().split('T')[0]; // YYYY-MM-DD UTC
+  // UI 중복 클릭 방지용 로컬 캐시 (실제 검증은 서버)
+  const todayUTC = new Date().toISOString().split('T')[0];
   const todayKey = `attend_${CURRENT_USER.email}_room${PANEL_ROOM_NUM}_${todayUTC}`;
   if(localStorage.getItem(todayKey)){
     alert(`오늘 이 방에서 이미 출석체크를 완료했어요!\n내일(UTC 기준 00:00) 다시 도전하세요 🍯`);
@@ -3190,38 +3202,90 @@ function openAttendanceQuiz(){
   const ans = prompt(`📅 출석체크 퀴즈 — ${_attendRoomNum}번 방\n\n${a} + ${b} = ?\n\n정답을 입력하세요 (5 HIVE 지급)`);
   if(ans === null) return;
   if(parseInt(ans) === _attendQuizAnswer){
-    claimAttendance(todayKey);
+    claimAttendance(todayKey, _attendRoomNum);
   } else {
     alert(`❌ 오답입니다! 정답은 ${_attendQuizAnswer}이었어요.`);
   }
 }
 
-async function claimAttendance(todayKey){
+async function claimAttendance(todayKey, roomNum){
+  // UI 중복 방지 (서버에서도 이중 검증)
   if(localStorage.getItem(todayKey)){
     alert('오늘은 이미 출석체크를 완료했어요! 내일 다시 도전하세요 🍯');
     return;
   }
   try {
     const token = await getValidToken();
-    const res = await fetch(`${SUPA_URL}/rest/v1/user_balances?user_email=eq.${encodeURIComponent(CURRENT_USER.email)}`, {
-      method: 'PATCH',
+    // ── Edge Function 호출 (서버 측 검증) ──
+    const res = await fetch(`${EDGE_URL}/edge-attend`, {
+      method: 'POST',
       headers:{
-        'apikey': SUPA_KEY,
         'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=representation'
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ balance: MY_BALANCE + 5 })
+      body: JSON.stringify({ room_number: roomNum })
     });
-    if(res.ok){
-      MY_BALANCE += 5;
+    const data = await res.json();
+    if(res.ok && data.success){
+      MY_BALANCE = data.new_balance; // 서버가 계산한 값으로 갱신
       updateBalanceUI();
+      localStorage.setItem(todayKey, '1'); // UI 중복 방지용 캐시
+      showToast(`✅ 정답! ${data.reward} HIVE를 지급받았어요 🍯`);
+    } else if(res.status === 409){
+      // 서버에서 이미 수령 판정
       localStorage.setItem(todayKey, '1');
-      showToast('✅ 정답! 5 HIVE를 지급받았어요 🍯');
+      alert('오늘은 이미 출석체크를 완료했어요! 내일 다시 도전하세요 🍯');
     } else {
-      alert('지급 오류가 발생했습니다. 다시 시도해주세요.');
+      alert(`지급 오류: ${data.error || '다시 시도해주세요.'}`);
     }
   } catch(e){ alert('오류: '+e.message); }
+}
+
+// ── Daily Wage 수령 ──
+let _dailyWageClaiming = false; // 중복 클릭 방지
+async function claimDailyWage(){
+  if(!CURRENT_USER){ alert('로그인이 필요합니다.'); return; }
+  if(_dailyWageClaiming) return;
+
+  // 타이머가 아직 남아있으면 얼리 리턴
+  const remaining = getNextDailyWage();
+  if(remaining > 0){
+    const h = Math.floor(remaining/3600000);
+    const m = Math.floor((remaining%3600000)/60000);
+    alert(`⏰ 아직 수령할 수 없어요!\n${h}시간 ${m}분 후에 다시 시도하세요.`);
+    return;
+  }
+
+  _dailyWageClaiming = true;
+  const block = document.getElementById('daily-wage-block');
+  if(block) block.style.opacity = '0.5';
+
+  try {
+    const token = await getValidToken();
+    // ── Edge Function 호출 (서버 측 검증) ──
+    const res = await fetch(`${EDGE_URL}/edge-daily-wage`, {
+      method: 'POST',
+      headers:{
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    const data = await res.json();
+    if(res.ok && data.success){
+      MY_BALANCE = data.new_balance; // 서버가 계산한 값으로 갱신
+      updateBalanceUI();
+      showToast(`✅ Daily Wage ${data.reward} HIVE 수령 완료! 🍯`);
+    } else if(res.status === 409){
+      // 서버에서 이미 수령 판정
+      alert('오늘 Daily Wage는 이미 수령했어요! 내일(UTC 00:00) 다시 수령하세요 🍯');
+    } else {
+      alert(`수령 오류: ${data.error || '다시 시도해주세요.'}`);
+    }
+  } catch(e){ alert('오류: '+e.message); }
+  finally {
+    _dailyWageClaiming = false;
+    if(block) block.style.opacity = '1';
+  }
 }
 
 // ── 등록 완료 후 POST to X ──
@@ -3231,7 +3295,7 @@ function postToXAfterReg(){
   if(!num) return;
   const handle = CURRENT_USER?.email?.split('@')[0] || 'HiveRoom';
   const url = `${location.origin}${location.pathname}#room=${num}&zoom=2`;
-  const text = `🍯 HiveRoom에 입주했어요!\n\n나만의 방을 꾸미고 맵에 등록했습니다.\n지금 바로 방문해보세요! 🏠\n👉 ${url}\n\n#HiveRoom #하이브룸 #입주완료`;
+  const text = `🍯 HiveRoom에 입주했어요!\n\n나의 방을 꾸미고 맵에 등록했습니다.\n지금 바로 방문하여 저의 이웃이 되어주세요! 🏠\n👉 ${url}`;
   window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank', 'width=600,height=450');
 }
 
