@@ -168,25 +168,22 @@ header{
 
 /* 반전 버튼 제거됨 - 캔버스 오버레이로 대체 */
 
-/* ── 아이템 선택 컨트롤 — con-left 하단 플로팅 ── */
+/* ── 아이템 선택 컨트롤 — 광고 영역 바로 위 ── */
 #item-ctrl{
   display:none;
-  position:absolute;
-  bottom:0;
-  left:0;
-  right:0;
+  position:static;
   background:rgba(255,255,255,.97);
   border-top:2px solid var(--honey);
-  border-radius:0 0 0 0;
+  border-bottom:1px solid var(--border);
   padding:8px 12px;
-  box-shadow:0 -4px 16px rgba(0,0,0,.12);
+  box-shadow:0 -2px 8px rgba(0,0,0,.08);
   gap:8px;
   align-items:center;
   pointer-events:auto;
   white-space:nowrap;
   flex-wrap:wrap;
   justify-content:center;
-  z-index:20;
+  flex-shrink:0;
 }
 #item-ctrl.show{display:flex;}
 .ctrl-btn{
@@ -634,8 +631,7 @@ header{
             <canvas id="room-cv" width="700" height="700" style="width:460px;height:460px;display:block;"></canvas>
           </div>
         </div>
-        <div class="preview-ad">광고 영역</div>
-        <!-- 컨트롤 핸들: con-left 하단 플로팅 -->
+        <!-- 컨트롤 핸들: 광고 영역 바로 위 -->
         <div id="item-ctrl">
           <div class="ctrl-size">
             <span>크기</span>
@@ -651,6 +647,7 @@ header{
           <button class="ctrl-btn" title="선택해제" onclick="onCtrlDeselect()" style="font-size:10px;width:44px;color:#666;">해제</button>
           <button class="ctrl-btn" title="삭제" onclick="onCtrlDelete()" style="font-size:10px;width:36px;color:#C44;background:#FFF0F0;">삭제</button>
         </div>
+        <div class="preview-ad">광고 영역</div>
       </div>
 
       <!-- 오른쪽: 에셋 선택 -->
