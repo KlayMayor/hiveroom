@@ -2361,7 +2361,7 @@ function drawMap(){
 
   // ── 방 렌더 (채워진 방만) ──
   const s=HEX*mScale;
-  const sorted=[...Array(1001).keys()].slice(1).sort((a,b)=>{const pa=SLOT_POS[a],pb=SLOT_POS[b];return(pa.r-pb.r)||(pa.q-pb.q);});
+  const sorted=[...Array(1028).keys()].slice(1).sort((a,b)=>{const pa=SLOT_POS[a],pb=SLOT_POS[b];if(!pa||!pb)return 0;return(pa.r-pb.r)||(pa.q-pb.q);});
   sorted.forEach(num=>{
     const pos=SLOT_POS[num];if(!pos)return;
     const{x:cx,y:cy}=ap(pos.q,pos.r);
@@ -2707,6 +2707,21 @@ function drawEmptyGrid(cx,cy,s,alpha=0.55,num=null){
     mctx.textBaseline='middle';
     mctx.fillStyle=`rgba(${isHov?'255,255,255':'220,220,220'},${ta.toFixed(2)})`;
     mctx.fillText(num, cx, cy);
+  }
+  // 빈 타일 호버 시 방 만들기 비용 표시 (타일 상단 중앙)
+  if(isHov && num !== null){
+    const price = zCfg.price ?? getZoneConfig(num).price;
+    const valLabel = `🍯 ${price.toLocaleString()}`;
+    const fs = Math.max(10, s * 0.15);
+    mctx.font = `bold ${fs}px 'Noto Sans KR',sans-serif`;
+    const vw = mctx.measureText(valLabel).width + 14;
+    const vh = fs + 8;
+    const vx = cx - vw / 2;
+    const vy = cy - s * 0.72 - vh / 2;
+    mctx.beginPath(); mctx.roundRect(vx, vy, vw, vh, vh/2);
+    mctx.fillStyle = 'rgba(20,15,5,.75)'; mctx.fill();
+    mctx.fillStyle = '#FFE566'; mctx.textAlign = 'center'; mctx.textBaseline = 'middle';
+    mctx.fillText(valLabel, cx, vy + vh/2);
   }
 }
 
@@ -3759,7 +3774,7 @@ mCV.addEventListener('click',e=>{
     return;
   }
   // 헥사곤 타일 클릭 → 사이드 패널
-  for(let num=1;num<=1000;num++){
+  for(let num=1;num<=1027;num++){
     const room=ROOMS[num]; if(!room) continue;
     const pos=SLOT_POS[num]; if(!pos) continue;
     const{x:cx,y:cy}=ap(pos.q,pos.r);
