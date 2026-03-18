@@ -422,7 +422,7 @@ header{
 <header>
   <div class="logo">🍯 HiveRoom</div>
   <div class="h-sep"></div>
-  <div class="h-badge">Resident <span id="cnt">0</span></div>
+  <button class="h-badge" onclick="openHelp()" style="cursor:pointer;border:1px solid var(--honey);background:var(--hlt);color:var(--hdk);font-family:'Noto Sans KR',sans-serif;">❓ 도움말</button>
   <div class="h-sep"></div>
   <button class="h-toggle-btn" id="room-num-btn" onclick="toggleRoomNumbers()">
     # Room No.
@@ -2495,6 +2495,21 @@ function drawFilled(cx,cy,s,num,room){
     mctx.fillStyle='rgba(30,20,10,.72)'; mctx.fill();
     mctx.fillStyle='#fff'; mctx.textAlign='left'; mctx.textBaseline='middle';
     mctx.fillText(label, lx+8, by);
+  }
+  // 호버 중이면 타일 현재 가치 표시 (타일 상단 중앙)
+  if(HOVER_TILE===num && !room.reserved){
+    const tileVal = ROOM_BALANCES[num] ?? room.tileValue ?? 0;
+    const valLabel = `🍯 ${tileVal.toLocaleString()}`;
+    const fs = Math.max(10, s * 0.15);
+    mctx.font = `bold ${fs}px 'Noto Sans KR',sans-serif`;
+    const vw = mctx.measureText(valLabel).width + 14;
+    const vh = fs + 8;
+    const vx = cx - vw / 2;
+    const vy = cy - s * 0.72 - vh / 2;
+    mctx.beginPath(); mctx.roundRect(vx, vy, vw, vh, vh/2);
+    mctx.fillStyle = 'rgba(20,15,5,.75)'; mctx.fill();
+    mctx.fillStyle = '#FFE566'; mctx.textAlign = 'center'; mctx.textBaseline = 'middle';
+    mctx.fillText(valLabel, cx, vy + vh/2);
   }
 }
 
