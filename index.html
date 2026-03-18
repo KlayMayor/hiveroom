@@ -1405,6 +1405,7 @@ function showCtrl(cat, id){
   document.getElementById('ctrl-flip-btn').classList.toggle('on', flipped);
   positionCtrl(cat, id);
   document.getElementById('item-ctrl').classList.add('show');
+  renderRoom(); // ← CTRL_SEL 변경 후 즉시 재렌더링하여 테두리가 새 아이템에 표시
 }
 function hideCtrl(){
   CTRL_SEL = {cat:null, id:null};
@@ -1741,7 +1742,7 @@ async function _drawOneItem(ctx, cat, id, defaultSz, baseCenter, spreadFn){
   const img=await loadImg(d.url);
   ctx.save(); ctx.globalAlpha=1;
   if(isCtrl){
-    ctx.beginPath();ctx.arc(pos.x,pos.y,sz/2+14,0,Math.PI*2);
+    ctx.beginPath();ctx.arc(pos.x,pos.y,sz/2+12,0,Math.PI*2);
     ctx.strokeStyle='rgba(242,184,48,.95)';ctx.lineWidth=4;
     ctx.setLineDash([10,5]);ctx.stroke();ctx.setLineDash([]);
   }
@@ -1808,7 +1809,7 @@ async function drawDecoCtx(ctx){
     const img=await loadImg(d.url);
     ctx.save(); ctx.globalAlpha=1;
     if(isCtrl){
-      ctx.beginPath();ctx.arc(pos.x,pos.y,sz/2+14,0,Math.PI*2);
+      ctx.beginPath();ctx.arc(pos.x,pos.y,sz/2+12,0,Math.PI*2);
       ctx.strokeStyle='rgba(242,184,48,.95)';ctx.lineWidth=4;
       ctx.setLineDash([10,5]);ctx.stroke();ctx.setLineDash([]);
     }
@@ -1851,7 +1852,7 @@ async function drawFurnCtx(ctx){
     const img=await loadImg(f.url);
     ctx.save(); ctx.globalAlpha=1;
     if(isCtrl){
-      ctx.beginPath();ctx.arc(pos.x,pos.y,sz/2+14,0,Math.PI*2);
+      ctx.beginPath();ctx.arc(pos.x,pos.y,sz/2+12,0,Math.PI*2);
       ctx.strokeStyle='rgba(242,184,48,.95)';ctx.lineWidth=4;
       ctx.setLineDash([10,5]);ctx.stroke();ctx.setLineDash([]);
     }
