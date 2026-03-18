@@ -3777,7 +3777,7 @@ function toggleRoomNumbers(){
   drawMap();
 }
 
-function zoomIn(){mScale=Math.min(mScale*1.2,2.5);drawMap();}
+function zoomIn(){mScale=Math.min(mScale*1.2,2.6);drawMap();}
 function zoomOut(){mScale=Math.max(mScale/1.2,.3);drawMap();}
 function resetView(){mScale=1;mOX=0;mOY=0;drawMap();}
 
@@ -3815,7 +3815,7 @@ mCV.addEventListener('wheel',e=>{
   const mx = e.clientX - rect.left;
   const my = e.clientY - rect.top;
   const factor = e.deltaY > 0 ? 0.9 : 1.1;
-  const newScale = Math.max(.3, Math.min(2.5, mScale * factor));
+  const newScale = Math.max(.3, Math.min(2.6, mScale * factor));
   // 커서 위치 기준 zoom: 커서가 가리키는 맵 좌표를 보존
   // 커서 → 맵 좌표: mapX = (mx - mW/2 - mOX), mapY = (my - mH/2 - mOY)
   // 새 offset = 커서위치 - mW/2 - mapX * ratio
@@ -3963,7 +3963,7 @@ function applyUrlHash(){
   const params = Object.fromEntries(hash.split('&').map(p=>p.split('=')));
   const roomNum = parseInt(params.room);
   const zoom    = parseFloat(params.zoom);
-  if(!isNaN(zoom) && zoom >= 0.3 && zoom <= 2.5) mScale = zoom;
+  if(!isNaN(zoom) && zoom >= 0.3 && zoom <= 2.6) mScale = zoom;
   if(!isNaN(roomNum) && roomNum >= 1 && roomNum <= 1027){
     const pos = SLOT_POS[roomNum];
     if(pos){
