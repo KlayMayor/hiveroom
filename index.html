@@ -2088,7 +2088,6 @@ async function goToMap(roomNum){
     }
   });
   if(img) ROOMS[roomNum] = { img, twitterId, avatarUrl: `https://unavatar.io/x/${twitterId}`, interest: SEL_INTEREST || '', ownerEmail: CURRENT_USER?.email||'', creatorEmail: CURRENT_USER?.email||'' };
-  document.getElementById('cnt').textContent = Object.keys(ROOMS).length;
   _pendingTileNum = null;
   closeDone(); closeConsole();
   // 해당 방 타일을 화면 정중앙에 위치
@@ -2583,7 +2582,8 @@ async function loadResidentCount(){
     const data = await res.json();
     // 고유 이메일 수 = 실제 가입자 수
     const unique = new Set(data.map(r => r.email).filter(e => e && e.trim() !== '')).size;
-    document.getElementById('cnt').textContent = unique;
+    const cntEl = document.getElementById('cnt');
+    if(cntEl) cntEl.textContent = unique;
   } catch(e){ console.warn('가입자 수 로드 실패:', e); }
 }
 
