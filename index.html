@@ -2243,6 +2243,8 @@ let SHOW_ROOM_NUMBERS = false; // Room No. 토글 상태
 
 const mCV=document.getElementById('map-cv');
 const mctx=mCV.getContext('2d');
+mctx.imageSmoothingEnabled = true;
+mctx.imageSmoothingQuality = 'high';
 let mW=0,mH=0,HEX=58,mScale=1,mOX=0,mOY=0;
 let isDrag=false,_dragMoved=false,dSt={x:0,y:0},dOff={x:0,y:0};
 const DRAG_THRESHOLD=5; // 5px 이상 움직여야 드래그로 판정
@@ -2383,6 +2385,8 @@ function drawFilled(cx,cy,s,num,room){
   if(room.img){
     const drawH = s * 2;
     const drawW = s * 2;
+    mctx.imageSmoothingEnabled = true;
+    mctx.imageSmoothingQuality = 'high';
     mctx.drawImage(room.img, cx - drawW/2, cy - drawH/2, drawW, drawH);
   }
   mctx.restore();
