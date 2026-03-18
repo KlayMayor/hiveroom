@@ -121,6 +121,7 @@ header{
   display:flex;flex-direction:column;
   background:#F8F5F0;
   border-right:1px solid var(--border);
+  position:relative;
 }
 .preview-area{
   flex:3;display:flex;flex-direction:column;
@@ -167,22 +168,25 @@ header{
 
 /* 반전 버튼 제거됨 - 캔버스 오버레이로 대체 */
 
-/* ── 아이템 선택 컨트롤 오버레이 ── */
+/* ── 아이템 선택 컨트롤 — con-left 하단 플로팅 ── */
 #item-ctrl{
   display:none;
-  position:static;
-  background:rgba(255,255,255,.96);
-  border:2px solid var(--honey);
-  border-radius:14px;
-  padding:6px 10px;
-  box-shadow:0 4px 20px rgba(0,0,0,.18);
+  position:absolute;
+  bottom:0;
+  left:0;
+  right:0;
+  background:rgba(255,255,255,.97);
+  border-top:2px solid var(--honey);
+  border-radius:0 0 0 0;
+  padding:8px 12px;
+  box-shadow:0 -4px 16px rgba(0,0,0,.12);
   gap:8px;
   align-items:center;
   pointer-events:auto;
   white-space:nowrap;
-  margin-top:8px;
   flex-wrap:wrap;
   justify-content:center;
+  z-index:20;
 }
 #item-ctrl.show{display:flex;}
 .ctrl-btn{
@@ -468,11 +472,11 @@ header{
   <!-- 로그인 후: 타이머 + HIVE잔액 + 프로필 -->
   <div class="h-timers" id="h-timers">
     <!-- Daily Wage 카운트다운 -->
-    <div class="h-timer-block" id="daily-wage-block" style="cursor:pointer;" onclick="claimDailyWage()" title="클릭하여 Daily Wage 수령">
+    <div class="h-timer-block" id="daily-wage-block" title="매일 UTC 00:00에 10 HIVE가 자동 지급됩니다">
       <span class="t-label">Daily Wage</span>
       <span class="h-timer-val" id="timer-daily">--:--:--</span>
       <div class="h-timer-info">!</div>
-      <div class="h-timer-tooltip">유저는 매일 10 HIVE 기본소득을 지급 받습니다.<br>타이머가 00:00:00이 되면 클릭하여 수령하세요!</div>
+      <div class="h-timer-tooltip">매일 UTC 00:00에 10 HIVE가 자동으로 지급됩니다! 🍯</div>
     </div>
     <!-- Monthly Tax 카운트다운 -->
     <div class="h-timer-block">
@@ -628,24 +632,25 @@ header{
         <div class="preview-area">
           <div style="display:flex;flex-direction:column;align-items:center;">
             <canvas id="room-cv" width="700" height="700" style="width:460px;height:460px;display:block;"></canvas>
-            <div id="item-ctrl">
-              <div class="ctrl-size">
-                <span>크기</span>
-                <input type="range" id="ctrl-size-range" min="30" max="200" value="100"
-                  oninput="onSizeChange(this.value)">
-                <span id="ctrl-size-val">100%</span>
-              </div>
-              <div class="ctrl-sep"></div>
-              <button class="ctrl-btn" id="ctrl-flip-btn" title="좌우반전" onclick="onCtrlFlip()">⇄</button>
-              <button class="ctrl-btn" id="ctrl-layer-up" title="앞으로" onclick="onCtrlLayerUp()">↑</button>
-              <button class="ctrl-btn" id="ctrl-layer-dn" title="뒤로" onclick="onCtrlLayerDn()">↓</button>
-              <div class="ctrl-sep"></div>
-              <button class="ctrl-btn" title="선택해제" onclick="onCtrlDeselect()" style="font-size:10px;width:44px;color:#666;">해제</button>
-              <button class="ctrl-btn" title="삭제" onclick="onCtrlDelete()" style="font-size:10px;width:36px;color:#C44;background:#FFF0F0;">삭제</button>
-            </div>
           </div>
         </div>
         <div class="preview-ad">광고 영역</div>
+        <!-- 컨트롤 핸들: con-left 하단 플로팅 -->
+        <div id="item-ctrl">
+          <div class="ctrl-size">
+            <span>크기</span>
+            <input type="range" id="ctrl-size-range" min="30" max="200" value="100"
+              oninput="onSizeChange(this.value)">
+            <span id="ctrl-size-val">100%</span>
+          </div>
+          <div class="ctrl-sep"></div>
+          <button class="ctrl-btn" id="ctrl-flip-btn" title="좌우반전" onclick="onCtrlFlip()">⇄</button>
+          <button class="ctrl-btn" id="ctrl-layer-up" title="앞으로" onclick="onCtrlLayerUp()">↑</button>
+          <button class="ctrl-btn" id="ctrl-layer-dn" title="뒤로" onclick="onCtrlLayerDn()">↓</button>
+          <div class="ctrl-sep"></div>
+          <button class="ctrl-btn" title="선택해제" onclick="onCtrlDeselect()" style="font-size:10px;width:44px;color:#666;">해제</button>
+          <button class="ctrl-btn" title="삭제" onclick="onCtrlDelete()" style="font-size:10px;width:36px;color:#C44;background:#FFF0F0;">삭제</button>
+        </div>
       </div>
 
       <!-- 오른쪽: 에셋 선택 -->
@@ -2171,6 +2176,8 @@ async function registerRoom(){
   _lastRegisteredNum = targetNum;
   document.getElementById('post-x-wrap').style.display = 'block';
   rb.textContent='🗺 맵에서 확인하기'; rb.disabled=false; rb.onclick=()=>goToMap(targetNum);
+  // 완료 토스트
+  showToast(isEdit ? '✅ 방 수정이 완료됐어요! 🏠' : '✅ 방 만들기가 완료됐어요! 🏠');
 }
 async function goToMap(roomNum){
   const twitterId = document.getElementById('tw-id').value.replace('@','').trim();
@@ -2838,25 +2845,13 @@ async function loadMyBalance(){
   if(!CURRENT_USER) return;
   try {
     const res = await fetch(
-      `${SUPA_URL}/rest/v1/user_balances?user_email=eq.${encodeURIComponent(CURRENT_USER.email)}&select=balance,last_daily_wage`,
+      `${SUPA_URL}/rest/v1/user_balances?user_email=eq.${encodeURIComponent(CURRENT_USER.email)}&select=balance`,
       { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${await getValidToken()}` } }
     );
     if(!res.ok) return;
     const data = await res.json();
     if(data && data.length > 0){
       MY_BALANCE = data[0].balance;
-      // 서버의 last_daily_wage 기준으로 타이머 상태 업데이트
-      const lastWage = data[0].last_daily_wage; // 'YYYY-MM-DD' or null
-      const todayUTC = new Date().toISOString().split('T')[0];
-      if(lastWage === todayUTC){
-        // 오늘 이미 수령 → 내일 UTC 00:00까지 카운트다운
-        const block = document.getElementById('daily-wage-block');
-        if(block){ block.style.cursor='default'; block.style.opacity='0.6'; block.title='오늘은 이미 수령했어요'; }
-      } else {
-        // 수령 가능 → 클릭 유도
-        const block = document.getElementById('daily-wage-block');
-        if(block){ block.style.cursor='pointer'; block.style.opacity='1'; block.title='클릭하여 Daily Wage 수령'; }
-      }
     } else {
       // 최초 가입: 300 HIVE 지급
       await initUserBalance();
@@ -3241,53 +3236,7 @@ async function claimAttendance(todayKey, roomNum){
   } catch(e){ alert('오류: '+e.message); }
 }
 
-// ── Daily Wage 수령 ──
-let _dailyWageClaiming = false; // 중복 클릭 방지
-async function claimDailyWage(){
-  if(!CURRENT_USER){ alert('로그인이 필요합니다.'); return; }
-  if(_dailyWageClaiming) return;
-
-  // 타이머가 아직 남아있으면 얼리 리턴
-  const remaining = getNextDailyWage();
-  if(remaining > 0){
-    const h = Math.floor(remaining/3600000);
-    const m = Math.floor((remaining%3600000)/60000);
-    alert(`⏰ 아직 수령할 수 없어요!\n${h}시간 ${m}분 후에 다시 시도하세요.`);
-    return;
-  }
-
-  _dailyWageClaiming = true;
-  const block = document.getElementById('daily-wage-block');
-  if(block) block.style.opacity = '0.5';
-
-  try {
-    const token = await getValidToken();
-    // ── Edge Function 호출 (서버 측 검증) ──
-    const res = await fetch(`${EDGE_URL}/edge-daily-wage`, {
-      method: 'POST',
-      headers:{
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-    const data = await res.json();
-    if(res.ok && data.success){
-      MY_BALANCE = data.new_balance; // 서버가 계산한 값으로 갱신
-      updateBalanceUI();
-      showToast(`✅ Daily Wage ${data.reward} HIVE 수령 완료! 🍯`);
-    } else if(res.status === 409){
-      // 서버에서 이미 수령 판정
-      alert('오늘 Daily Wage는 이미 수령했어요! 내일(UTC 00:00) 다시 수령하세요 🍯');
-    } else {
-      alert(`수령 오류: ${data.error || '다시 시도해주세요.'}`);
-    }
-  } catch(e){ alert('오류: '+e.message); }
-  finally {
-    _dailyWageClaiming = false;
-    if(block) block.style.opacity = '1';
-  }
-}
-
+// ── Daily Wage 자동 지급 체크 (UTC 00:00 감지) ──
 // ── 등록 완료 후 POST to X ──
 let _lastRegisteredNum = null;
 function postToXAfterReg(){
@@ -3365,6 +3314,7 @@ async function confirmBuyRoom(){
   closeRoomPanel();
   document.getElementById('buy-success-ov').classList.add('show');
   btn.disabled = false; btn.textContent = '구매하기';
+  showToast('✅ 구매가 완료됐어요! 🏠');
 }
 function closeBuySuccess(){ document.getElementById('buy-success-ov').classList.remove('show'); }
 
