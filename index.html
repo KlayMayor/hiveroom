@@ -2495,8 +2495,12 @@ function drawMap(){
     const{x:cx,y:cy}=ap(pos.q,pos.r);
     if(cx<-s*2||cx>mW+s*2||cy<-s*2||cy>mH+s*2)return;
     const room=ROOMS[num];
-    if(room) drawFilled(cx,cy,s,num,room);
-    else {
+    if(room && room.incomplete){
+      // 미완성 방 (occupied=Y, design_json=null) → 회색 타일로 표시
+      drawIncompleteGrid(cx,cy,s,num);
+    } else if(room) {
+      drawFilled(cx,cy,s,num,room);
+    } else {
       // 중앙에서 거리 기반 알파 (외곽일수록 흐리게)
       const distX = cx - mW/2, distY = cy - mH/2;
       const dist = Math.sqrt(distX*distX + distY*distY);
@@ -2662,33 +2666,50 @@ async function loadRooms(){
       const img = new Image();
       img.crossOrigin = 'anonymous';
       img.src = imgUrl;
+      // occupied=Y이지만 design_json=null → 방 꾸미기 미완성 상태
+      const isIncomplete = !row.design_json && !row.reserved;
       img.onload = () => {
         ROOMS[row.room_number] = {
-          img,
+          img: isIncomplete ? null : img,  // 미완성이면 이미지 무시
           twitterId:    row.twitter_id,
           avatarUrl:    row.avatar_url  || '',
           interest:     row.interest    || '',
           reserved:     row.reserved    || false,
+          incomplete:   isIncomplete,
           tileValue:    ROOM_BALANCES[row.room_number] || 0,
           ownerEmail:   row.email       || '',
           creatorEmail: row.email       || ''
         };
-        if(row.avatar_url) loadAvatarImg(row.avatar_url);
+        if(!isIncomplete && row.avatar_url) loadAvatarImg(row.avatar_url);
         resolve();
       };
       img.onerror = () => {
-        // 이미지 없어도 reserved면 빈 슬롯 예약 표시 (twitterId/avatarUrl 유지)
+        // 이미지 없음: reserved면 예약 슬롯, 아니면 미완성
         if(row.reserved){
           ROOMS[row.room_number] = {
             img: null, reserved: true,
             twitterId:  row.twitter_id  || '',
             avatarUrl:  row.avatar_url  || '',
             interest:   row.interest    || '',
+            incomplete: false,
             tileValue:  ROOM_BALANCES[row.room_number] || 0,
             ownerEmail: row.email       || '',
             creatorEmail: row.email     || ''
           };
           if(row.avatar_url) loadAvatarImg(row.avatar_url);
+        } else {
+          // 이미지 없는 일반 방 (미완성 포함)
+          ROOMS[row.room_number] = {
+            img: null,
+            twitterId:    row.twitter_id  || '',
+            avatarUrl:    row.avatar_url  || '',
+            interest:     row.interest    || '',
+            reserved:     false,
+            incomplete:   isIncomplete,
+            tileValue:    ROOM_BALANCES[row.room_number] || 0,
+            ownerEmail:   row.email       || '',
+            creatorEmail: row.email       || ''
+          };
         }
         resolve();
       };
@@ -2845,6 +2866,24 @@ function subscribeRooms(){
   connect();
 }
 
+function drawIncompleteGrid(cx,cy,s,num){
+  // 미완성 방: 회색 반투명 육각형 + 🔒 아이콘 + 방 번호
+  mHex(cx,cy,s-1);
+  mctx.fillStyle='rgba(100,100,110,0.45)';
+  mctx.fill();
+  mctx.strokeStyle='rgba(150,150,160,0.7)';
+  mctx.lineWidth=1.5;
+  mctx.stroke();
+  if(SHOW_ROOM_NUMBERS){
+    const fs = Math.max(9, s*0.16);
+    mctx.font=`bold ${fs}px 'Jua',sans-serif`;
+    mctx.textAlign='center'; mctx.textBaseline='middle';
+    mctx.fillStyle='rgba(220,220,230,0.7)';
+    mctx.fillText(num, cx, cy+fs*0.7);
+    mctx.font=`${Math.max(10,s*0.22)}px sans-serif`;
+    mctx.fillText('🔒', cx, cy-fs*0.5);
+  }
+}
 function drawEmptyGrid(cx,cy,s,alpha=0.55,num=null){
   mHex(cx,cy,s-1);
   const zCfg = num ? getZoneConfig(num) : {border:'#A8D8A8'};
@@ -3384,18 +3423,19 @@ async function confirmBuyRoom(){
   if(room) room.ownerEmail = CURRENT_USER.email;
   updateBalanceUI();
   _afterBuyRoom(PANEL_ROOM_NUM);
+  const _boughtNum = PANEL_ROOM_NUM; // closeRoomPanel 전에 저장
   closeRoomPanel();
-  document.getElementById('buy-success-ov').classList.add('show');
+  const ov = document.getElementById('buy-success-ov');
+  ov.dataset.boughtNum = _boughtNum;
+  ov.classList.add('show');
   btn.disabled = false; btn.textContent = '구매하기';
   showToast('✅ 구매가 완료됐어요! 🏠');
 }
 function closeBuySuccess(){
-  document.getElementById('buy-success-ov').classList.remove('show');
-  // 구매 완료 후 해당 방의 수정 패널 자동 오픈
-  if(PANEL_ROOM_NUM !== null){
-    const num = PANEL_ROOM_NUM;
-    openEditRoomByNum(num);
-  }
+  const ov = document.getElementById('buy-success-ov');
+  ov.classList.remove('show');
+  const num = parseInt(ov.dataset.boughtNum);
+  if(num) openEditRoomByNum(num);
 }
 
 // ── 이사하기 ──
@@ -3554,6 +3594,49 @@ async function confirmMove(){
 // ── 빈 타일 패널 ──
 let EMPTY_PANEL_NUM = null;
 
+function openIncompleteTilePanel(num){
+  // 미완성 방(occupied=Y, design_json=null) 클릭 시 구매 패널
+  const room = ROOMS[num];
+  if(!room) return;
+  EMPTY_PANEL_NUM = num;
+  const zCfg = getZoneConfig(num);
+  const tilePrice = ROOM_BALANCES[num] ?? room.tileValue ?? zCfg.price;
+  document.getElementById('ep-num').textContent = `${num}번 타일`;
+  const zoneEl = document.getElementById('ep-zone');
+  zoneEl.textContent = zCfg.label;
+  zoneEl.className = `rp-zone rp-zone-${getZone(num)}`;
+  document.getElementById('ep-price').textContent = `${tilePrice.toLocaleString()} HIVE`;
+  const myBal = MY_BALANCE !== null ? MY_BALANCE : 0;
+  document.getElementById('ep-mybal').textContent = `${myBal.toLocaleString()} HIVE`;
+  const btn = document.getElementById('ep-buy-btn');
+  const insuf = document.getElementById('ep-insufficient');
+  const loginMsg = document.getElementById('ep-login-msg');
+  if(!CURRENT_USER){
+    btn.style.display='none'; loginMsg.style.display='block'; insuf.style.display='none';
+  } else if(room.ownerEmail && room.ownerEmail === CURRENT_USER.email){
+    // 내 미완성 방 → 방 수정하기로 바로 이동
+    closeEmptyPanel();
+    openEditRoomByNum(num);
+    return;
+  } else {
+    // 타인의 미완성 방 → 구매하기 버튼
+    btn.style.display='block'; loginMsg.style.display='none';
+    btn.disabled = !(myBal >= tilePrice);
+    btn.textContent = '구매하기';
+    btn.onclick = () => requestBuyIncomplete(num, tilePrice);
+    insuf.style.display = (myBal < tilePrice) ? 'block' : 'none';
+  }
+  document.getElementById('room-panel').classList.remove('open');
+  PANEL_ROOM_NUM = null;
+  document.getElementById('empty-panel').style.left = '0';
+}
+function requestBuyIncomplete(num, price){
+  // 미완성 방 구매 확인 팝업
+  PANEL_ROOM_NUM = num;
+  document.getElementById('buy-confirm-price').textContent = `${price.toLocaleString()} HIVE 차감`;
+  document.getElementById('buy-confirm-ov').dataset.quotedPrice = price;
+  document.getElementById('buy-confirm-ov').style.display = 'flex';
+}
 function openEmptyPanel(num){
   if(!CURRENT_USER){
     // 비로그인: 로그인 안내만 표시
@@ -4009,7 +4092,13 @@ mCV.addEventListener('click',e=>{
     const pos=SLOT_POS[num]; if(!pos) continue;
     const{x:cx,y:cy}=ap(pos.q,pos.r);
     if(Math.sqrt((mx-cx)**2+(my-cy)**2)<s*0.92){
-      openRoomPanel(num);
+      if(room.incomplete){
+        // 미완성 방 클릭 → 구매 패널 (빈 타일 패널에 '구매하기' 버튼)
+        closeRoomPanel();
+        openIncompleteTilePanel(num);
+      } else {
+        openRoomPanel(num);
+      }
       return;
     }
   }
