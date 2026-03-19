@@ -3262,15 +3262,11 @@ function getCooltime(roomNum){
   } catch(e){ return null; }
 }
 
-function checkBuyCooltime(roomNum, buyBtn){
-  const ct = getCooltime(roomNum);
-  if(!ct) return; // 쿨타임 없음
-  const remaining = ct.endsAt - Date.now();
-  if(remaining <= 0) return;
-  // 버튼 비활성화 + 카운트다운
+function startCooltimeCountdown(buyBtn, endsAt){
+  // 남은 시간 카운트다운 (UI 전용)
   buyBtn.disabled = true;
   const tick = () => {
-    const r = ct.endsAt - Date.now();
+    const r = endsAt - Date.now();
     if(r <= 0){ buyBtn.textContent = '구매하기'; buyBtn.disabled = false; return; }
     const h = Math.floor(r/3600000).toString().padStart(2,'0');
     const m = Math.floor((r%3600000)/60000).toString().padStart(2,'0');
@@ -3279,6 +3275,34 @@ function checkBuyCooltime(roomNum, buyBtn){
     setTimeout(tick, 1000);
   };
   tick();
+}
+
+async function checkBuyCooltime(roomNum, buyBtn){
+  // 1. localStorage 우선 확인 (빠른 응답)
+  const ct = getCooltime(roomNum);
+  if(ct && ct.endsAt > Date.now()){
+    startCooltimeCountdown(buyBtn, ct.endsAt);
+    return;
+  }
+  // 2. 서버 DB(hive_transactions) 조회 — localStorage에 없거나 만료된 경우
+  try {
+    const res = await fetch(
+      `${SUPA_URL}/rest/v1/hive_transactions?room_number=eq.${roomNum}&tx_type=in.(room_create,tile_buy)&order=created_at.desc&limit=1&select=tx_type,created_at`,
+      { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }
+    );
+    if(!res.ok) return;
+    const rows = await res.json();
+    if(!rows || rows.length === 0) return;
+    const lastTx = rows[0];
+    const lastMs = new Date(lastTx.created_at).getTime();
+    const coolMs = lastTx.tx_type === 'room_create' ? COOLTIME_NEW_MS : COOLTIME_BUY_MS;
+    const endsAt = lastMs + coolMs;
+    const remaining = endsAt - Date.now();
+    if(remaining <= 0) return; // 쿨타임 만료
+    // localStorage 동기화 후 카운트다운 시작
+    setCooltime(roomNum, lastTx.tx_type === 'room_create' ? 'new' : 'buy', remaining);
+    startCooltimeCountdown(buyBtn, endsAt);
+  } catch(e){ /* 조회 실패 시 쿨타임 없는 것으로 처리 */ }
 }
 
 // ── 구매 후 쿨타임 설정 (confirmTileBuy & confirmBuyRoom 완료 후 호출) ──
