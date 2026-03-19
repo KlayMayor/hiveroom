@@ -2779,6 +2779,33 @@ function subscribeRooms(){
           if(row && row.occupied === 'Y'){
             console.log(`📦 Realtime: ${msg.event} room #${row.room_number}`);
             await loadOneRoom(row);
+
+            // ── 소유권 변경 감지: 내가 열어둔 패널의 방이 타인에게 넘어간 경우 ──
+            if(msg.event === 'UPDATE' && CURRENT_USER && row.email){
+              const newOwner = (row.email || '').toLowerCase().trim();
+              const me = (CURRENT_USER.email || '').toLowerCase().trim();
+              // 내가 소유자였는데 지금은 아닌 경우 → 패널 강제 갱신
+              if(newOwner !== me && PANEL_ROOM_NUM === row.room_number){
+                alert(`⚠️ ${row.room_number}번 방이 다른 유저에게 구매되었습니다.`);
+                await loadRooms();
+                closeRoomPanel();
+              }
+              // 잔액도 서버와 동기화 (판매 대금 수령 반영)
+              if(newOwner !== me && row.email){
+                // 내 잔액 최신화
+                const balRes = await fetch(
+                  `${SUPA_URL}/rest/v1/user_balances?user_email=eq.${encodeURIComponent(CURRENT_USER.email)}&select=balance`,
+                  { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }
+                );
+                if(balRes.ok){
+                  const balData = await balRes.json();
+                  if(balData?.[0]?.balance != null){
+                    MY_BALANCE = balData[0].balance;
+                    updateBalanceUI();
+                  }
+                }
+              }
+            }
           }
         }
         // DELETE 이벤트
