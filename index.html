@@ -2739,6 +2739,17 @@ async function loadResidentCount(){
 
 // ── 단일 방 이미지 로드 & 맵 반영 ──
 async function loadOneRoom(row){
+  // room_balances도 함께 최신화
+  try {
+    const balRes = await fetch(
+      `${SUPA_URL}/rest/v1/room_balances?room_number=eq.${row.room_number}&select=balance`,
+      { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }
+    );
+    if(balRes.ok){
+      const balData = await balRes.json();
+      if(balData?.[0]?.balance != null) ROOM_BALANCES[row.room_number] = balData[0].balance;
+    }
+  } catch(e){}
   return new Promise(resolve => {
     const imgUrl = `${SUPA_URL}/storage/v1/object/public/room-pic/${row.room_number}/room.jpg?t=${Date.now()}`;
     const img = new Image();
@@ -2750,6 +2761,7 @@ async function loadOneRoom(row){
         avatarUrl:    row.avatar_url  || '',
         interest:     row.interest    || '',
         reserved:     row.reserved    || false,
+        incomplete:   !row.design_json && !row.reserved,
         tileValue:    ROOM_BALANCES[row.room_number] || 0,
         ownerEmail:   row.email       || '',
         creatorEmail: row.email       || ''
@@ -3189,7 +3201,12 @@ function openRoomPanel(num){
     insuf.style.display = (!CURRENT_USER || (!canBuy && !isOwnFinal && !room.reserved)) ? 'block' : 'none';
     if(!CURRENT_USER) insuf.textContent = '로그인이 필요합니다';
     else insuf.textContent = '잔액이 부족합니다';
-    checkBuyCooltime(num, buyBtn);
+    // 쿨타임 확인: canBuy일 때만 (잔액 부족/비로그인 제외)
+    if(canBuy && CURRENT_USER){
+      buyBtn.disabled = true; // DB 조회 완료까지 일단 비활성화
+      buyBtn.textContent = '확인 중...';
+      checkBuyCooltime(num, buyBtn);
+    }
   }
   document.getElementById('room-panel').classList.add('open');
 }
@@ -3262,10 +3279,12 @@ function getCooltime(roomNum){
   } catch(e){ return null; }
 }
 
-function startCooltimeCountdown(buyBtn, endsAt){
+function startCooltimeCountdown(buyBtn, endsAt, roomNum){
   // 남은 시간 카운트다운 (UI 전용)
+  // roomNum: 이 카운트다운이 시작된 방 번호 — 패널이 다른 방으로 바뀌면 중지
   buyBtn.disabled = true;
   const tick = () => {
+    if(PANEL_ROOM_NUM !== roomNum) return; // 다른 방으로 바뀌면 중지
     const r = endsAt - Date.now();
     if(r <= 0){ buyBtn.textContent = '구매하기'; buyBtn.disabled = false; return; }
     const h = Math.floor(r/3600000).toString().padStart(2,'0');
@@ -3281,28 +3300,45 @@ async function checkBuyCooltime(roomNum, buyBtn){
   // 1. localStorage 우선 확인 (빠른 응답)
   const ct = getCooltime(roomNum);
   if(ct && ct.endsAt > Date.now()){
-    startCooltimeCountdown(buyBtn, ct.endsAt);
+    startCooltimeCountdown(buyBtn, ct.endsAt, roomNum);
     return;
   }
-  // 2. 서버 DB(hive_transactions) 조회 — localStorage에 없거나 만료된 경우
+  // 2. 서버 DB(hive_transactions) 조회
   try {
     const res = await fetch(
       `${SUPA_URL}/rest/v1/hive_transactions?room_number=eq.${roomNum}&tx_type=in.(room_create,tile_buy)&order=created_at.desc&limit=1&select=tx_type,created_at`,
       { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }
     );
-    if(!res.ok) return;
+    if(!res.ok){
+      // 조회 실패 → 버튼 활성화
+      if(PANEL_ROOM_NUM === roomNum){ buyBtn.disabled = false; buyBtn.textContent = '구매하기'; }
+      return;
+    }
     const rows = await res.json();
-    if(!rows || rows.length === 0) return;
+    // 패널이 이미 다른 방으로 바뀐 경우 무시
+    if(PANEL_ROOM_NUM !== roomNum) return;
+    if(!rows || rows.length === 0){
+      // 트랜잭션 없음 → 쿨타임 없음, 버튼 활성화
+      buyBtn.disabled = false; buyBtn.textContent = '구매하기';
+      return;
+    }
     const lastTx = rows[0];
     const lastMs = new Date(lastTx.created_at).getTime();
     const coolMs = lastTx.tx_type === 'room_create' ? COOLTIME_NEW_MS : COOLTIME_BUY_MS;
     const endsAt = lastMs + coolMs;
     const remaining = endsAt - Date.now();
-    if(remaining <= 0) return; // 쿨타임 만료
-    // localStorage 동기화 후 카운트다운 시작
+    if(remaining <= 0){
+      // 쿨타임 만료 → 버튼 활성화
+      buyBtn.disabled = false; buyBtn.textContent = '구매하기';
+      return;
+    }
+    // 쿨타임 중 → localStorage 동기화 후 카운트다운
     setCooltime(roomNum, lastTx.tx_type === 'room_create' ? 'new' : 'buy', remaining);
-    startCooltimeCountdown(buyBtn, endsAt);
-  } catch(e){ /* 조회 실패 시 쿨타임 없는 것으로 처리 */ }
+    startCooltimeCountdown(buyBtn, endsAt, roomNum);
+  } catch(e){
+    // 조회 실패 → 버튼 활성화
+    if(PANEL_ROOM_NUM === roomNum){ buyBtn.disabled = false; buyBtn.textContent = '구매하기'; }
+  }
 }
 
 // ── 구매 후 쿨타임 설정 (confirmTileBuy & confirmBuyRoom 완료 후 호출) ──
