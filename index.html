@@ -569,6 +569,24 @@ header{
           </div>
         </div>
 
+        <!-- Page 5: 늦지 않았어요 -->
+        <div class="tips-slide">
+          <div class="tips-img-ph">💡</div>
+          <div class="tips-content">
+            <div class="tips-title">💡 늦었다고 생각하지 마세요!</div>
+            <div class="tips-desc">
+              게으른 사람은 어디에나 있습니다.<br>
+              <b>타일 값을 높여두지 않은 방</b>을 찾아 매입하면 내 방이 됩니다.<br><br>
+              <small>
+                🍯 최초 로그인 시 <b>300 HIVE</b>가 지급됩니다.<br>
+                📅 매일 <b>10 HIVE</b>가 자동 지급됩니다.<br>
+                ✅ 출석체크를 통해 더 많은 HIVE를 모을 수 있습니다.<br>
+                📉 각 방은 매월 TAX를 지불하여 타일 값이 내려갑니다.
+              </small>
+            </div>
+          </div>
+        </div>
+
       </div><!-- /tips-slides -->
     </div><!-- /tips-viewport -->
     <div class="tips-footer">
@@ -578,6 +596,7 @@ header{
         <div class="tips-dot" id="td1" onclick="tipsGoTo(1)" style="cursor:pointer;"></div>
         <div class="tips-dot" id="td2" onclick="tipsGoTo(2)" style="cursor:pointer;"></div>
         <div class="tips-dot" id="td3" onclick="tipsGoTo(3)" style="cursor:pointer;"></div>
+        <div class="tips-dot" id="td4" onclick="tipsGoTo(4)" style="cursor:pointer;"></div>
       </div>
       <button class="tips-next" id="tips-next-btn" onclick="tipsNext()">다음 →</button>
     </div>
@@ -3754,7 +3773,7 @@ function stopTimers(){
 // ══════════════════════════════════════
 // ── Tips 팝업 ──
 let _tipsPage = 0;
-const _tipsTotalPages = 4;
+const _tipsTotalPages = 5;
 
 function tipsNext(){
   if(_tipsPage < _tipsTotalPages - 1){
