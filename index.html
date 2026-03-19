@@ -804,7 +804,7 @@ header{
     <div style="margin-top:6px;padding:10px 12px;background:#FFF8E8;border-radius:10px;font-size:11px;color:#A87800;line-height:1.6;">
       💡 이 타일을 구매하면 나만의 방을 꾸밀 수 있어요!<br>구매 후 방 꾸미기 화면이 바로 열립니다.
     </div>
-    <button class="rp-buy-btn" id="ep-buy-btn" onclick="requestTileBuy()" style="margin-top:16px;">방 만들기</button>
+    <button class="rp-buy-btn" id="ep-buy-btn" style="margin-top:16px;">방 만들기</button>
     <div class="rp-insufficient" id="ep-insufficient" style="display:none;">잔액이 부족합니다</div>
     <div id="ep-login-msg" style="display:none;text-align:center;font-size:12px;color:var(--muted);margin-top:10px;">로그인이 필요합니다</div>
   </div>
@@ -3668,8 +3668,9 @@ function openEmptyPanel(num){
   document.getElementById('ep-mybal').textContent = `${myBal.toLocaleString()} HIVE`;
   const canBuy = CURRENT_USER && myBal >= price;
   const btn = document.getElementById('ep-buy-btn');
-  // 버그픽스: 이전 처리중 상태 초기화
+  // 버그픽스: 이전 처리중 상태 초기화 + onclick 초기화
   btn.disabled = false; btn.textContent = '방 만들기';
+  btn.onclick = requestTileBuy;
   const insuf = document.getElementById('ep-insufficient');
   const loginMsg = document.getElementById('ep-login-msg');
   if(!CURRENT_USER){
