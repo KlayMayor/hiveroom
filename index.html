@@ -3159,10 +3159,11 @@ const COOLTIME_NEW_MS  = 36 * 60 * 60 * 1000; // 방 만들기 후 36시간
 const COOLTIME_BUY_MS  =  1 * 60 * 60 * 1000; // 구매 후 1시간
 const COOLTIME_KEY = 'hiveroom_cooltime'; // localStorage key: {roomNum: {type, endsAt}}
 
-function setCooltime(roomNum, type){
+function setCooltime(roomNum, type, customMs){
   try {
     const store = JSON.parse(localStorage.getItem(COOLTIME_KEY)||'{}');
-    const ms = type === 'new' ? COOLTIME_NEW_MS : COOLTIME_BUY_MS;
+    const ms = customMs != null ? customMs
+             : type === 'new' ? COOLTIME_NEW_MS : COOLTIME_BUY_MS;
     store[roomNum] = { type, endsAt: Date.now() + ms };
     localStorage.setItem(COOLTIME_KEY, JSON.stringify(store));
   } catch(e){}
@@ -3310,7 +3311,12 @@ async function confirmBuyRoom(){
   const efData = await efRes.json();
   if(!efRes.ok){
     btn.disabled = false; btn.textContent = '구매하기';
-    if(efRes.status === 409){
+    if(efRes.status === 425){
+      // 서버 쿨타임 — 남은 시간을 서버에서 받아 표시
+      const remainingMs = efData.cooltime_remaining_ms;
+      if(remainingMs > 0) setCooltime(PANEL_ROOM_NUM, 'buy', remainingMs);
+      alert(`⏳ ${efData.error}`);
+    } else if(efRes.status === 409){
       if(efData.error === 'PRICE_MISMATCH'){
         // 투자로 인해 가격이 올라감 → 최신 가격으로 패널 갱신 후 재시도 안내
         const actualPrice = efData.actual_price;
