@@ -1492,13 +1492,9 @@ function pick(cat,id,multi){
       }
       setTimeout(()=>showCtrl(cat,id2), 50);
     } else {
-      // 이미 2개 선택됨 → 첫 번째(base) 제거
-      SEL[cat].delete(base);
-      delete FLIP[cat]?.[base];
-      delete POS[cat]?.[base];
-      delete SIZE[cat]?.[base];
-      LAYER_ORDER[cat] = LAYER_ORDER[cat].filter(x=>x!==base);
-      if(CTRL_SEL.cat===cat && CTRL_SEL.id===base) hideCtrl();
+      // 이미 2개 선택됨 → 경고 표시 (제거하지 않음)
+      alert('동일 아이템은 2개까지 선택 가능합니다.');
+      return;
     }
   } else {
     SEL[cat]=id;
@@ -3393,7 +3389,14 @@ async function confirmBuyRoom(){
   btn.disabled = false; btn.textContent = '구매하기';
   showToast('✅ 구매가 완료됐어요! 🏠');
 }
-function closeBuySuccess(){ document.getElementById('buy-success-ov').classList.remove('show'); }
+function closeBuySuccess(){
+  document.getElementById('buy-success-ov').classList.remove('show');
+  // 구매 완료 후 해당 방의 수정 패널 자동 오픈
+  if(PANEL_ROOM_NUM !== null){
+    const num = PANEL_ROOM_NUM;
+    openEditRoomByNum(num);
+  }
+}
 
 // ── 이사하기 ──
 let MOVE_FROM_NUM = null;
