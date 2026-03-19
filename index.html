@@ -50,6 +50,26 @@ header{
   font-family:'Noto Sans KR',sans-serif;transition:all .15s;white-space:nowrap;
 }
 .h-toggle-btn.on{background:var(--hlt);border-color:var(--honey);color:var(--hdk);}
+/* ── 맵 필터 드롭다운 ── */
+#map-filter-dropdown{
+  display:none;position:fixed;top:46px;left:50%;transform:translateX(-50%);
+  z-index:700;background:#fff;border-radius:16px;
+  box-shadow:0 8px 32px rgba(0,0,0,.18);padding:14px 16px;min-width:280px;
+  border:1px solid var(--border);
+}
+#map-filter-dropdown.open{display:block;}
+.mf-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #f0ede8;cursor:pointer;user-select:none;}
+.mf-row:last-child{border-bottom:none;}
+.mf-row input[type=checkbox]{width:16px;height:16px;accent-color:var(--honey);cursor:pointer;flex-shrink:0;}
+.mf-label{font-size:13px;font-weight:600;color:#444;font-family:'Noto Sans KR',sans-serif;flex-shrink:0;}
+.mf-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.mf-dot.yellow{background:#F2B830;}
+.mf-dot.blue{background:#4A90D9;}
+.mf-dot.green{background:#2ECC71;}
+.mf-dot.red{background:#E74C3C;}
+.mf-input{flex:1;border:1px solid #ddd;border-radius:8px;padding:4px 8px;font-size:12px;font-family:'Noto Sans KR',sans-serif;outline:none;min-width:0;}
+.mf-input:focus{border-color:var(--honey);}
+.mf-avatar{width:22px;height:22px;border-radius:50%;object-fit:cover;background:#eee;flex-shrink:0;}
 .h-hive-badge{
   font-size:12px;font-weight:700;
   background:linear-gradient(135deg,#FFF8E8,#FFF0C8);
@@ -459,9 +479,48 @@ header{
   <div class="h-sep"></div>
   <button class="h-badge" onclick="openHelp()" style="cursor:pointer;border:1px solid var(--honey);background:var(--hlt);color:var(--hdk);font-family:'Noto Sans KR',sans-serif;">❓ 도움말</button>
   <div class="h-sep"></div>
-  <button class="h-toggle-btn" id="room-num-btn" onclick="toggleRoomNumbers()">
+  <button class="h-toggle-btn" id="room-num-btn" onclick="toggleMapFilter()">
     # Room No.
   </button>
+  <!-- 맵 필터 드롭다운 -->
+  <div id="map-filter-dropdown">
+    <div class="mf-row" onclick="mfToggle('roomNum')">
+      <input type="checkbox" id="mf-roomNum" onchange="mfToggle('roomNum')" onclick="event.stopPropagation()">
+      <span class="mf-label">타일 번호 보기</span>
+    </div>
+    <div class="mf-row" onclick="mfToggle('attend')">
+      <input type="checkbox" id="mf-attend" onchange="mfToggle('attend')" onclick="event.stopPropagation()">
+      <span class="mf-dot yellow"></span>
+      <span class="mf-label">출석체크</span>
+    </div>
+    <div class="mf-row" onclick="mfToggle('myroom')">
+      <input type="checkbox" id="mf-myroom" onchange="mfToggle('myroom')" onclick="event.stopPropagation()">
+      <span class="mf-dot blue"></span>
+      <span class="mf-label">My Room</span>
+    </div>
+    <div class="mf-row" style="align-items:flex-start;flex-direction:column;gap:6px;">
+      <div style="display:flex;align-items:center;gap:10px;width:100%;" onclick="mfToggle('userSearch')">
+        <input type="checkbox" id="mf-userSearch" onchange="mfToggle('userSearch')" onclick="event.stopPropagation()">
+        <span class="mf-dot green"></span>
+        <span class="mf-label">유저 검색</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;padding-left:26px;width:100%;">
+        <img class="mf-avatar" id="mf-user-avatar" src="" style="display:none;">
+        <input class="mf-input" id="mf-user-input" placeholder="트위터 ID 입력" oninput="mfUserInput(this.value)" onclick="event.stopPropagation()">
+      </div>
+    </div>
+    <div class="mf-row" style="align-items:flex-start;flex-direction:column;gap:6px;border-bottom:none;">
+      <div style="display:flex;align-items:center;gap:10px;width:100%;" onclick="mfToggle('commSearch')">
+        <input type="checkbox" id="mf-commSearch" onchange="mfToggle('commSearch')" onclick="event.stopPropagation()">
+        <span class="mf-dot red"></span>
+        <span class="mf-label">커뮤니티 검색</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;padding-left:26px;width:100%;">
+        <img class="mf-avatar" id="mf-comm-avatar" src="" style="display:none;">
+        <input class="mf-input" id="mf-comm-input" placeholder="트위터 ID 입력" oninput="mfCommInput(this.value)" onclick="event.stopPropagation()">
+      </div>
+    </div>
+  </div>
   <!-- 비로그인 -->
   <button class="h-login-btn" id="login-btn" onclick="signInGoogle()">
     <img src="https://www.google.com/favicon.ico" alt="G"> LOG IN
@@ -2526,30 +2585,16 @@ function drawFilled(cx,cy,s,num,room){
   const zCfg = getZoneConfig(num);
   const isHov = HOVER_TILE === num;
 
-  // Reserved 방: 두꺼운 반사광 애니메이션 테두리
+  // Reserved 방: 토글 필터에 따른 테두리 (shimmer 애니메이션 제거)
   if(room.reserved){
-    const t = (Date.now() % 2000) / 2000; // 0~1 주기
-    mctx.save();
-    mHex(cx,cy,s+1);
-    // 반사광 그라디언트 (시간에 따라 각도 회전)
-    const angle = t * Math.PI * 2;
-    const gx1 = cx + Math.cos(angle) * s;
-    const gy1 = cy + Math.sin(angle) * s;
-    const gx2 = cx - Math.cos(angle) * s;
-    const gy2 = cy - Math.sin(angle) * s;
-    const grad = mctx.createLinearGradient(gx1,gy1,gx2,gy2);
-    grad.addColorStop(0,   'rgba(255,220,50,0.2)');
-    grad.addColorStop(0.35,'rgba(255,255,255,0.9)');
-    grad.addColorStop(0.5, 'rgba(255,240,100,1.0)');
-    grad.addColorStop(0.65,'rgba(255,255,255,0.9)');
-    grad.addColorStop(1,   'rgba(255,180,0,0.2)');
-    mctx.strokeStyle = grad;
-    mctx.lineWidth = 5;
-    mctx.shadowColor = 'rgba(255,220,50,0.8)';
-    mctx.shadowBlur = 14;
+    mHex(cx,cy,s-.5);
+    // attend 토글 ON이면 노란색 테두리, 아니면 zone 기본 테두리
+    if(MAP_FILTER.attend){
+      mctx.strokeStyle='#F2B830'; mctx.lineWidth=2.5;
+    } else {
+      mctx.strokeStyle=zCfg.border; mctx.lineWidth=2;
+    }
     mctx.stroke();
-    mctx.restore();
-    // reserved 방도 twitterId/avatarUrl 있으면 뱃지 표시
     if(!room.twitterId && !room.avatarUrl) return;
   } else if(isHov){
     // 금속 반사 glow 효과
@@ -2574,6 +2619,8 @@ function drawFilled(cx,cy,s,num,room){
   } else {
     mHex(cx,cy,s-.5); mctx.strokeStyle=zCfg.border; mctx.lineWidth=2.5; mctx.stroke();
   }
+  // ── 토글 필터 테두리 오버레이 ──
+  _drawFilterBorder(mctx, cx, cy, s, num, room);
   // reserved 방도 twitterId/avatarUrl 있으면 뱃지 표시
   if(room.reserved && !room.twitterId && !room.avatarUrl) return;
   // 프로필 사진 원형 뱃지 (왼쪽 위) — 스케일 애니메이션 적용
@@ -3983,12 +4030,121 @@ function closeHelp(){
   document.getElementById('help-ov').classList.remove('show');
 }
 
-function toggleRoomNumbers(){
-  SHOW_ROOM_NUMBERS = !SHOW_ROOM_NUMBERS;
+// ── 맵 필터 상태 ──
+const MAP_FILTER = {
+  roomNum:    false,
+  attend:     false,
+  myroom:     false,
+  userSearch: false,
+  commSearch: false,
+  userQuery:  '',
+  commQuery:  '',
+};
+let _mfDebounceUser = null;
+let _mfDebounceComm = null;
+
+function toggleMapFilter(){
+  const dd = document.getElementById('map-filter-dropdown');
   const btn = document.getElementById('room-num-btn');
-  btn.classList.toggle('on', SHOW_ROOM_NUMBERS);
-  btn.textContent = SHOW_ROOM_NUMBERS ? '# Room No. ON' : '# Room No.';
+  const isOpen = dd.classList.toggle('open');
+  btn.classList.toggle('on', isOpen);
+  if(isOpen){
+    // 드롭다운 외부 클릭 시 닫기
+    setTimeout(() => {
+      document.addEventListener('click', _mfOutsideClick, { once: true });
+    }, 0);
+  }
+}
+function _mfOutsideClick(e){
+  const dd = document.getElementById('map-filter-dropdown');
+  const btn = document.getElementById('room-num-btn');
+  if(!dd.contains(e.target) && e.target !== btn){
+    dd.classList.remove('open');
+    btn.classList.remove('on');
+  } else if(dd.classList.contains('open')){
+    // 아직 열려있으면 다시 등록
+    setTimeout(() => {
+      document.addEventListener('click', _mfOutsideClick, { once: true });
+    }, 0);
+  }
+}
+function mfToggle(key){
+  MAP_FILTER[key] = !MAP_FILTER[key];
+  document.getElementById('mf-'+key).checked = MAP_FILTER[key];
+  // roomNum은 기존 SHOW_ROOM_NUMBERS와 연동
+  if(key === 'roomNum') SHOW_ROOM_NUMBERS = MAP_FILTER[key];
   drawMap();
+}
+function mfUserInput(val){
+  MAP_FILTER.userQuery = val.trim().replace('@','');
+  clearTimeout(_mfDebounceUser);
+  _mfDebounceUser = setTimeout(() => {
+    const av = document.getElementById('mf-user-avatar');
+    if(MAP_FILTER.userQuery){
+      av.src = `https://unavatar.io/x/${MAP_FILTER.userQuery}`;
+      av.style.display = 'block';
+    } else {
+      av.style.display = 'none';
+    }
+    if(MAP_FILTER.userSearch) drawMap();
+  }, 400);
+}
+function mfCommInput(val){
+  MAP_FILTER.commQuery = val.trim().replace('@','');
+  clearTimeout(_mfDebounceComm);
+  _mfDebounceComm = setTimeout(() => {
+    const av = document.getElementById('mf-comm-avatar');
+    if(MAP_FILTER.commQuery){
+      av.src = `https://unavatar.io/x/${MAP_FILTER.commQuery}`;
+      av.style.display = 'block';
+    } else {
+      av.style.display = 'none';
+    }
+    if(MAP_FILTER.commSearch) drawMap();
+  }, 400);
+}
+
+// ── 토글 필터 테두리 오버레이 (drawFilled에서 호출) ──
+function _drawFilterBorder(ctx, cx, cy, s, num, room){
+  const borders = []; // {color, width, blur}
+
+  // 출석체크: reserved 방
+  if(MAP_FILTER.attend && room.reserved){
+    borders.push({ color:'#F2B830', width:3, blur:6 });
+  }
+  // My Room: 내 소유 방
+  if(MAP_FILTER.myroom && CURRENT_USER && room.ownerEmail &&
+     room.ownerEmail.toLowerCase() === CURRENT_USER.email.toLowerCase()){
+    borders.push({ color:'#4A90D9', width:3, blur:6 });
+  }
+  // 유저 검색: twitterId 일치
+  if(MAP_FILTER.userSearch && MAP_FILTER.userQuery &&
+     room.twitterId && room.twitterId.toLowerCase() === MAP_FILTER.userQuery.toLowerCase()){
+    borders.push({ color:'#2ECC71', width:3.5, blur:8 });
+  }
+  // 커뮤니티 검색: interest 일치
+  if(MAP_FILTER.commSearch && MAP_FILTER.commQuery &&
+     room.interest && room.interest.toLowerCase() === MAP_FILTER.commQuery.toLowerCase()){
+    borders.push({ color:'#E74C3C', width:3.5, blur:8 });
+  }
+
+  if(borders.length === 0) return;
+
+  borders.forEach(b => {
+    ctx.save();
+    mHex(cx, cy, s + 1);
+    ctx.strokeStyle = b.color;
+    ctx.lineWidth = b.width;
+    ctx.shadowColor = b.color;
+    ctx.shadowBlur = b.blur;
+    ctx.stroke();
+    ctx.restore();
+  });
+}
+
+function toggleRoomNumbers(){
+  // 하위 호환: 기존 단축키 등에서 호출 시
+  mfToggle('roomNum');
 }
 
 function zoomIn(){mScale=Math.min(mScale*1.2,2.6);drawMap();}
