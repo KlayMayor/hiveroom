@@ -2580,7 +2580,7 @@ function drawFilled(cx,cy,s,num,room){
   const bRBase=Math.max(10,s*.16), bx=cx-s*.58, by=cy-s*.56;
   const sc = BADGE_SCALE[num] || 1.0;
   const bR = bRBase * sc;
-  const avatarImg = room.avatarUrl ? AVATAR_CACHE[room.avatarUrl] : null;
+  const avatarImg = room.avatarUrl ? AVATAR_CACHE[bustAvatarUrl(room.avatarUrl)] : null;
   if(!avatarImg && room.avatarUrl){
     loadAvatarImg(room.avatarUrl);
   }
