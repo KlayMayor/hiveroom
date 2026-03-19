@@ -2406,13 +2406,24 @@ function ltn(hex,a){const n=parseInt(hex.replace('#',''),16);const c=(v,d)=>Math
 // ── 아바타 이미지 캐시 ──
 
 const AVATAR_CACHE = {};
+// 날짜 단위 캐시 버스팅 — unavatar.io URL에만 적용 (하루 1회 최신 프로필 반영)
+function bustAvatarUrl(url){
+  if(!url) return url;
+  if(url.includes('unavatar.io')){
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    return `${url}?t=${today}`;
+  }
+  return url;
+}
 function loadAvatarImg(url){
-  if(!url || AVATAR_CACHE[url]) return AVATAR_CACHE[url] || null;
+  if(!url) return null;
+  const bustedUrl = bustAvatarUrl(url);
+  if(AVATAR_CACHE[bustedUrl]) return AVATAR_CACHE[bustedUrl];
   const img = new Image();
   img.crossOrigin = 'anonymous';
-  img.onload = () => { AVATAR_CACHE[url] = img; drawMap(); };
-  img.onerror = () => { AVATAR_CACHE[url] = null; };
-  img.src = url;
+  img.onload = () => { AVATAR_CACHE[bustedUrl] = img; drawMap(); };
+  img.onerror = () => { AVATAR_CACHE[bustedUrl] = null; };
+  img.src = bustedUrl;
   return null;
 }
 
