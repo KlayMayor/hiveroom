@@ -3253,31 +3253,7 @@ async function openEditRoomByNum(num){
 // ── 구매 쿨타임 ──
 const COOLTIME_NEW_MS  = 36 * 60 * 60 * 1000; // 방 만들기 후 36시간
 const COOLTIME_BUY_MS  =  1 * 60 * 60 * 1000; // 구매 후 1시간
-const COOLTIME_KEY = 'hiveroom_cooltime'; // localStorage key: {roomNum: {type, endsAt}}
-
-function setCooltime(roomNum, type, customMs){
-  try {
-    const store = JSON.parse(localStorage.getItem(COOLTIME_KEY)||'{}');
-    const ms = customMs != null ? customMs
-             : type === 'new' ? COOLTIME_NEW_MS : COOLTIME_BUY_MS;
-    store[roomNum] = { type, endsAt: Date.now() + ms };
-    localStorage.setItem(COOLTIME_KEY, JSON.stringify(store));
-  } catch(e){}
-}
-
-function getCooltime(roomNum){
-  try {
-    const store = JSON.parse(localStorage.getItem(COOLTIME_KEY)||'{}');
-    const entry = store[roomNum];
-    if(!entry) return null;
-    if(Date.now() > entry.endsAt){
-      delete store[roomNum];
-      localStorage.setItem(COOLTIME_KEY, JSON.stringify(store));
-      return null;
-    }
-    return entry;
-  } catch(e){ return null; }
-}
+// 쿨타임은 서버 DB(hive_transactions) 기반으로만 판단 — localStorage 불사용
 
 function startCooltimeCountdown(buyBtn, endsAt, roomNum){
   // 남은 시간 카운트다운 (UI 전용)
@@ -3334,9 +3310,9 @@ async function checkBuyCooltime(roomNum, buyBtn){
   }
 }
 
-// ── 구매 후 쿨타임 설정 (confirmTileBuy & confirmBuyRoom 완료 후 호출) ──
-function _afterCreateRoom(roomNum){ setCooltime(roomNum, 'new'); }
-function _afterBuyRoom(roomNum){   setCooltime(roomNum, 'buy'); }
+// 쿨타임은 서버 DB 기반으로만 판단하므로 클라이언트 setCooltime 불필요
+function _afterCreateRoom(roomNum){ /* no-op */ }
+function _afterBuyRoom(roomNum){   /* no-op */ }
 
 // ── 출석체크 퀴즈 (방마다 별도, UTC 자정 기준) ──
 let _attendQuizAnswer = null;
@@ -3446,7 +3422,6 @@ async function confirmBuyRoom(){
     if(efRes.status === 425){
       // 서버 쿨타임 — 남은 시간을 서버에서 받아 표시
       const remainingMs = efData.cooltime_remaining_ms;
-      if(remainingMs > 0) setCooltime(PANEL_ROOM_NUM, 'buy', remainingMs);
       alert(`⏳ ${efData.error}`);
     } else if(efRes.status === 409){
       if(efData.error === 'PRICE_MISMATCH'){
@@ -4187,8 +4162,7 @@ window.addEventListener('keydown', e=>{
 });
 startStarAnim(); // 별 반짝임 시작
 renderRoom(); updateProg(); resizeMap();
-// 구 버전 localStorage 쿨타임 데이터 초기화 (서버 DB 기반으로 전환)
-try { localStorage.removeItem('hiveroom_cooltime'); } catch(e){}
+
 initAuth();    // Google 로그인 상태 복원
 loadAssets();  // Supabase에서 에셋 로드
 
