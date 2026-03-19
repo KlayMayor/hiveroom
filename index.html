@@ -3297,13 +3297,7 @@ function startCooltimeCountdown(buyBtn, endsAt, roomNum){
 }
 
 async function checkBuyCooltime(roomNum, buyBtn){
-  // 1. localStorage 우선 확인 (빠른 응답)
-  const ct = getCooltime(roomNum);
-  if(ct && ct.endsAt > Date.now()){
-    startCooltimeCountdown(buyBtn, ct.endsAt, roomNum);
-    return;
-  }
-  // 2. 서버 DB(hive_transactions) 조회
+  // 항상 서버 DB(hive_transactions) 조회 — localStorage는 부정확할 수 있으므로 사용 안 함
   try {
     const res = await fetch(
       `${SUPA_URL}/rest/v1/hive_transactions?room_number=eq.${roomNum}&tx_type=in.(room_create,tile_buy)&order=created_at.desc&limit=1&select=tx_type,created_at`,
@@ -3332,8 +3326,7 @@ async function checkBuyCooltime(roomNum, buyBtn){
       buyBtn.disabled = false; buyBtn.textContent = '구매하기';
       return;
     }
-    // 쿨타임 중 → localStorage 동기화 후 카운트다운
-    setCooltime(roomNum, lastTx.tx_type === 'room_create' ? 'new' : 'buy', remaining);
+    // 쿨타임 중 → 카운트다운 시작
     startCooltimeCountdown(buyBtn, endsAt, roomNum);
   } catch(e){
     // 조회 실패 → 버튼 활성화
@@ -4194,6 +4187,8 @@ window.addEventListener('keydown', e=>{
 });
 startStarAnim(); // 별 반짝임 시작
 renderRoom(); updateProg(); resizeMap();
+// 구 버전 localStorage 쿨타임 데이터 초기화 (서버 DB 기반으로 전환)
+try { localStorage.removeItem('hiveroom_cooltime'); } catch(e){}
 initAuth();    // Google 로그인 상태 복원
 loadAssets();  // Supabase에서 에셋 로드
 
