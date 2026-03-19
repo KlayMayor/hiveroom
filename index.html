@@ -2751,18 +2751,29 @@ async function loadOneRoom(row){
 function subscribeRooms(){
   const wsUrl = SUPA_URL.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + SUPA_KEY + '&vsn=1.0.0';
   let ws, heartbeat, reconnectTimer;
+  let joinRef = 1;
 
   function connect(){
     ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
       console.log('🔴 Realtime 연결됨');
-      // 채널 join
+      // Supabase Realtime v2: postgres_changes 명시 필요
       ws.send(JSON.stringify({
-        topic: 'realtime:public:rooms',
+        topic: 'realtime:hiveroom-rooms',
         event: 'phx_join',
-        payload: { config: { broadcast: { self: false }, presence: { key: '' } } },
-        ref: '1'
+        payload: {
+          config: {
+            broadcast: { self: false },
+            presence: { key: '' },
+            postgres_changes: [
+              { event: 'UPDATE', schema: 'public', table: 'rooms' },
+              { event: 'INSERT', schema: 'public', table: 'rooms' },
+              { event: 'DELETE', schema: 'public', table: 'rooms' }
+            ]
+          }
+        },
+        ref: String(joinRef++)
       }));
       // 30초마다 heartbeat
       heartbeat = setInterval(() => {
@@ -2773,26 +2784,26 @@ function subscribeRooms(){
     ws.onmessage = async (e) => {
       try {
         const msg = JSON.parse(e.data);
-        // INSERT 또는 UPDATE 이벤트
-        if(msg.event === 'INSERT' || msg.event === 'UPDATE'){
-          const row = msg.payload?.record;
+        // postgres_changes 이벤트는 event='postgres_changes', payload.data.type에 INSERT/UPDATE/DELETE
+        const pgEvent = msg.event === 'postgres_changes' ? msg.payload?.data?.type
+                      : (msg.event === 'INSERT' || msg.event === 'UPDATE' || msg.event === 'DELETE') ? msg.event
+                      : null;
+        if(!pgEvent) return;
+
+        const row = msg.payload?.data?.record || msg.payload?.record;
+        const oldRow = msg.payload?.data?.old_record || msg.payload?.old_record;
+
+        if(pgEvent === 'INSERT' || pgEvent === 'UPDATE'){
           if(row && row.occupied === 'Y'){
-            console.log(`📦 Realtime: ${msg.event} room #${row.room_number}`);
+            console.log(`📦 Realtime: ${pgEvent} room #${row.room_number}`);
             await loadOneRoom(row);
 
-            // ── 소유권 변경 감지: 내가 열어둔 패널의 방이 타인에게 넘어간 경우 ──
-            if(msg.event === 'UPDATE' && CURRENT_USER && row.email){
+            // ── 소유권 변경 감지: 내 방이 타인에게 넘어간 경우 ──
+            if(pgEvent === 'UPDATE' && CURRENT_USER && row.email){
               const newOwner = (row.email || '').toLowerCase().trim();
               const me = (CURRENT_USER.email || '').toLowerCase().trim();
-              // 내가 소유자였는데 지금은 아닌 경우 → 패널 강제 갱신
-              if(newOwner !== me && PANEL_ROOM_NUM === row.room_number){
-                alert(`⚠️ ${row.room_number}번 방이 다른 유저에게 구매되었습니다.`);
-                await loadRooms();
-                closeRoomPanel();
-              }
-              // 잔액도 서버와 동기화 (판매 대금 수령 반영)
-              if(newOwner !== me && row.email){
-                // 내 잔액 최신화
+              if(newOwner !== me){
+                // 내 잔액 서버에서 최신화 (판매 대금 수령)
                 const balRes = await fetch(
                   `${SUPA_URL}/rest/v1/user_balances?user_email=eq.${encodeURIComponent(CURRENT_USER.email)}&select=balance`,
                   { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }
@@ -2804,20 +2815,26 @@ function subscribeRooms(){
                     updateBalanceUI();
                   }
                 }
+                // 패널이 열려 있으면 강제 닫기 + 알림
+                if(PANEL_ROOM_NUM === row.room_number){
+                  alert(`⚠️ ${row.room_number}번 방이 다른 유저에게 구매되었습니다.`);
+                  await loadRooms();
+                  closeRoomPanel();
+                }
               }
             }
           }
         }
-        // DELETE 이벤트
-        if(msg.event === 'DELETE'){
-          const old = msg.payload?.old_record;
-          if(old?.room_number){
-            delete ROOMS[old.room_number];
+
+        if(pgEvent === 'DELETE'){
+          const num = (oldRow || row)?.room_number;
+          if(num){
+            delete ROOMS[num];
             drawMap();
             loadResidentCount();
           }
         }
-      } catch(err){ /* ignore parse errors */ }
+      } catch(err){ console.warn('Realtime parse error:', err); }
     };
 
     ws.onerror = (e) => console.warn('Realtime 오류:', e);
