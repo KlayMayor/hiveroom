@@ -3319,12 +3319,12 @@ async function confirmBuyRoom(){
         alert(`⚠️ 가격이 변경되었습니다!\n견적: ${quotedPrice.toLocaleString()} HIVE → 실제: ${actualPrice.toLocaleString()} HIVE\n\n'구매하기'를 다시 클릭해주세요.`);
       } else {
         // 다른 유저가 이미 구매함
-        alert(`구매 실패: ${efData.error}`);
+        alert(`구매 실패 [409]: ${efData.error}`);
         await loadRooms();
         closeRoomPanel();
       }
     } else {
-      alert(`구매 실패: ${efData.error}`);
+      alert(`구매 실패 [${efRes.status}]: ${efData.error || JSON.stringify(efData)}`);
     }
     return;
   }
