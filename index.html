@@ -2489,7 +2489,7 @@ const AVATAR_CACHE = {};
 function bustAvatarUrl(url){
   if(!url) return url;
   if(url.includes('unavatar.io')){
-    const bucket = Math.floor(Date.now() / 3600000); // 1시간 버킷
+    const bucket = Math.floor(Date.now() / (3600000 * 12)); // 12시간 버킷
     return `${url}?t=${bucket}`;
   }
   return url;
@@ -2506,10 +2506,10 @@ function loadAvatarImg(url){
   img.src = bustedUrl;
   return null;
 }
-// 1시간마다 AVATAR_CACHE 초기화 → 새 버킷으로 자동 갱신
+// 12시간마다 AVATAR_CACHE 초기화 → 새 버킷으로 자동 갱신
 setInterval(() => {
   Object.keys(AVATAR_CACHE).forEach(k => delete AVATAR_CACHE[k]);
-}, 3600000);
+}, 3600000 * 12);
 
 function drawCircleImg(ctx, img, cx, cy, r){
   ctx.save();
