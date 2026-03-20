@@ -2875,6 +2875,8 @@ function subscribeRooms(){
               { event: 'INSERT', schema: 'public', table: 'rooms' },
               { event: 'DELETE', schema: 'public', table: 'rooms' }
             ]
+            // 참고: old_record 수신은 DB에서 REPLICA IDENTITY FULL 설정 필요
+            // ALTER TABLE rooms REPLICA IDENTITY FULL;
           }
         },
         ref: String(joinRef++)
@@ -2902,13 +2904,14 @@ function subscribeRooms(){
             console.log(`📦 Realtime: ${pgEvent} room #${row.room_number}`);
             await loadOneRoom(row);
 
-            // ── 소유권 변경 감지: 내 방이 타인에게 넘어간 경우 ──
-            if(pgEvent === 'UPDATE' && CURRENT_USER && row.email){
+            // ── 소유권 변경 감지 ──
+            if(pgEvent === 'UPDATE' && CURRENT_USER){
               const newOwner = (row.email || '').toLowerCase().trim();
+              const prevOwner = (oldRow?.email || '').toLowerCase().trim();
               const me = (CURRENT_USER.email || '').toLowerCase().trim();
-              if(newOwner !== me){
-                // 내 잔액 서버에서 최신화 (판매 대금 수령)
-                // rooms UPDATE → user_balances UPDATE 순서이므로 500ms 대기 후 조회
+
+              // 내가 이전 소유자였고 지금은 아닌 경우 → 판매 대금 수령
+              if(prevOwner === me && newOwner !== me){
                 const fetchSellerBal = async () => {
                   const balRes = await fetch(
                     `${SUPA_URL}/rest/v1/user_balances?user_email=eq.${encodeURIComponent(CURRENT_USER.email)}&select=balance`,
@@ -2922,7 +2925,6 @@ function subscribeRooms(){
                     }
                   }
                 };
-                // 500ms 후 1차 조회, 혹시 아직 반영 안 됐으면 2초 후 재조회
                 setTimeout(fetchSellerBal, 500);
                 setTimeout(fetchSellerBal, 2000);
                 // 패널이 열려 있으면 강제 닫기 + 알림
@@ -2930,6 +2932,16 @@ function subscribeRooms(){
                   alert(`⚠️ ${row.room_number}번 방이 다른 유저에게 구매되었습니다.`);
                   await loadRooms();
                   closeRoomPanel();
+                }
+              }
+
+              // 현재 열려있는 패널이 이 방이고 소유권이 바뀐 경우 → 패널 쿨타임 재체크
+              if(newOwner !== prevOwner && PANEL_ROOM_NUM === row.room_number && newOwner !== me){
+                const buyBtn = document.getElementById('rp-buy-btn');
+                if(buyBtn && buyBtn.style.display !== 'none'){
+                  buyBtn.disabled = true;
+                  buyBtn.textContent = '확인 중...';
+                  checkBuyCooltime(row.room_number, buyBtn);
                 }
               }
             }
@@ -3374,23 +3386,53 @@ function startCooltimeCountdown(buyBtn, endsAt, roomNum){
   tick();
 }
 
-async function checkBuyCooltime(roomNum, buyBtn){
-  // 항상 서버 DB(hive_transactions) 조회 — localStorage는 부정확할 수 있으므로 사용 안 함
+async function checkBuyCooltime(roomNum, buyBtn, retryCount = 0){
+  // 항상 서버 DB(hive_transactions) 조회
   try {
-    const res = await fetch(
-      `${SUPA_URL}/rest/v1/hive_transactions?room_number=eq.${roomNum}&tx_type=in.(room_create,tile_buy)&order=created_at.desc&limit=1&select=tx_type,created_at`,
-      { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }
-    );
-    if(!res.ok){
-      // 조회 실패 → 버튼 활성화
+    // rooms 테이블에서 현재 소유자도 함께 확인
+    const [txRes, roomRes] = await Promise.all([
+      fetch(
+        `${SUPA_URL}/rest/v1/hive_transactions?room_number=eq.${roomNum}&tx_type=in.(room_create,tile_buy)&order=created_at.desc&limit=1&select=tx_type,created_at`,
+        { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }
+      ),
+      fetch(
+        `${SUPA_URL}/rest/v1/rooms?room_number=eq.${roomNum}&select=email`,
+        { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }
+      )
+    ]);
+    if(PANEL_ROOM_NUM !== roomNum) return; // 패널 바뀌면 중단
+
+    // 소유자가 이미 나인 경우 → 구매 버튼 숨기기
+    if(roomRes.ok){
+      const roomRows = await roomRes.json();
+      const serverEmail = (roomRows?.[0]?.email || '').toLowerCase().trim();
+      const me = (CURRENT_USER?.email || '').toLowerCase().trim();
+      if(serverEmail === me){
+        buyBtn.style.display = 'none';
+        document.getElementById('rp-own-badge').style.display = 'block';
+        document.getElementById('rp-edit-btn').style.display = 'block';
+        document.getElementById('rp-invest-btn').style.display = 'block';
+        document.getElementById('rp-move-btn').style.display = 'block';
+        if(ROOMS[roomNum]) ROOMS[roomNum].ownerEmail = serverEmail;
+        return;
+      }
+    }
+
+    if(!txRes.ok){
       if(PANEL_ROOM_NUM === roomNum){ buyBtn.disabled = false; buyBtn.textContent = '구매하기'; }
       return;
     }
-    const rows = await res.json();
-    // 패널이 이미 다른 방으로 바뀐 경우 무시
+    const rows = await txRes.json();
     if(PANEL_ROOM_NUM !== roomNum) return;
+
     if(!rows || rows.length === 0){
-      // 트랜잭션 없음 → 쿨타임 없음, 버튼 활성화
+      // 트랜잭션 없음 — 방금 구매된 경우 DB에 아직 반영 안 됐을 수 있으므로 1회 재시도
+      if(retryCount < 2){
+        setTimeout(() => {
+          if(PANEL_ROOM_NUM === roomNum) checkBuyCooltime(roomNum, buyBtn, retryCount + 1);
+        }, 800);
+        return;
+      }
       buyBtn.disabled = false; buyBtn.textContent = '구매하기';
       return;
     }
@@ -3400,14 +3442,11 @@ async function checkBuyCooltime(roomNum, buyBtn){
     const endsAt = lastMs + coolMs;
     const remaining = endsAt - Date.now();
     if(remaining <= 0){
-      // 쿨타임 만료 → 버튼 활성화
       buyBtn.disabled = false; buyBtn.textContent = '구매하기';
       return;
     }
-    // 쿨타임 중 → 카운트다운 시작
     startCooltimeCountdown(buyBtn, endsAt, roomNum);
   } catch(e){
-    // 조회 실패 → 버튼 활성화
     if(PANEL_ROOM_NUM === roomNum){ buyBtn.disabled = false; buyBtn.textContent = '구매하기'; }
   }
 }
