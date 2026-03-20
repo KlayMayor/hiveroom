@@ -4280,24 +4280,30 @@ async function loadRankingData(){
     }
 
     // 커뮤니티 랭킹 (interest = 트위터ID, 대소문자 무시)
+    const maxCommCnt = topComm.length > 0 ? topComm[0][1] : 1;
     const commRows = topComm.map(([key, cnt], i) => {
       const tw = commOriginal[key] || key;
       const av = bustAvatarUrl(`https://unavatar.io/x/${tw}`);
+      const barPct = Math.round((cnt / maxCommCnt) * 100);
+      const barColors = ['#F2B830','#A0C8F0','#A8D8A8'];
+      const barHtml = `<div style="width:100%;background:#F0EDE8;border-radius:4px;height:7px;margin-top:5px;overflow:hidden;">
+        <div style="width:${barPct}%;background:${barColors[i]||'#ccc'};height:100%;border-radius:4px;transition:width .4s;"></div>
+      </div>`;
       return `
-        <div class="ranking-item">
-          <span class="ranking-medal">${MEDALS[i]||''}</span>
+        <div class="ranking-item" style="align-items:flex-start;">
+          <span class="ranking-medal" style="padding-top:2px;">${MEDALS[i]||''}</span>
           <img class="ranking-avatar" src="${av}" onerror="this.src='${FALLBACK_AVATAR}'">
-          <div class="ranking-info">
+          <div class="ranking-info" style="flex:1;">
             <div class="ranking-name">@${tw}</div>
-            <div class="ranking-val">팬 ${cnt}명</div>
+            ${barHtml}
           </div>
-          <div class="ranking-score">${cnt} 방</div>
+          <div class="ranking-score" style="padding-top:2px;">(${cnt})</div>
         </div>`;
     }).join('');
 
     const updatedAt = new Date().toLocaleTimeString('ko-KR');
     body.innerHTML = `
-      ${renderSection('🏠 방 보유 TOP 3', topRooms, v => `${v}개`)}
+      ${renderSection('🏠 방 보유 TOP 3', topRooms, v => `${v}🏠`)}
       ${renderSection('📈 부동산 가치 TOP 3', topEstate, v => `${Number(v).toLocaleString()} 🍯`)}
       <div class="ranking-section"><div class="ranking-section-title">🌐 커뮤니티 TOP 3</div>${commRows || '<div style="color:#ccc;font-size:12px;padding:8px 10px;">데이터 없음</div>'}</div>
       <div style="text-align:center;font-size:10px;color:#CCC;margin-top:4px;padding-bottom:4px;">${updatedAt} 기준</div>
