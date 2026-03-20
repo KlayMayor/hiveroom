@@ -2483,19 +2483,22 @@ function ltn(hex,a){const n=parseInt(hex.replace('#',''),16);const c=(v,d)=>Math
 // ── 아바타 이미지 캐시 ──
 
 const AVATAR_CACHE = {};
-// 날짜 단위 캐시 버스팅 — unavatar.io URL에만 적용 (하루 1회 최신 프로필 반영)
+// 캐시 버스팅: unavatar.io는 1시간 버킷(Math.floor(Date.now()/3600000)) 사용
+// → 브라우저 HTTP 캐시 및 메모리 캐시 모두 최대 1시간 유지
+// → 탭을 오래 열어둬도 갱신됨 (날짜 단위보다 훨씬 빠름)
 function bustAvatarUrl(url){
   if(!url) return url;
   if(url.includes('unavatar.io')){
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    return `${url}?t=${today}`;
+    const bucket = Math.floor(Date.now() / 3600000); // 1시간 버킷
+    return `${url}?t=${bucket}`;
   }
   return url;
 }
 function loadAvatarImg(url){
   if(!url) return null;
   const bustedUrl = bustAvatarUrl(url);
-  if(AVATAR_CACHE[bustedUrl]) return AVATAR_CACHE[bustedUrl];
+  // 메모리 캐시 히트 여부 확인
+  if(AVATAR_CACHE[bustedUrl] !== undefined) return AVATAR_CACHE[bustedUrl];
   const img = new Image();
   img.crossOrigin = 'anonymous';
   img.onload = () => { AVATAR_CACHE[bustedUrl] = img; drawMap(); };
@@ -2503,6 +2506,10 @@ function loadAvatarImg(url){
   img.src = bustedUrl;
   return null;
 }
+// 1시간마다 AVATAR_CACHE 초기화 → 새 버킷으로 자동 갱신
+setInterval(() => {
+  Object.keys(AVATAR_CACHE).forEach(k => delete AVATAR_CACHE[k]);
+}, 3600000);
 
 function drawCircleImg(ctx, img, cx, cy, r){
   ctx.save();
