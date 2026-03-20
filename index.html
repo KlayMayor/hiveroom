@@ -477,15 +477,52 @@ header{
 .rp-move-btn:hover{background:#F2B830;color:#fff;}
 .rp-link-btn{width:100%;margin-top:6px;padding:9px;border-radius:14px;border:none;background:#000;color:#fff;font-size:13px;font-weight:700;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:all .2s;letter-spacing:.3px;}
 .rp-link-btn:hover{background:#222;transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,0,0,.25);}
+
+/* ── 랭킹 팝업 ── */
+#ranking-ov{display:none;position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);align-items:center;justify-content:center;}
+#ranking-ov.show{display:flex;}
+.ranking-box{background:#fff;border-radius:22px;width:min(440px,94vw);max-height:88vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.25);animation:popin .35s cubic-bezier(.34,1.56,.64,1);}
+.ranking-head{background:linear-gradient(135deg,var(--honey),var(--accent));padding:18px 22px;display:flex;align-items:center;justify-content:space-between;border-radius:22px 22px 0 0;}
+.ranking-head-title{font-family:'Jua',sans-serif;font-size:18px;color:#fff;}
+.ranking-close{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.ranking-body{padding:18px 20px;}
+.ranking-section{margin-bottom:20px;}
+.ranking-section-title{font-family:'Jua',sans-serif;font-size:13px;color:var(--muted);letter-spacing:.5px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.ranking-item{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:12px;margin-bottom:6px;background:#FAFAF8;}
+.ranking-item:hover{background:var(--hlt);}
+.ranking-medal{font-size:20px;width:28px;text-align:center;flex-shrink:0;}
+.ranking-avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid var(--border);flex-shrink:0;background:#eee;}
+.ranking-info{flex:1;min-width:0;}
+.ranking-name{font-size:13px;font-weight:700;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ranking-val{font-size:11px;color:var(--muted);margin-top:1px;}
+.ranking-score{font-family:'Jua',sans-serif;font-size:15px;color:var(--hdk);flex-shrink:0;}
+.ranking-loading{text-align:center;padding:32px;color:var(--muted);font-size:13px;}
+.ranking-refresh{display:block;margin:0 auto 4px;padding:7px 20px;border-radius:12px;border:1.5px solid var(--border);background:#fff;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted);font-family:'Noto Sans KR',sans-serif;transition:all .15s;}
+.ranking-refresh:hover{border-color:var(--honey);color:var(--hdk);}
 </style>
 </head>
 <body>
+
+<!-- 랭킹 팝업 -->
+<div id="ranking-ov">
+  <div class="ranking-box">
+    <div class="ranking-head">
+      <span class="ranking-head-title">🏆 HiveRoom 랭킹</span>
+      <button class="ranking-close" onclick="closeRanking()">✕</button>
+    </div>
+    <div class="ranking-body" id="ranking-body">
+      <div class="ranking-loading">🍯 랭킹 불러오는 중...</div>
+    </div>
+  </div>
+</div>
 
 <!-- HEADER -->
 <header>
   <div class="logo">🍯 HiveRoom</div>
   <div class="h-sep"></div>
   <button class="h-badge" onclick="openHelp()" style="cursor:pointer;border:1px solid var(--honey);background:var(--hlt);color:var(--hdk);font-family:'Noto Sans KR',sans-serif;">❓ 도움말</button>
+  <div class="h-sep"></div>
+  <button class="h-badge" onclick="openRanking()" style="cursor:pointer;border:1px solid #B8A0E8;background:#F5F0FF;color:#6040B0;font-family:'Noto Sans KR',sans-serif;">🏆 랭킹</button>
   <div class="h-sep"></div>
   <div class="h-filter-wrap">
     <button class="h-toggle-btn" id="room-num-btn" onclick="toggleMapFilter()">
@@ -4154,6 +4191,160 @@ function initTips(){
 
 // 도움말
 // ══════════════════════════════════════
+
+// ══════════════════════════════════════
+// 랭킹 팝업
+// ══════════════════════════════════════
+function openRanking(){
+  document.getElementById('ranking-ov').classList.add('show');
+  loadRankingData();
+}
+function closeRanking(){
+  document.getElementById('ranking-ov').classList.remove('show');
+}
+// 팝업 외부 클릭 닫기
+document.addEventListener('click', e => {
+  const ov = document.getElementById('ranking-ov');
+  if(ov && ov.classList.contains('show') && e.target === ov) closeRanking();
+});
+
+async function loadRankingData(){
+  const body = document.getElementById('ranking-body');
+  body.innerHTML = '<div class="ranking-loading">🍯 랭킹 불러오는 중...</div>';
+
+  try {
+    const h = { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` };
+
+    // 1. 잔액 TOP 유저 (user_balances)
+    // 2. 방 보유 개수 TOP (rooms, email별 count)
+    // 3. 부동산 가치 TOP (rooms JOIN room_balances, email별 sum)
+    // 4. 커뮤니티 순위 (rooms, interest별 count)
+    const [balRes, roomsRes, rbRes] = await Promise.all([
+      fetch(`${SUPA_URL}/rest/v1/user_balances?select=user_email,balance&order=balance.desc&limit=3`, {headers:h}),
+      fetch(`${SUPA_URL}/rest/v1/rooms?select=email,room_number&occupied=eq.Y&reserved=eq.false`, {headers:h}),
+      fetch(`${SUPA_URL}/rest/v1/room_balances?select=room_number,balance`, {headers:h}),
+    ]);
+
+    const balData  = balRes.ok  ? await balRes.json()  : [];
+    const roomData = roomsRes.ok ? await roomsRes.json() : [];
+    const rbData   = rbRes.ok   ? await rbRes.json()   : [];
+
+    // room_balances 맵
+    const rbMap = {};
+    (rbData || []).forEach(r => { rbMap[r.room_number] = r.balance || 0; });
+
+    // 방 보유 수 집계
+    const roomCount = {}, estateValue = {};
+    (roomData || []).forEach(r => {
+      if(!r.email) return;
+      roomCount[r.email] = (roomCount[r.email] || 0) + 1;
+      estateValue[r.email] = (estateValue[r.email] || 0) + (rbMap[r.room_number] || 100);
+    });
+
+    // 커뮤니티 집계 (interest)
+    const commRes = await fetch(
+      `${SUPA_URL}/rest/v1/rooms?select=interest&occupied=eq.Y&reserved=eq.false&interest=neq.`,
+      {headers:h}
+    );
+    const commData = commRes.ok ? await commRes.json() : [];
+    const commCount = {};
+    (commData || []).forEach(r => {
+      if(!r.interest) return;
+      commCount[r.interest] = (commCount[r.interest] || 0) + 1;
+    });
+
+    // 정렬
+    const topBalance = (balData || []).slice(0,3);
+    const topRooms   = Object.entries(roomCount).sort((a,b)=>b[1]-a[1]).slice(0,3);
+    const topEstate  = Object.entries(estateValue).sort((a,b)=>b[1]-a[1]).slice(0,3);
+    const topComm    = Object.entries(commCount).sort((a,b)=>b[1]-a[1]).slice(0,3);
+
+    // 트위터ID 조회 (email → twitterId)
+    const allEmails = new Set([
+      ...topBalance.map(r=>r.user_email),
+      ...topRooms.map(([e])=>e),
+      ...topEstate.map(([e])=>e),
+    ]);
+    const emailToTwitter = {};
+    if(allEmails.size > 0){
+      const emailList = [...allEmails].map(e=>`email=eq.${encodeURIComponent(e)}`).join('&');
+      // rooms에서 email→twitter_id 매핑
+      const twRes = await fetch(
+        `${SUPA_URL}/rest/v1/rooms?select=email,twitter_id&occupied=eq.Y&${emailList}`,
+        {headers:h}
+      );
+      if(twRes.ok){
+        const twData = await twRes.json();
+        (twData||[]).forEach(r => {
+          if(r.email && r.twitter_id) emailToTwitter[r.email] = r.twitter_id;
+        });
+      }
+    }
+
+    const MEDALS = ['🥇','🥈','🥉'];
+
+    function avatarUrl(email){
+      const tw = emailToTwitter[email];
+      return tw ? bustAvatarUrl(`https://unavatar.io/x/${tw}`) : `https://ui-avatars.com/api/?name=${encodeURIComponent(email[0]||'?')}&background=F2B830&color=fff&size=64`;
+    }
+    function displayName(email){
+      const tw = emailToTwitter[email];
+      return tw ? `@${tw}` : email.split('@')[0];
+    }
+
+    function renderSection(title, items, valFn){
+      if(!items.length) return `<div class="ranking-section"><div class="ranking-section-title">${title}</div><div style="color:#ccc;font-size:12px;padding:8px 10px;">데이터 없음</div></div>`;
+      const rows = items.map(([key, val], i) => `
+        <div class="ranking-item">
+          <span class="ranking-medal">${MEDALS[i]||''}</span>
+          <img class="ranking-avatar" src="${avatarUrl(key)}" onerror="this.src='https://ui-avatars.com/api/?name=?&background=eee&color=999&size=64'">
+          <div class="ranking-info">
+            <div class="ranking-name">${displayName(key)}</div>
+            <div class="ranking-val">${key}</div>
+          </div>
+          <div class="ranking-score">${valFn(val)}</div>
+        </div>`).join('');
+      return `<div class="ranking-section"><div class="ranking-section-title">${title}</div>${rows}</div>`;
+    }
+
+    // 잔액 랭킹 렌더 (구조 다름)
+    const balRows = topBalance.map((r,i) => `
+      <div class="ranking-item">
+        <span class="ranking-medal">${MEDALS[i]||''}</span>
+        <img class="ranking-avatar" src="${avatarUrl(r.user_email)}" onerror="this.src='https://ui-avatars.com/api/?name=?&background=eee&color=999&size=64'">
+        <div class="ranking-info">
+          <div class="ranking-name">${displayName(r.user_email)}</div>
+          <div class="ranking-val">${r.user_email}</div>
+        </div>
+        <div class="ranking-score">${Number(r.balance).toLocaleString()} 🍯</div>
+      </div>`).join('');
+
+    // 커뮤니티 랭킹 (interest = 트위터ID)
+    const commRows = topComm.map(([tw, cnt], i) => `
+      <div class="ranking-item">
+        <span class="ranking-medal">${MEDALS[i]||''}</span>
+        <img class="ranking-avatar" src="${bustAvatarUrl(`https://unavatar.io/x/${tw}`)}" onerror="this.src='https://ui-avatars.com/api/?name=?&background=eee&color=999&size=64'">
+        <div class="ranking-info">
+          <div class="ranking-name">@${tw}</div>
+          <div class="ranking-val">팬 ${cnt}명</div>
+        </div>
+        <div class="ranking-score">${cnt} 방</div>
+      </div>`).join('');
+
+    const updatedAt = new Date().toLocaleTimeString('ko-KR');
+    body.innerHTML = `
+      <div class="ranking-section"><div class="ranking-section-title">💰 잔액 TOP 3</div>${balRows}</div>
+      ${renderSection('🏠 방 보유 TOP 3', topRooms, v => `${v}개`)}
+      ${renderSection('📈 부동산 가치 TOP 3', topEstate, v => `${Number(v).toLocaleString()} 🍯`)}
+      <div class="ranking-section"><div class="ranking-section-title">🌐 커뮤니티 TOP 3</div>${commRows || '<div style="color:#ccc;font-size:12px;padding:8px 10px;">데이터 없음</div>'}</div>
+      <div style="text-align:center;font-size:10px;color:#CCC;margin-top:4px;padding-bottom:4px;">${updatedAt} 기준</div>
+      <button class="ranking-refresh" onclick="loadRankingData()">🔄 새로고침</button>
+    `;
+  } catch(e){
+    document.getElementById('ranking-body').innerHTML = `<div class="ranking-loading">❌ 불러오기 실패: ${e.message}</div>`;
+  }
+}
+
 function openHelp(){
   closeMenu();
   document.getElementById('help-ov').classList.add('show');
