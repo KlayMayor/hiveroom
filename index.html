@@ -70,7 +70,7 @@ header{
 .mf-dot.red{background:#E74C3C;}
 .mf-input{flex:1;border:1px solid #ddd;border-radius:8px;padding:4px 8px;font-size:12px;font-family:'Noto Sans KR',sans-serif;outline:none;min-width:0;}
 .mf-input:focus{border-color:var(--honey);}
-.mf-avatar{width:22px;height:22px;border-radius:50%;object-fit:cover;background:#eee;flex-shrink:0;}
+.mf-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;background:#eee;flex-shrink:0;border:1.5px solid var(--border);}
 .h-hive-badge{
   font-size:12px;font-weight:700;
   background:linear-gradient(135deg,#FFF8E8,#FFF0C8);
@@ -3204,7 +3204,7 @@ function openRoomPanel(num){
   const interestImg = document.getElementById('rp-interest-img');
   const ownerEl    = document.getElementById('rp-owner');
   if(room.twitterId){
-    avatarImg.src = `https://unavatar.io/x/${room.twitterId}`;
+    avatarImg.src = bustAvatarUrl(`https://unavatar.io/x/${room.twitterId}`);
     avatarImg.style.display = 'block';
     ownerEl.textContent = `@${room.twitterId}`;
   } else {
@@ -3212,7 +3212,7 @@ function openRoomPanel(num){
     ownerEl.textContent = '';
   }
   if(room.interest){
-    interestImg.src = `https://unavatar.io/x/${room.interest}`;
+    interestImg.src = bustAvatarUrl(`https://unavatar.io/x/${room.interest}`);
     interestImg.style.display = 'block';
   } else {
     interestImg.style.display = 'none';
@@ -4091,7 +4091,10 @@ function mfUserInput(val){
   _mfDebounceUser = setTimeout(() => {
     const av = document.getElementById('mf-user-avatar');
     if(MAP_FILTER.userQuery){
-      av.src = `https://unavatar.io/x/${MAP_FILTER.userQuery}`;
+      av.onerror = () => { av.style.opacity='0.3'; };
+      av.onload  = () => { av.style.opacity='1'; };
+      av.style.opacity = '0.5';
+      av.src = bustAvatarUrl(`https://unavatar.io/x/${MAP_FILTER.userQuery}`);
       av.style.display = 'block';
     } else {
       av.style.display = 'none';
@@ -4105,7 +4108,10 @@ function mfCommInput(val){
   _mfDebounceComm = setTimeout(() => {
     const av = document.getElementById('mf-comm-avatar');
     if(MAP_FILTER.commQuery){
-      av.src = `https://unavatar.io/x/${MAP_FILTER.commQuery}`;
+      av.onerror = () => { av.style.opacity='0.3'; };
+      av.onload  = () => { av.style.opacity='1'; };
+      av.style.opacity = '0.5';
+      av.src = bustAvatarUrl(`https://unavatar.io/x/${MAP_FILTER.commQuery}`);
       av.style.display = 'block';
     } else {
       av.style.display = 'none';
