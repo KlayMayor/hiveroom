@@ -133,8 +133,13 @@ header{
 .con-close-btn{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;}
 .con-close-btn:hover{background:rgba(255,255,255,.35);}
 
-/* 콘솔 바디 */
-.con-body{flex:1;display:flex;overflow:hidden;}
+/* 콘솔 바디 — 세로 구조: 상단(미리보기+아이템) / 하단(광고) */
+.con-body{
+  flex:1;display:flex;flex-direction:column;overflow:hidden;
+}
+.con-body-top{
+  flex:1;display:flex;overflow:hidden;min-height:0;
+}
 
 /* ── 왼쪽: 미리보기 ── */
 .con-left{
@@ -145,16 +150,18 @@ header{
   position:relative;
 }
 .preview-area{
-  flex:3;display:flex;flex-direction:column;
+  flex:1;display:flex;flex-direction:column;
   align-items:center;justify-content:flex-start;
   gap:0;padding:12px 12px 8px;width:100%;
   min-height:0;overflow-y:auto;
 }
+/* ── 하단 광고 영역 (전체 너비) ── */
 .preview-ad{
-  flex:1;display:flex;align-items:center;justify-content:center;
+  height:90px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
   background:#EEEAE2;border-top:1px solid var(--border);
   font-size:11px;color:#BBB;letter-spacing:.3px;
-  flex-shrink:0;
+  width:100%;
 }
 .preview-label{
   font-size:10px;font-weight:700;color:var(--muted);
@@ -705,66 +712,77 @@ header{
     <!-- 바디 -->
     <div class="con-body">
 
-      <!-- 왼쪽: 미리보기 -->
-      <div class="con-left">
-        <div class="preview-area">
-          <div style="display:flex;flex-direction:column;align-items:center;">
-            <canvas id="room-cv" width="700" height="700" style="width:460px;height:460px;display:block;"></canvas>
+      <!-- 상단: 미리보기 + 아이템선택 -->
+      <div class="con-body-top">
+
+        <!-- 왼쪽: 미리보기 -->
+        <div class="con-left">
+          <div class="preview-area">
+            <div style="display:flex;flex-direction:column;align-items:center;">
+              <canvas id="room-cv" width="700" height="700" style="width:460px;height:460px;display:block;"></canvas>
+            </div>
+          </div>
+          <!-- 컨트롤 핸들 -->
+          <div id="item-ctrl">
+            <div class="ctrl-size">
+              <span>크기</span>
+              <input type="range" id="ctrl-size-range" min="30" max="200" value="100"
+                oninput="onSizeChange(this.value)">
+              <span id="ctrl-size-val">100%</span>
+            </div>
+            <div class="ctrl-sep"></div>
+            <button class="ctrl-btn" id="ctrl-flip-btn" title="좌우반전" onclick="onCtrlFlip()">⇄</button>
+            <button class="ctrl-btn" id="ctrl-layer-up" title="앞으로" onclick="onCtrlLayerUp()">↑</button>
+            <button class="ctrl-btn" id="ctrl-layer-dn" title="뒤로" onclick="onCtrlLayerDn()">↓</button>
+            <div class="ctrl-sep"></div>
+            <button class="ctrl-btn" title="선택해제" onclick="onCtrlDeselect()" style="font-size:10px;width:44px;color:#666;">해제</button>
+            <button class="ctrl-btn" title="삭제" onclick="onCtrlDelete()" style="font-size:10px;width:36px;color:#C44;background:#FFF0F0;">삭제</button>
           </div>
         </div>
-        <!-- 컨트롤 핸들: 광고 영역 바로 위 -->
-        <div id="item-ctrl">
-          <div class="ctrl-size">
-            <span>크기</span>
-            <input type="range" id="ctrl-size-range" min="30" max="200" value="100"
-              oninput="onSizeChange(this.value)">
-            <span id="ctrl-size-val">100%</span>
+
+        <!-- 오른쪽: 에셋 선택 -->
+        <div class="con-right">
+
+          <!-- 에셋 탭 -->
+          <div class="asset-tabs">
+            <button class="atab on"  onclick="switchTab(this,'wall')">🎨 벽지</button>
+            <button class="atab"     onclick="switchTab(this,'floor')">🟫 바닥</button>
+            <button class="atab"     onclick="switchTab(this,'furniture')">🪑 가구</button>
+            <button class="atab"     onclick="switchTab(this,'walldeco')">✨ 장식</button>
+            <button class="atab"     onclick="switchTab(this,'item')">🎁 아이템</button>
           </div>
-          <div class="ctrl-sep"></div>
-          <button class="ctrl-btn" id="ctrl-flip-btn" title="좌우반전" onclick="onCtrlFlip()">⇄</button>
-          <button class="ctrl-btn" id="ctrl-layer-up" title="앞으로" onclick="onCtrlLayerUp()">↑</button>
-          <button class="ctrl-btn" id="ctrl-layer-dn" title="뒤로" onclick="onCtrlLayerDn()">↓</button>
-          <div class="ctrl-sep"></div>
-          <button class="ctrl-btn" title="선택해제" onclick="onCtrlDeselect()" style="font-size:10px;width:44px;color:#666;">해제</button>
-          <button class="ctrl-btn" title="삭제" onclick="onCtrlDelete()" style="font-size:10px;width:36px;color:#C44;background:#FFF0F0;">삭제</button>
+
+          <div class="asset-pane on" id="pane-wall">
+            <div class="agrid" id="grid-wall"></div>
+            <div class="pane-sel-lbl none" id="sel-wall">미선택</div>
+          </div>
+          <div class="asset-pane" id="pane-floor">
+            <div class="agrid" id="grid-floor"></div>
+            <div class="pane-sel-lbl none" id="sel-floor">미선택</div>
+          </div>
+          <div class="asset-pane" id="pane-furniture">
+            <div class="agrid" id="grid-furniture"></div>
+            <div class="pane-sel-lbl none" id="sel-furniture">미선택 (복수선택)</div>
+          </div>
+          <div class="asset-pane" id="pane-walldeco">
+            <div class="agrid" id="grid-walldeco"></div>
+            <div class="pane-sel-lbl none" id="sel-walldeco">미선택 (복수선택)</div>
+          </div>
+          <div class="asset-pane" id="pane-item">
+            <div class="agrid" id="grid-item"></div>
+            <div class="pane-sel-lbl none" id="sel-item">미선택 (복수선택)</div>
+          </div>
+
         </div>
-        <div class="preview-ad">광고 영역</div>
+      </div><!-- /con-body-top -->
+
+      <!-- 하단: 광고 영역 (전체 너비) -->
+      <div class="preview-ad">
+        <!-- Google AdSense 가로형 광고 삽입 위치 -->
+        <!-- <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-XXXXXXXXXXXXXXXX" data-ad-slot="XXXXXXXXXX" data-ad-format="horizontal"></ins> -->
+        광고 영역
       </div>
 
-      <!-- 오른쪽: 에셋 선택 -->
-      <div class="con-right">
-
-        <!-- 에셋 탭 -->
-        <div class="asset-tabs">
-          <button class="atab on"  onclick="switchTab(this,'wall')">🎨 벽지</button>
-          <button class="atab"     onclick="switchTab(this,'floor')">🟫 바닥</button>
-          <button class="atab"     onclick="switchTab(this,'furniture')">🪑 가구</button>
-          <button class="atab"     onclick="switchTab(this,'walldeco')">✨ 장식</button>
-          <button class="atab"     onclick="switchTab(this,'item')">🎁 아이템</button>
-        </div>
-
-        <div class="asset-pane on" id="pane-wall">
-          <div class="agrid" id="grid-wall"></div>
-          <div class="pane-sel-lbl none" id="sel-wall">미선택</div>
-        </div>
-        <div class="asset-pane" id="pane-floor">
-          <div class="agrid" id="grid-floor"></div>
-          <div class="pane-sel-lbl none" id="sel-floor">미선택</div>
-        </div>
-        <div class="asset-pane" id="pane-furniture">
-          <div class="agrid" id="grid-furniture"></div>
-          <div class="pane-sel-lbl none" id="sel-furniture">미선택 (복수선택)</div>
-        </div>
-        <div class="asset-pane" id="pane-walldeco">
-          <div class="agrid" id="grid-walldeco"></div>
-          <div class="pane-sel-lbl none" id="sel-walldeco">미선택 (복수선택)</div>
-        </div>
-        <div class="asset-pane" id="pane-item">
-          <div class="agrid" id="grid-item"></div>
-          <div class="pane-sel-lbl none" id="sel-item">미선택 (복수선택)</div>
-        </div>
-
-      </div>
     </div>
   </div><!-- /#console -->
 
