@@ -51,8 +51,9 @@ header{
 }
 .h-toggle-btn.on{background:var(--hlt);border-color:var(--honey);color:var(--hdk);}
 /* ── 맵 필터 드롭다운 ── */
+.h-filter-wrap{position:relative;}
 #map-filter-dropdown{
-  display:none;position:fixed;top:46px;left:50%;transform:translateX(-50%);
+  display:none;position:absolute;top:calc(100% + 6px);left:0;
   z-index:700;background:#fff;border-radius:16px;
   box-shadow:0 8px 32px rgba(0,0,0,.18);padding:14px 16px;min-width:280px;
   border:1px solid var(--border);
@@ -479,11 +480,12 @@ header{
   <div class="h-sep"></div>
   <button class="h-badge" onclick="openHelp()" style="cursor:pointer;border:1px solid var(--honey);background:var(--hlt);color:var(--hdk);font-family:'Noto Sans KR',sans-serif;">❓ 도움말</button>
   <div class="h-sep"></div>
-  <button class="h-toggle-btn" id="room-num-btn" onclick="toggleMapFilter()">
-    # Room No.
-  </button>
-  <!-- 맵 필터 드롭다운 -->
-  <div id="map-filter-dropdown">
+  <div class="h-filter-wrap">
+    <button class="h-toggle-btn" id="room-num-btn" onclick="toggleMapFilter()">
+      🔎 타일 검색
+    </button>
+    <!-- 맵 필터 드롭다운 -->
+    <div id="map-filter-dropdown">
     <div class="mf-row" onclick="mfToggle('roomNum')">
       <input type="checkbox" id="mf-roomNum" onchange="mfToggle('roomNum')" onclick="event.stopPropagation()">
       <span class="mf-label">타일 번호 보기</span>
@@ -520,7 +522,8 @@ header{
         <input class="mf-input" id="mf-comm-input" placeholder="트위터 ID 입력" oninput="mfCommInput(this.value)" onclick="event.stopPropagation()">
       </div>
     </div>
-  </div>
+    </div><!-- /map-filter-dropdown -->
+  </div><!-- /h-filter-wrap -->
   <!-- 비로그인 -->
   <button class="h-login-btn" id="login-btn" onclick="signInGoogle()">
     <img src="https://www.google.com/favicon.ico" alt="G"> LOG IN
@@ -4071,8 +4074,8 @@ function _mfOutsideClick(e){
 function mfToggle(key){
   MAP_FILTER[key] = !MAP_FILTER[key];
   document.getElementById('mf-'+key).checked = MAP_FILTER[key];
-  // roomNum은 기존 SHOW_ROOM_NUMBERS와 연동
   if(key === 'roomNum') SHOW_ROOM_NUMBERS = MAP_FILTER[key];
+  // 버튼 .on 상태는 드롭다운 열림 여부로만 결정 (개별 토글 상태 반영 안 함)
   drawMap();
 }
 function mfUserInput(val){
