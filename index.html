@@ -44,6 +44,41 @@ header{
 }
 .h-make-btn:hover{transform:translateY(-1px);box-shadow:0 5px 18px rgba(224,120,32,.4);}
 .h-make-btn.active{background:linear-gradient(135deg,#888,#555);}
+/* ── 공지사항 ── */
+#h-notice{
+  flex:1;min-width:0;overflow:hidden;
+  display:flex;align-items:center;
+  margin:0 8px;
+}
+.h-notice-inner{
+  display:flex;align-items:center;gap:8px;
+  white-space:nowrap;width:100%;overflow:hidden;
+}
+.h-notice-badge{
+  font-size:10px;font-weight:700;
+  background:linear-gradient(135deg,var(--honey),var(--accent));
+  color:#fff;padding:2px 8px;border-radius:8px;
+  flex-shrink:0;letter-spacing:.3px;
+}
+.h-notice-marquee{
+  flex:1;overflow:hidden;position:relative;
+}
+.h-notice-text{
+  display:inline-block;
+  font-size:12px;color:#555;font-weight:500;
+  font-family:'Noto Sans KR',sans-serif;
+  white-space:nowrap;
+  animation:marquee-scroll 20s linear infinite;
+  padding-left:100%;
+}
+.h-notice-text.short{
+  animation:none;
+  padding-left:0;
+}
+@keyframes marquee-scroll{
+  0%  { transform:translateX(0); }
+  100%{ transform:translateX(-100%); }
+}
 .h-toggle-btn{
   font-size:11px;font-weight:700;padding:4px 12px;border-radius:14px;cursor:pointer;
   border:1px solid var(--border);background:#f5f5f5;color:#888;
@@ -568,6 +603,15 @@ header{
     </div>
     </div><!-- /map-filter-dropdown -->
   </div><!-- /h-filter-wrap -->
+  <!-- 공지사항 -->
+  <div id="h-notice">
+    <div class="h-notice-inner">
+      <span class="h-notice-badge">📢 공지</span>
+      <div class="h-notice-marquee">
+        <span class="h-notice-text" id="h-notice-text">불러오는 중...</span>
+      </div>
+    </div>
+  </div>
   <!-- 비로그인 -->
   <button class="h-login-btn" id="login-btn" onclick="signInGoogle()">
     <img src="https://www.google.com/favicon.ico" alt="G"> LOG IN
@@ -4314,6 +4358,39 @@ async function loadRankingData(){
   }
 }
 
+
+// ══════════════════════════════════════
+// 공지사항 로드
+// ══════════════════════════════════════
+async function loadNotice(){
+  try {
+    const res = await fetch(
+      `${SUPA_URL}/rest/v1/notices?active=eq.true&order=created_at.desc&limit=1&select=content`,
+      { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }
+    );
+    if(!res.ok) return;
+    const data = await res.json();
+    const el = document.getElementById('h-notice-text');
+    if(!el) return;
+    if(!data || data.length === 0){
+      el.textContent = '🍯 HiveRoom에 오신 것을 환영합니다!';
+      el.classList.add('short');
+      return;
+    }
+    const text = data[0].content || '';
+    el.textContent = text;
+    // 텍스트가 짧으면 마퀴 애니메이션 끄기
+    if(text.length < 40){
+      el.classList.add('short');
+    } else {
+      el.classList.remove('short');
+      // 텍스트 길이에 비례해 속도 조정 (기본 20s, 최대 60s)
+      const duration = Math.min(60, Math.max(20, text.length * 0.3));
+      el.style.animationDuration = duration + 's';
+    }
+  } catch(e){ /* 공지 로드 실패 시 무시 */ }
+}
+
 function openHelp(){
   closeMenu();
   document.getElementById('help-ov').classList.add('show');
@@ -4628,6 +4705,7 @@ loadAssets();  // Supabase에서 에셋 로드
 })();
 
 loadRooms().then(()=>{ applyUrlHash(); }); // URL 해시 적용 (방 로드 후)
+loadNotice(); // 공지사항 로드
 subscribeRooms(); // Supabase Realtime 구독
 
 // ── URL 해시 네비게이션 ──
