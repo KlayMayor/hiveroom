@@ -4297,13 +4297,13 @@ async function loadRankingData(){
             <div class="ranking-name">@${tw}</div>
             ${barHtml}
           </div>
-          <div class="ranking-score" style="padding-top:2px;">(${cnt})</div>
+          <div class="ranking-score" style="padding-top:2px;">${cnt}🧡</div>
         </div>`;
     }).join('');
 
     const updatedAt = new Date().toLocaleTimeString('ko-KR');
     body.innerHTML = `
-      ${renderSection('🏠 방 보유 TOP 3', topRooms, v => `${v}🏠`)}
+      ${renderSection('📍 타일 보유 TOP 3', topRooms, v => `${v}🏠`)}
       ${renderSection('📈 부동산 가치 TOP 3', topEstate, v => `${Number(v).toLocaleString()} 🍯`)}
       <div class="ranking-section"><div class="ranking-section-title">🌐 커뮤니티 TOP 3</div>${commRows || '<div style="color:#ccc;font-size:12px;padding:8px 10px;">데이터 없음</div>'}</div>
       <div style="text-align:center;font-size:10px;color:#CCC;margin-top:4px;padding-bottom:4px;">${updatedAt} 기준</div>
