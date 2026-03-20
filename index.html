@@ -2907,8 +2907,14 @@ function subscribeRooms(){
             // ── 소유권 변경 감지 ──
             if(pgEvent === 'UPDATE' && CURRENT_USER){
               const newOwner = (row.email || '').toLowerCase().trim();
-              const prevOwner = (oldRow?.email || '').toLowerCase().trim();
+              // oldRow 없는 경우 클라이언트 캐시(ROOMS)에서 이전 소유자 확인
+              const prevOwner = (
+                oldRow?.email ||
+                ROOMS[row.room_number]?.ownerEmail ||
+                ''
+              ).toLowerCase().trim();
               const me = (CURRENT_USER.email || '').toLowerCase().trim();
+              console.log(`🔍 Realtime 소유권: prev=[${prevOwner}] new=[${newOwner}] me=[${me}]`);
 
               // 내가 이전 소유자였고 지금은 아닌 경우 → 판매 대금 수령
               if(prevOwner === me && newOwner !== me){
@@ -3290,36 +3296,18 @@ function openRoomPanel(num){
     document.getElementById('rp-invest-btn').style.display = 'none';
     document.getElementById('rp-move-btn').style.display = 'none';
     document.getElementById('rp-attend-btn').style.display = 'none';
-    buyBtn.disabled = !canBuy || !CURRENT_USER;
-    insuf.style.display = (!CURRENT_USER || (!canBuy && !isOwnFinal && !room.reserved)) ? 'block' : 'none';
-    if(!CURRENT_USER) insuf.textContent = '로그인이 필요합니다';
-    else insuf.textContent = '잔액이 부족합니다';
-    // 쿨타임 확인: canBuy일 때만 (잔액 부족/비로그인 제외)
-    if(canBuy && CURRENT_USER){
-      buyBtn.disabled = true; // DB 조회 완료까지 일단 비활성화
+
+    if(!CURRENT_USER){
+      // 비로그인
+      buyBtn.disabled = true;
+      insuf.style.display = 'block';
+      insuf.textContent = '로그인이 필요합니다';
+    } else {
+      // 로그인: 쿨타임 + 소유자 서버 재확인 (잔액 무관하게 항상 실행)
+      buyBtn.disabled = true;
       buyBtn.textContent = '확인 중...';
-      // 서버에서 최신 소유자 재확인 후 쿨타임 체크
-      // (Realtime 지연으로 클라이언트 ROOMS[num]이 구버전일 수 있음)
-      fetch(
-        `${SUPA_URL}/rest/v1/rooms?room_number=eq.${num}&select=email`,
-        { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }
-      ).then(r => r.json()).then(rows => {
-        if(!rows || !rows.length) return;
-        const serverEmail = (rows[0].email || '').toLowerCase().trim();
-        const me = (CURRENT_USER?.email || '').toLowerCase().trim();
-        if(serverEmail === me){
-          // 이미 내 방으로 바뀐 경우 → 구매 버튼 숨기고 패널 갱신
-          buyBtn.style.display = 'none';
-          document.getElementById('rp-own-badge').style.display = 'block';
-          document.getElementById('rp-edit-btn').style.display = 'block';
-          document.getElementById('rp-invest-btn').style.display = 'block';
-          document.getElementById('rp-move-btn').style.display = 'block';
-          // ROOMS 캐시도 업데이트
-          if(ROOMS[num]) ROOMS[num].ownerEmail = serverEmail;
-        } else {
-          checkBuyCooltime(num, buyBtn);
-        }
-      }).catch(() => checkBuyCooltime(num, buyBtn));
+      insuf.style.display = 'none';
+      checkBuyCooltime(num, buyBtn, 0, myBal, price);
     }
   }
   document.getElementById('room-panel').classList.add('open');
@@ -3386,10 +3374,9 @@ function startCooltimeCountdown(buyBtn, endsAt, roomNum){
   tick();
 }
 
-async function checkBuyCooltime(roomNum, buyBtn, retryCount = 0){
-  // 항상 서버 DB(hive_transactions) 조회
+async function checkBuyCooltime(roomNum, buyBtn, retryCount = 0, myBal = null, price = null){
+  // 항상 서버 DB(hive_transactions) + rooms 소유자 동시 조회
   try {
-    // rooms 테이블에서 현재 소유자도 함께 확인
     const [txRes, roomRes] = await Promise.all([
       fetch(
         `${SUPA_URL}/rest/v1/hive_transactions?room_number=eq.${roomNum}&tx_type=in.(room_create,tile_buy)&order=created_at.desc&limit=1&select=tx_type,created_at`,
@@ -3400,14 +3387,15 @@ async function checkBuyCooltime(roomNum, buyBtn, retryCount = 0){
         { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }
       )
     ]);
-    if(PANEL_ROOM_NUM !== roomNum) return; // 패널 바뀌면 중단
+    if(PANEL_ROOM_NUM !== roomNum) return;
 
-    // 소유자가 이미 나인 경우 → 구매 버튼 숨기기
+    // ── 소유자 확인
     if(roomRes.ok){
       const roomRows = await roomRes.json();
       const serverEmail = (roomRows?.[0]?.email || '').toLowerCase().trim();
       const me = (CURRENT_USER?.email || '').toLowerCase().trim();
       if(serverEmail === me){
+        // 이미 내 방 → 구매 버튼 숨기고 수정 버튼 표시
         buyBtn.style.display = 'none';
         document.getElementById('rp-own-badge').style.display = 'block';
         document.getElementById('rp-edit-btn').style.display = 'block';
@@ -3418,22 +3406,23 @@ async function checkBuyCooltime(roomNum, buyBtn, retryCount = 0){
       }
     }
 
+    // ── 쿨타임 조회
     if(!txRes.ok){
-      if(PANEL_ROOM_NUM === roomNum){ buyBtn.disabled = false; buyBtn.textContent = '구매하기'; }
+      _activateBuyBtn(buyBtn, roomNum, myBal, price);
       return;
     }
     const rows = await txRes.json();
     if(PANEL_ROOM_NUM !== roomNum) return;
 
     if(!rows || rows.length === 0){
-      // 트랜잭션 없음 — 방금 구매된 경우 DB에 아직 반영 안 됐을 수 있으므로 1회 재시도
+      // 트랜잭션 없음 — 방금 구매된 경우 DB에 아직 반영 안 됐을 수 있으므로 재시도
       if(retryCount < 2){
         setTimeout(() => {
-          if(PANEL_ROOM_NUM === roomNum) checkBuyCooltime(roomNum, buyBtn, retryCount + 1);
+          if(PANEL_ROOM_NUM === roomNum) checkBuyCooltime(roomNum, buyBtn, retryCount + 1, myBal, price);
         }, 800);
         return;
       }
-      buyBtn.disabled = false; buyBtn.textContent = '구매하기';
+      _activateBuyBtn(buyBtn, roomNum, myBal, price);
       return;
     }
     const lastTx = rows[0];
@@ -3442,12 +3431,28 @@ async function checkBuyCooltime(roomNum, buyBtn, retryCount = 0){
     const endsAt = lastMs + coolMs;
     const remaining = endsAt - Date.now();
     if(remaining <= 0){
-      buyBtn.disabled = false; buyBtn.textContent = '구매하기';
+      _activateBuyBtn(buyBtn, roomNum, myBal, price);
       return;
     }
+    // 쿨타임 중 → 비활성화 카운트다운
     startCooltimeCountdown(buyBtn, endsAt, roomNum);
   } catch(e){
-    if(PANEL_ROOM_NUM === roomNum){ buyBtn.disabled = false; buyBtn.textContent = '구매하기'; }
+    _activateBuyBtn(buyBtn, roomNum, myBal, price);
+  }
+}
+
+function _activateBuyBtn(buyBtn, roomNum, myBal, price){
+  // 쿨타임 없음 → 잔액 체크 후 버튼 활성화/비활성화
+  if(PANEL_ROOM_NUM !== roomNum) return;
+  const insuf = document.getElementById('rp-insufficient');
+  if(myBal !== null && price !== null && myBal < price){
+    buyBtn.disabled = true;
+    buyBtn.textContent = '구매하기';
+    if(insuf){ insuf.style.display = 'block'; insuf.textContent = '잔액이 부족합니다'; }
+  } else {
+    buyBtn.disabled = false;
+    buyBtn.textContent = '구매하기';
+    if(insuf) insuf.style.display = 'none';
   }
 }
 
