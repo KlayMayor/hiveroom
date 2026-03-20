@@ -4214,126 +4214,89 @@ async function loadRankingData(){
 
   try {
     const h = { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` };
+    const MEDALS = ['🥇','🥈','🥉'];
+    const FALLBACK_AVATAR = `https://ui-avatars.com/api/?name=?&background=eee&color=999&size=64`;
 
-    // 1. 잔액 TOP 유저 (user_balances)
-    // 2. 방 보유 개수 TOP (rooms, email별 count)
-    // 3. 부동산 가치 TOP (rooms JOIN room_balances, email별 sum)
-    // 4. 커뮤니티 순위 (rooms, interest별 count)
-    const [balRes, roomsRes, rbRes] = await Promise.all([
-      fetch(`${SUPA_URL}/rest/v1/user_balances?select=user_email,balance&order=balance.desc&limit=3`, {headers:h}),
-      fetch(`${SUPA_URL}/rest/v1/rooms?select=email,room_number&occupied=eq.Y&reserved=eq.false`, {headers:h}),
+    // rooms 전체 + room_balances 병렬 조회
+    const [roomsRes, rbRes, commRes] = await Promise.all([
+      fetch(`${SUPA_URL}/rest/v1/rooms?select=twitter_id,room_number,interest&occupied=eq.Y&reserved=eq.false`, {headers:h}),
       fetch(`${SUPA_URL}/rest/v1/room_balances?select=room_number,balance`, {headers:h}),
+      fetch(`${SUPA_URL}/rest/v1/rooms?select=interest&occupied=eq.Y&reserved=eq.false&interest=neq.`, {headers:h}),
     ]);
 
-    const balData  = balRes.ok  ? await balRes.json()  : [];
     const roomData = roomsRes.ok ? await roomsRes.json() : [];
     const rbData   = rbRes.ok   ? await rbRes.json()   : [];
+    const commData = commRes.ok ? await commRes.json() : [];
 
     // room_balances 맵
     const rbMap = {};
     (rbData || []).forEach(r => { rbMap[r.room_number] = r.balance || 0; });
 
-    // 방 보유 수 집계
-    const roomCount = {}, estateValue = {};
+    // 트위터ID(소문자) 기준으로 방 보유 수 + 부동산 가치 집계
+    // 대소문자 무시: twitter_id.toLowerCase() 를 키로 사용
+    // 원본 표시용 ID는 처음 나온 값 유지
+    const twCount = {}, twEstate = {}, twOriginal = {};
     (roomData || []).forEach(r => {
-      if(!r.email) return;
-      roomCount[r.email] = (roomCount[r.email] || 0) + 1;
-      estateValue[r.email] = (estateValue[r.email] || 0) + (rbMap[r.room_number] || 100);
+      if(!r.twitter_id) return;
+      const key = r.twitter_id.toLowerCase();
+      if(!twOriginal[key]) twOriginal[key] = r.twitter_id; // 원본 대소문자 보존
+      twCount[key]  = (twCount[key]  || 0) + 1;
+      twEstate[key] = (twEstate[key] || 0) + (rbMap[r.room_number] || 100);
     });
 
-    // 커뮤니티 집계 (interest)
-    const commRes = await fetch(
-      `${SUPA_URL}/rest/v1/rooms?select=interest&occupied=eq.Y&reserved=eq.false&interest=neq.`,
-      {headers:h}
-    );
-    const commData = commRes.ok ? await commRes.json() : [];
-    const commCount = {};
+    // 커뮤니티: interest 대소문자 무시
+    const commCount = {}, commOriginal = {};
     (commData || []).forEach(r => {
       if(!r.interest) return;
-      commCount[r.interest] = (commCount[r.interest] || 0) + 1;
+      const key = r.interest.toLowerCase();
+      if(!commOriginal[key]) commOriginal[key] = r.interest;
+      commCount[key] = (commCount[key] || 0) + 1;
     });
 
-    // 정렬
-    const topBalance = (balData || []).slice(0,3);
-    const topRooms   = Object.entries(roomCount).sort((a,b)=>b[1]-a[1]).slice(0,3);
-    const topEstate  = Object.entries(estateValue).sort((a,b)=>b[1]-a[1]).slice(0,3);
-    const topComm    = Object.entries(commCount).sort((a,b)=>b[1]-a[1]).slice(0,3);
+    // TOP 3 정렬
+    const topRooms  = Object.entries(twCount).sort((a,b)=>b[1]-a[1]).slice(0,3);
+    const topEstate = Object.entries(twEstate).sort((a,b)=>b[1]-a[1]).slice(0,3);
+    const topComm   = Object.entries(commCount).sort((a,b)=>b[1]-a[1]).slice(0,3);
 
-    // 트위터ID 조회 (email → twitterId)
-    const allEmails = new Set([
-      ...topBalance.map(r=>r.user_email),
-      ...topRooms.map(([e])=>e),
-      ...topEstate.map(([e])=>e),
-    ]);
-    const emailToTwitter = {};
-    if(allEmails.size > 0){
-      const emailList = [...allEmails].map(e=>`email=eq.${encodeURIComponent(e)}`).join('&');
-      // rooms에서 email→twitter_id 매핑
-      const twRes = await fetch(
-        `${SUPA_URL}/rest/v1/rooms?select=email,twitter_id&occupied=eq.Y&${emailList}`,
-        {headers:h}
-      );
-      if(twRes.ok){
-        const twData = await twRes.json();
-        (twData||[]).forEach(r => {
-          if(r.email && r.twitter_id) emailToTwitter[r.email] = r.twitter_id;
-        });
-      }
-    }
-
-    const MEDALS = ['🥇','🥈','🥉'];
-
-    function avatarUrl(email){
-      const tw = emailToTwitter[email];
-      return tw ? bustAvatarUrl(`https://unavatar.io/x/${tw}`) : `https://ui-avatars.com/api/?name=${encodeURIComponent(email[0]||'?')}&background=F2B830&color=fff&size=64`;
-    }
-    function displayName(email){
-      const tw = emailToTwitter[email];
-      return tw ? `@${tw}` : email.split('@')[0];
+    // 트위터ID 기준 랭킹 아이템 렌더
+    function renderTwItem(twKey, val, i, valStr){
+      const tw = twOriginal[twKey] || twKey;
+      const av = bustAvatarUrl(`https://unavatar.io/x/${tw}`);
+      return `
+        <div class="ranking-item">
+          <span class="ranking-medal">${MEDALS[i]||''}</span>
+          <img class="ranking-avatar" src="${av}" onerror="this.src='${FALLBACK_AVATAR}'">
+          <div class="ranking-info">
+            <div class="ranking-name">@${tw}</div>
+          </div>
+          <div class="ranking-score">${valStr}</div>
+        </div>`;
     }
 
     function renderSection(title, items, valFn){
       if(!items.length) return `<div class="ranking-section"><div class="ranking-section-title">${title}</div><div style="color:#ccc;font-size:12px;padding:8px 10px;">데이터 없음</div></div>`;
-      const rows = items.map(([key, val], i) => `
-        <div class="ranking-item">
-          <span class="ranking-medal">${MEDALS[i]||''}</span>
-          <img class="ranking-avatar" src="${avatarUrl(key)}" onerror="this.src='https://ui-avatars.com/api/?name=?&background=eee&color=999&size=64'">
-          <div class="ranking-info">
-            <div class="ranking-name">${displayName(key)}</div>
-            <div class="ranking-val">${key}</div>
-          </div>
-          <div class="ranking-score">${valFn(val)}</div>
-        </div>`).join('');
+      const rows = items.map(([key, val], i) => renderTwItem(key, val, i, valFn(val))).join('');
       return `<div class="ranking-section"><div class="ranking-section-title">${title}</div>${rows}</div>`;
     }
 
-    // 잔액 랭킹 렌더 (구조 다름)
-    const balRows = topBalance.map((r,i) => `
-      <div class="ranking-item">
-        <span class="ranking-medal">${MEDALS[i]||''}</span>
-        <img class="ranking-avatar" src="${avatarUrl(r.user_email)}" onerror="this.src='https://ui-avatars.com/api/?name=?&background=eee&color=999&size=64'">
-        <div class="ranking-info">
-          <div class="ranking-name">${displayName(r.user_email)}</div>
-          <div class="ranking-val">${r.user_email}</div>
-        </div>
-        <div class="ranking-score">${Number(r.balance).toLocaleString()} 🍯</div>
-      </div>`).join('');
-
-    // 커뮤니티 랭킹 (interest = 트위터ID)
-    const commRows = topComm.map(([tw, cnt], i) => `
-      <div class="ranking-item">
-        <span class="ranking-medal">${MEDALS[i]||''}</span>
-        <img class="ranking-avatar" src="${bustAvatarUrl(`https://unavatar.io/x/${tw}`)}" onerror="this.src='https://ui-avatars.com/api/?name=?&background=eee&color=999&size=64'">
-        <div class="ranking-info">
-          <div class="ranking-name">@${tw}</div>
-          <div class="ranking-val">팬 ${cnt}명</div>
-        </div>
-        <div class="ranking-score">${cnt} 방</div>
-      </div>`).join('');
+    // 커뮤니티 랭킹 (interest = 트위터ID, 대소문자 무시)
+    const commRows = topComm.map(([key, cnt], i) => {
+      const tw = commOriginal[key] || key;
+      const av = bustAvatarUrl(`https://unavatar.io/x/${tw}`);
+      return `
+        <div class="ranking-item">
+          <span class="ranking-medal">${MEDALS[i]||''}</span>
+          <img class="ranking-avatar" src="${av}" onerror="this.src='${FALLBACK_AVATAR}'">
+          <div class="ranking-info">
+            <div class="ranking-name">@${tw}</div>
+            <div class="ranking-val">팬 ${cnt}명</div>
+          </div>
+          <div class="ranking-score">${cnt} 방</div>
+        </div>`;
+    }).join('');
 
     const updatedAt = new Date().toLocaleTimeString('ko-KR');
     body.innerHTML = `
-      <div class="ranking-section"><div class="ranking-section-title">💰 잔액 TOP 3</div>${balRows}</div>
       ${renderSection('🏠 방 보유 TOP 3', topRooms, v => `${v}개`)}
       ${renderSection('📈 부동산 가치 TOP 3', topEstate, v => `${Number(v).toLocaleString()} 🍯`)}
       <div class="ranking-section"><div class="ranking-section-title">🌐 커뮤니티 TOP 3</div>${commRows || '<div style="color:#ccc;font-size:12px;padding:8px 10px;">데이터 없음</div>'}</div>
