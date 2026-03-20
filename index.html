@@ -2917,7 +2917,7 @@ function subscribeRooms(){
                 ''
               ).toLowerCase().trim();
               const me = (CURRENT_USER.email || '').toLowerCase().trim();
-              console.log(`🔍 Realtime 소유권: prev=[${prevOwner}] new=[${newOwner}] me=[${me}]`);
+
 
               // 내가 이전 소유자였고 지금은 아닌 경우 → 판매 대금 수령
               if(prevOwner === me && newOwner !== me){
@@ -2925,19 +2925,18 @@ function subscribeRooms(){
                 const fetchSellerBal = async () => {
                   try {
                     const tok = await getValidToken().catch(() => null) || SUPA_KEY;
-                    console.log(`💰 판매자 잔액 조회 시작 (token: ${tok === SUPA_KEY ? 'anon' : 'jwt'})`);
                     const balRes = await fetch(
                       `${SUPA_URL}/rest/v1/user_balances?user_email=eq.${encodeURIComponent(CURRENT_USER.email)}&select=balance`,
                       { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${tok}` } }
                     );
-                    const balData = await balRes.json();
-                    console.log(`💰 잔액 조회 결과: status=${balRes.status}`, balData);
-                    if(balRes.ok && balData?.[0]?.balance != null){
-                      MY_BALANCE = balData[0].balance;
-                      updateBalanceUI();
-                      console.log(`💰 판매 대금 수령 완료: ${MY_BALANCE} HIVE`);
+                    if(balRes.ok){
+                      const balData = await balRes.json();
+                      if(balData?.[0]?.balance != null){
+                        MY_BALANCE = balData[0].balance;
+                        updateBalanceUI();
+                      }
                     }
-                  } catch(e){ console.warn('잔액 갱신 실패:', e); }
+                  } catch(e){}
                 };
                 setTimeout(fetchSellerBal, 500);
                 setTimeout(fetchSellerBal, 2500);
