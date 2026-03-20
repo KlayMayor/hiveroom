@@ -860,6 +860,7 @@ header{
     </div>
     <div class="rp-row"><span class="rp-lbl">현재 가치</span><span class="rp-val" id="rp-value">—</span></div>
     <button class="rp-buy-btn" id="rp-buy-btn" onclick="requestBuyRoom()">구매하기</button>
+    <div id="rp-cooltime" style="display:none;text-align:center;font-size:12px;font-weight:700;color:#A87800;margin-top:6px;padding:6px 0;background:#FFF8E8;border-radius:8px;letter-spacing:.3px;">⏳ 00:00:00</div>
     <div class="rp-insufficient" id="rp-insufficient" style="display:none">잔액이 부족합니다</div>
     <div class="rp-own-badge" id="rp-own-badge" style="display:none">내 방입니다</div>
     <button class="rp-move-btn" id="rp-edit-btn" onclick="openEditRoomFromPanel()" style="display:none;margin-top:8px;">✏️ 방 수정하기</button>
@@ -3305,8 +3306,10 @@ function openRoomPanel(num){
     } else {
       // 로그인: 쿨타임 + 소유자 서버 재확인 (잔액 무관하게 항상 실행)
       buyBtn.disabled = true;
-      buyBtn.textContent = '확인 중...';
+      buyBtn.textContent = '구매하기';
       insuf.style.display = 'none';
+      const _ct = document.getElementById('rp-cooltime');
+      if(_ct){ _ct.style.display = 'block'; _ct.textContent = '⏳ 확인 중...'; }
       checkBuyCooltime(num, buyBtn, 0, myBal, price);
     }
   }
@@ -3317,6 +3320,8 @@ function closeRoomPanel(){
   document.getElementById('rp-edit-btn').style.display = 'none';
   document.getElementById('rp-invest-btn').style.display = 'none';
   document.getElementById('rp-attend-btn').style.display = 'none';
+  const ctDiv = document.getElementById('rp-cooltime');
+  if(ctDiv) ctDiv.style.display = 'none';
   PANEL_ROOM_NUM = null;
 }
 
@@ -3358,17 +3363,30 @@ const COOLTIME_BUY_MS  =  1 * 60 * 60 * 1000; // 구매 후 1시간
 // 쿨타임은 서버 DB(hive_transactions) 기반으로만 판단 — localStorage 불사용
 
 function startCooltimeCountdown(buyBtn, endsAt, roomNum){
-  // 남은 시간 카운트다운 (UI 전용)
-  // roomNum: 이 카운트다운이 시작된 방 번호 — 패널이 다른 방으로 바뀌면 중지
+  // 버튼은 항상 비활성화 + 텍스트 '구매하기' 유지
+  // 카운트다운은 rp-cooltime div에 표시
   buyBtn.disabled = true;
+  buyBtn.textContent = '구매하기';
+  const ctDiv = document.getElementById('rp-cooltime');
+  if(ctDiv) ctDiv.style.display = 'block';
   const tick = () => {
-    if(PANEL_ROOM_NUM !== roomNum) return; // 다른 방으로 바뀌면 중지
+    if(PANEL_ROOM_NUM !== roomNum){
+      // 패널이 닫히면 쿨타임 div도 숨김
+      if(ctDiv) ctDiv.style.display = 'none';
+      return;
+    }
     const r = endsAt - Date.now();
-    if(r <= 0){ buyBtn.textContent = '구매하기'; buyBtn.disabled = false; return; }
+    if(r <= 0){
+      // 쿨타임 만료 → _activateBuyBtn으로 잔액 체크 후 활성화
+      if(ctDiv) ctDiv.style.display = 'none';
+      const price = ROOM_BALANCES[roomNum] ?? 0;
+      _activateBuyBtn(buyBtn, roomNum, MY_BALANCE, price);
+      return;
+    }
     const h = Math.floor(r/3600000).toString().padStart(2,'0');
     const m = Math.floor((r%3600000)/60000).toString().padStart(2,'0');
     const s = Math.floor((r%60000)/1000).toString().padStart(2,'0');
-    buyBtn.textContent = `⏳ 쿨타임 ${h}:${m}:${s}`;
+    if(ctDiv) ctDiv.textContent = `⏳ 쿨타임 ${h}:${m}:${s}`;
     setTimeout(tick, 1000);
   };
   tick();
@@ -3442,8 +3460,10 @@ async function checkBuyCooltime(roomNum, buyBtn, retryCount = 0, myBal = null, p
 }
 
 function _activateBuyBtn(buyBtn, roomNum, myBal, price){
-  // 쿨타임 없음 → 잔액 체크 후 버튼 활성화/비활성화
+  // 쿨타임 없음 → 쿨타임 div 숨기고 잔액 체크 후 버튼 활성화/비활성화
   if(PANEL_ROOM_NUM !== roomNum) return;
+  const ctDiv = document.getElementById('rp-cooltime');
+  if(ctDiv) ctDiv.style.display = 'none';
   const insuf = document.getElementById('rp-insufficient');
   if(myBal !== null && price !== null && myBal < price){
     buyBtn.disabled = true;
