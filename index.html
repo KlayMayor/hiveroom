@@ -1456,9 +1456,12 @@ function openConsole() {
 }
 function closeConsole() {
   document.getElementById('console').classList.remove('open');
-  document.getElementById('make-btn').classList.remove('active');
-  document.getElementById('make-btn').textContent = '🏠 방 만들기';
-  document.getElementById('make-btn').onclick = openConsole;
+  const makeBtn = document.getElementById('make-btn');
+  if(makeBtn){
+    makeBtn.classList.remove('active');
+    makeBtn.textContent = '🏠 방 만들기';
+    makeBtn.onclick = openConsole;
+  }
 }
 
 // ══════════════════════════════════════
@@ -2903,12 +2906,11 @@ function subscribeRooms(){
         if(pgEvent === 'INSERT' || pgEvent === 'UPDATE'){
           if(row && row.occupied === 'Y'){
             console.log(`📦 Realtime: ${pgEvent} room #${row.room_number}`);
-            await loadOneRoom(row);
 
-            // ── 소유권 변경 감지 ──
+            // ── 소유권 변경 감지: loadOneRoom 보다 먼저 처리 (캐시 덮어쓰기 전) ──
             if(pgEvent === 'UPDATE' && CURRENT_USER){
               const newOwner = (row.email || '').toLowerCase().trim();
-              // oldRow 없는 경우 클라이언트 캐시(ROOMS)에서 이전 소유자 확인
+              // oldRow(REPLICA IDENTITY FULL) 우선, 없으면 아직 덮어쓰기 전 캐시 사용
               const prevOwner = (
                 oldRow?.email ||
                 ROOMS[row.room_number]?.ownerEmail ||
@@ -2919,21 +2921,27 @@ function subscribeRooms(){
 
               // 내가 이전 소유자였고 지금은 아닌 경우 → 판매 대금 수령
               if(prevOwner === me && newOwner !== me){
+                // JWT 토큰으로 내 잔액 조회 (RLS 우회)
                 const fetchSellerBal = async () => {
-                  const balRes = await fetch(
-                    `${SUPA_URL}/rest/v1/user_balances?user_email=eq.${encodeURIComponent(CURRENT_USER.email)}&select=balance`,
-                    { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }
-                  );
-                  if(balRes.ok){
+                  try {
+                    const tok = await getValidToken().catch(() => null) || SUPA_KEY;
+                    console.log(`💰 판매자 잔액 조회 시작 (token: ${tok === SUPA_KEY ? 'anon' : 'jwt'})`);
+                    const balRes = await fetch(
+                      `${SUPA_URL}/rest/v1/user_balances?user_email=eq.${encodeURIComponent(CURRENT_USER.email)}&select=balance`,
+                      { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${tok}` } }
+                    );
                     const balData = await balRes.json();
-                    if(balData?.[0]?.balance != null){
+                    console.log(`💰 잔액 조회 결과: status=${balRes.status}`, balData);
+                    if(balRes.ok && balData?.[0]?.balance != null){
                       MY_BALANCE = balData[0].balance;
                       updateBalanceUI();
+                      console.log(`💰 판매 대금 수령 완료: ${MY_BALANCE} HIVE`);
                     }
-                  }
+                  } catch(e){ console.warn('잔액 갱신 실패:', e); }
                 };
                 setTimeout(fetchSellerBal, 500);
-                setTimeout(fetchSellerBal, 2000);
+                setTimeout(fetchSellerBal, 2500);
+
                 // 패널이 열려 있으면 강제 닫기 + 알림
                 if(PANEL_ROOM_NUM === row.room_number){
                   alert(`⚠️ ${row.room_number}번 방이 다른 유저에게 구매되었습니다.`);
@@ -2947,11 +2955,15 @@ function subscribeRooms(){
                 const buyBtn = document.getElementById('rp-buy-btn');
                 if(buyBtn && buyBtn.style.display !== 'none'){
                   buyBtn.disabled = true;
-                  buyBtn.textContent = '확인 중...';
+                  const ctDiv = document.getElementById('rp-cooltime');
+                  if(ctDiv){ ctDiv.style.display='block'; ctDiv.textContent='⏳ 확인 중...'; }
                   checkBuyCooltime(row.room_number, buyBtn);
                 }
               }
             }
+
+            // loadOneRoom은 소유권 체크 후 실행 (캐시 순서 보장)
+            await loadOneRoom(row);
           }
         }
 
@@ -3394,11 +3406,13 @@ function startCooltimeCountdown(buyBtn, endsAt, roomNum){
 
 async function checkBuyCooltime(roomNum, buyBtn, retryCount = 0, myBal = null, price = null){
   // 항상 서버 DB(hive_transactions) + rooms 소유자 동시 조회
+  // hive_transactions는 RLS가 있으므로 유저 JWT 사용
   try {
+    const token = await getValidToken().catch(() => SUPA_KEY) || SUPA_KEY;
     const [txRes, roomRes] = await Promise.all([
       fetch(
         `${SUPA_URL}/rest/v1/hive_transactions?room_number=eq.${roomNum}&tx_type=in.(room_create,tile_buy)&order=created_at.desc&limit=1&select=tx_type,created_at`,
-        { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }
+        { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${token}` } }
       ),
       fetch(
         `${SUPA_URL}/rest/v1/rooms?room_number=eq.${roomNum}&select=email`,
