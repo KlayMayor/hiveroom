@@ -541,13 +541,15 @@ header{
 #mobile-pc-banner{
   display:none;
   background:linear-gradient(135deg,#1A1A2E,#16213E);
-  color:#fff;font-size:11px;font-weight:700;
-  text-align:center;padding:5px 12px;
-  letter-spacing:.5px;flex-shrink:0;
-  font-family:'Noto Sans KR',sans-serif;
+  color:#fff;text-align:center;padding:14px 12px;
+  flex-shrink:0;font-family:'Noto Sans KR',sans-serif;
 }
-#mobile-pc-banner span{
-  opacity:.7;font-weight:400;margin-left:6px;font-size:10px;
+#mobile-pc-banner .mb-line1{
+  font-size:18px;font-weight:900;letter-spacing:1px;
+  font-family:'Jua',sans-serif;
+}
+#mobile-pc-banner .mb-line2{
+  font-size:13px;font-weight:400;opacity:.75;margin-top:4px;
 }
 
 @media (max-width: 768px){
@@ -590,8 +592,8 @@ header{
 
 <!-- 모바일: PC 접속 안내 배너 -->
 <div id="mobile-pc-banner">
-  🖥️ FULL ACCESS ON PC
-  <span>— 모바일에서는 지도 탐색만 가능합니다</span>
+  <div class="mb-line1">🖥️ FULL ACCESS ON PC</div>
+  <div class="mb-line2">PC에서 접속해주세요</div>
 </div>
 
 <!-- 랭킹 팝업 -->
