@@ -2892,11 +2892,11 @@ function drawFilled(cx,cy,s,num,room){
     mctx.fillStyle='#fff'; mctx.textAlign='center'; mctx.textBaseline='middle';
     mctx.fillText(num, bx, by);
   }
-  // 관심사 뱃지 (뱃지 오른쪽 하단) — unavatar.io/x/{twitterId}
+  // 관심사 뱃지 (뱃지 오른쪽 하단) — interestAvatarUrl(pbs.twimg) 우선, 없으면 unavatar
   if(room.interest){
     const iR = bRBase * 0.4025;
     const ix = bx + bR * 0.65, iy = by + bR * 0.65;
-    const iUrl = `https://unavatar.io/x/${room.interest}`;
+    const iUrl = room.interestAvatarUrl || `https://unavatar.io/x/${room.interest}`;
     const iImg = loadAvatarImg(iUrl); // AVATAR_CACHE 재사용
     mctx.beginPath(); mctx.arc(ix,iy,iR+1.5,0,Math.PI*2);
     mctx.fillStyle='white'; mctx.fill();
@@ -3480,8 +3480,8 @@ function openRoomPanel(num){
   const interestImg = document.getElementById('rp-interest-img');
   const ownerEl    = document.getElementById('rp-owner');
   if(room.twitterId){
-    // AVATAR_CACHE 활용 — 맵에서 이미 로드된 이미지 재사용
-    const _twUrl = `https://unavatar.io/x/${room.twitterId}`;
+    // avatarUrl(pbs.twimg.com) 우선 사용, 없으면 unavatar fallback
+    const _twUrl = room.avatarUrl || `https://unavatar.io/x/${room.twitterId}`;
     const _cached = AVATAR_CACHE[bustAvatarUrl(_twUrl)];
     if(_cached && _cached.src) avatarImg.src = _cached.src;
     else { loadAvatarImg(_twUrl); avatarImg.src = bustAvatarUrl(_twUrl); }
