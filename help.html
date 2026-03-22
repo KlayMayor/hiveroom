@@ -382,13 +382,22 @@ function getLang(){
   return (navigator.language||'en').startsWith('ko') ? 'ko' : 'en';
 }
 
+function getDisplayVal(el){
+  // 태그 타입에 따라 적절한 display 값 반환
+  const tag = el.tagName.toLowerCase();
+  if(['span','b','strong','em','a','code'].includes(tag)) return 'inline';
+  if(['td','th'].includes(tag)) return 'table-cell';
+  if(['tr'].includes(tag)) return 'table-row';
+  return 'block'; // div, p, section-title 등
+}
+
 function applyLang(lang){
   document.documentElement.lang = lang;
   document.querySelectorAll('[data-en]').forEach(el => {
-    el.style.display = lang === 'en' ? '' : 'none';
+    el.style.display = lang === 'en' ? getDisplayVal(el) : 'none';
   });
   document.querySelectorAll('[data-ko]').forEach(el => {
-    el.style.display = lang === 'ko' ? '' : 'none';
+    el.style.display = lang === 'ko' ? getDisplayVal(el) : 'none';
   });
 }
 
