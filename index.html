@@ -4616,11 +4616,11 @@ async function loadRankingData(){
     const MEDALS = ['🥇','🥈','🥉'];
     const FALLBACK_AVATAR = `https://ui-avatars.com/api/?name=?&background=eee&color=999&size=64`;
 
-    // rooms 전체 + room_balances 병렬 조회
+    // avatar_url, interest_avatar_url 포함 조회
     const [roomsRes, rbRes, commRes] = await Promise.all([
-      fetch(`${SUPA_URL}/rest/v1/rooms?select=twitter_id,room_number,interest&occupied=eq.Y&reserved=eq.false`, {headers:h}),
+      fetch(`${SUPA_URL}/rest/v1/rooms?select=twitter_id,room_number,interest,avatar_url,interest_avatar_url&occupied=eq.Y&reserved=eq.false`, {headers:h}),
       fetch(`${SUPA_URL}/rest/v1/room_balances?select=room_number,balance`, {headers:h}),
-      fetch(`${SUPA_URL}/rest/v1/rooms?select=interest&occupied=eq.Y&reserved=eq.false&interest=neq.`, {headers:h}),
+      fetch(`${SUPA_URL}/rest/v1/rooms?select=interest,interest_avatar_url&occupied=eq.Y&reserved=eq.false&interest=neq.`, {headers:h}),
     ]);
 
     const roomData = roomsRes.ok ? await roomsRes.json() : [];
@@ -4631,24 +4631,30 @@ async function loadRankingData(){
     const rbMap = {};
     (rbData || []).forEach(r => { rbMap[r.room_number] = r.balance || 0; });
 
-    // 트위터ID(소문자) 기준으로 방 보유 수 + 부동산 가치 집계
-    // 대소문자 무시: twitter_id.toLowerCase() 를 키로 사용
-    // 원본 표시용 ID는 처음 나온 값 유지
-    const twCount = {}, twEstate = {}, twOriginal = {};
+    // 트위터ID(소문자) 기준 집계
+    // twAvatarUrl: twitter_id별 avatar_url(pbs.twimg) 저장
+    const twCount = {}, twEstate = {}, twOriginal = {}, twAvatarUrl = {};
     (roomData || []).forEach(r => {
       if(!r.twitter_id) return;
       const key = r.twitter_id.toLowerCase();
-      if(!twOriginal[key]) twOriginal[key] = r.twitter_id; // 원본 대소문자 보존
+      if(!twOriginal[key]){
+        twOriginal[key] = r.twitter_id;
+        // avatar_url이 있으면 저장 (pbs.twimg 우선)
+        if(r.avatar_url) twAvatarUrl[key] = r.avatar_url;
+      }
       twCount[key]  = (twCount[key]  || 0) + 1;
       twEstate[key] = (twEstate[key] || 0) + (rbMap[r.room_number] || 100);
     });
 
-    // 커뮤니티: interest 대소문자 무시
-    const commCount = {}, commOriginal = {};
+    // 커뮤니티: interest 대소문자 무시 + interest_avatar_url 수집
+    const commCount = {}, commOriginal = {}, commAvatarUrl = {};
     (commData || []).forEach(r => {
       if(!r.interest) return;
       const key = r.interest.toLowerCase();
-      if(!commOriginal[key]) commOriginal[key] = r.interest;
+      if(!commOriginal[key]){
+        commOriginal[key] = r.interest;
+        if(r.interest_avatar_url) commAvatarUrl[key] = r.interest_avatar_url;
+      }
       commCount[key] = (commCount[key] || 0) + 1;
     });
 
@@ -4657,10 +4663,18 @@ async function loadRankingData(){
     const topEstate = Object.entries(twEstate).sort((a,b)=>b[1]-a[1]).slice(0,3);
     const topComm   = Object.entries(commCount).sort((a,b)=>b[1]-a[1]).slice(0,3);
 
+    // avatar URL 결정: DB의 pbs.twimg 우선, 없으면 unavatar fallback
+    function getAvatar(twKey){
+      return twAvatarUrl[twKey] || `https://unavatar.io/x/${twOriginal[twKey] || twKey}`;
+    }
+    function getCommAvatar(key){
+      return commAvatarUrl[key] || `https://unavatar.io/x/${commOriginal[key] || key}`;
+    }
+
     // 트위터ID 기준 랭킹 아이템 렌더
     function renderTwItem(twKey, val, i, valStr){
       const tw = twOriginal[twKey] || twKey;
-      const av = bustAvatarUrl(`https://unavatar.io/x/${tw}`);
+      const av = getAvatar(twKey);
       return `
         <div class="ranking-item">
           <span class="ranking-medal">${MEDALS[i]||''}</span>
@@ -4678,11 +4692,11 @@ async function loadRankingData(){
       return `<div class="ranking-section"><div class="ranking-section-title">${title}</div>${rows}</div>`;
     }
 
-    // 커뮤니티 랭킹 (interest = 트위터ID, 대소문자 무시)
+    // 커뮤니티 랭킹
     const maxCommCnt = topComm.length > 0 ? topComm[0][1] : 1;
     const commRows = topComm.map(([key, cnt], i) => {
       const tw = commOriginal[key] || key;
-      const av = bustAvatarUrl(`https://unavatar.io/x/${tw}`);
+      const av = getCommAvatar(key);
       const barPct = Math.round((cnt / maxCommCnt) * 100);
       const barColors = ['#F2B830','#A0C8F0','#A8D8A8'];
       const barHtml = `<div style="width:100%;background:#F0EDE8;border-radius:4px;height:7px;margin-top:5px;overflow:hidden;">
