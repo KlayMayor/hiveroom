@@ -2958,7 +2958,9 @@ async function loadRooms(){
     if(!data || data.length === 0) return;
 
     await Promise.all(data.map(row => new Promise(resolve => {
-      const imgUrl = `${SUPA_URL}/storage/v1/object/public/room-pic/${row.room_number}/room.jpg?t=${Date.now()}`;
+      // updated_at 기반 캐시 버스팅 → 방 수정 시에만 캐시 무효화, 미변경 방은 브라우저 캐시 재사용
+      const _updTs = row.updated_at ? Math.floor(new Date(row.updated_at).getTime()/1000) : 0;
+      const imgUrl = `${SUPA_URL}/storage/v1/object/public/room-pic/${row.room_number}/room.jpg?t=${_updTs}`;
       const img = new Image();
       img.crossOrigin = 'anonymous';
       img.src = imgUrl;
@@ -3052,20 +3054,22 @@ async function loadOneRoom(row){
     }
   } catch(e){}
   return new Promise(resolve => {
-    const imgUrl = `${SUPA_URL}/storage/v1/object/public/room-pic/${row.room_number}/room.jpg?t=${Date.now()}`;
+    const _updTs2 = row.updated_at ? Math.floor(new Date(row.updated_at).getTime()/1000) : Date.now();
+    const imgUrl = `${SUPA_URL}/storage/v1/object/public/room-pic/${row.room_number}/room.jpg?t=${_updTs2}`;
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
       ROOMS[row.room_number] = {
         img,
-        twitterId:    row.twitter_id,
-        avatarUrl:    row.avatar_url  || '',
-        interest:     row.interest    || '',
-        reserved:     row.reserved    || false,
-        incomplete:   !row.design_json && !row.reserved,
-        tileValue:    ROOM_BALANCES[row.room_number] || 0,
-        ownerEmail:   row.email       || '',
-        creatorEmail: row.email       || ''
+        twitterId:         row.twitter_id,
+        avatarUrl:         row.avatar_url          || '',
+        interest:          row.interest            || '',
+        interestAvatarUrl: row.interest_avatar_url || '',
+        reserved:          row.reserved    || false,
+        incomplete:        !row.design_json && !row.reserved,
+        tileValue:         ROOM_BALANCES[row.room_number] || 0,
+        ownerEmail:        row.email       || '',
+        creatorEmail:      row.email       || ''
       };
       if(row.avatar_url) loadAvatarImg(row.avatar_url);
       drawMap();
