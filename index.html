@@ -1,6 +1,13 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-M9LCLHHN');</script>
+<!-- End Google Tag Manager -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HiveRoom</title>
@@ -44,6 +51,14 @@ header{
 }
 .h-make-btn:hover{transform:translateY(-1px);box-shadow:0 5px 18px rgba(224,120,32,.4);}
 .h-make-btn.active{background:linear-gradient(135deg,#888,#555);}
+/* ── 언어 선택 버튼 ── */
+.h-lang-btn{
+  font-size:11px;font-weight:700;padding:3px 10px;border-radius:14px;cursor:pointer;
+  border:1px solid var(--border);background:#f5f5f5;color:#888;
+  font-family:'Noto Sans KR',sans-serif;transition:all .15s;white-space:nowrap;
+  display:flex;align-items:center;gap:4px;
+}
+.h-lang-btn:hover{border-color:var(--honey);color:var(--hdk);background:var(--hlt);}
 /* ── 공지사항 ── */
 #h-notice{
   flex:1;min-width:0;overflow:hidden;
@@ -589,18 +604,22 @@ header{
 </style>
 </head>
 <body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-M9LCLHHN"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
 
 <!-- 모바일: PC 접속 안내 배너 -->
 <div id="mobile-pc-banner">
-  <div class="mb-line1">🖥️ FULL ACCESS ON PC</div>
-  <div class="mb-line2">PC에서 접속해주세요</div>
+  <div class="mb-line1"><span data-i18n="mobile_line1">🖥️ FULL ACCESS ON PC</span></div>
+  <div class="mb-line2"><span data-i18n="mobile_line2">Please access from a PC</span></div>
 </div>
 
 <!-- 랭킹 팝업 -->
 <div id="ranking-ov">
   <div class="ranking-box">
     <div class="ranking-head">
-      <span class="ranking-head-title">🏆 HiveRoom 랭킹</span>
+      <span class="ranking-head-title"><span data-i18n="ranking_title">🏆 HiveRoom Ranking</span></span>
       <button class="ranking-close" onclick="closeRanking()">✕</button>
     </div>
     <div class="ranking-body" id="ranking-body">
@@ -613,35 +632,37 @@ header{
 <header>
   <div class="logo">🍯 HiveRoom</div>
   <div class="h-sep"></div>
-  <button class="h-badge" onclick="openHelp()" style="cursor:pointer;border:1px solid var(--honey);background:var(--hlt);color:var(--hdk);font-family:'Noto Sans KR',sans-serif;">❓ 도움말</button>
+  <button class="h-lang-btn" id="lang-btn" onclick="toggleLang()">🌐 KO</button>
   <div class="h-sep"></div>
-  <button class="h-badge" onclick="openRanking()" style="cursor:pointer;border:1px solid #B8A0E8;background:#F5F0FF;color:#6040B0;font-family:'Noto Sans KR',sans-serif;">🏆 랭킹</button>
+  <button class="h-badge" onclick="openHelp()" style="cursor:pointer;border:1px solid var(--honey);background:var(--hlt);color:var(--hdk);font-family:'Noto Sans KR',sans-serif;" data-i18n="help">❓ Help</button>
+  <div class="h-sep"></div>
+  <button class="h-badge" onclick="openRanking()" style="cursor:pointer;border:1px solid #B8A0E8;background:#F5F0FF;color:#6040B0;font-family:'Noto Sans KR',sans-serif;" data-i18n="ranking">🏆 Ranking</button>
   <div class="h-sep"></div>
   <div class="h-filter-wrap">
-    <button class="h-toggle-btn" id="room-num-btn" onclick="toggleMapFilter()" style="border-color:#5BBCCC;background:#EBF8F8;color:#1A7A8A;">
-      🔎 타일 검색
+    <button class="h-toggle-btn" id="room-num-btn" onclick="toggleMapFilter()" style="border-color:#5BBCCC;background:#EBF8F8;color:#1A7A8A;" data-i18n="tile_search">
+      🔎 Tile Search
     </button>
     <!-- 맵 필터 드롭다운 -->
     <div id="map-filter-dropdown">
     <div class="mf-row" onclick="mfToggle('roomNum')">
       <input type="checkbox" id="mf-roomNum" onchange="mfToggle('roomNum')" onclick="event.stopPropagation()">
-      <span class="mf-label">타일 번호 보기</span>
+      <span class="mf-label"><span data-i18n="show_tile_num">Show Tile No.</span></span>
     </div>
     <div class="mf-row" onclick="mfToggle('attend')">
       <input type="checkbox" id="mf-attend" onchange="mfToggle('attend')" onclick="event.stopPropagation()">
       <span class="mf-dot yellow"></span>
-      <span class="mf-label">출석체크</span>
+      <span class="mf-label"><span data-i18n="checkin">Check-in</span></span>
     </div>
     <div class="mf-row" onclick="mfToggle('myroom')">
       <input type="checkbox" id="mf-myroom" onchange="mfToggle('myroom')" onclick="event.stopPropagation()">
       <span class="mf-dot blue"></span>
-      <span class="mf-label">My Room</span>
+      <span class="mf-label"><span data-i18n="my_room">My Room</span></span>
     </div>
     <div class="mf-row" style="align-items:flex-start;flex-direction:column;gap:6px;">
       <div style="display:flex;align-items:center;gap:10px;width:100%;" onclick="mfToggle('userSearch')">
         <input type="checkbox" id="mf-userSearch" onchange="mfToggle('userSearch')" onclick="event.stopPropagation()">
         <span class="mf-dot green"></span>
-        <span class="mf-label">유저 검색</span>
+        <span class="mf-label"><span data-i18n="user_search">User Search</span></span>
       </div>
       <div style="display:flex;align-items:center;gap:6px;padding-left:26px;width:100%;">
         <img class="mf-avatar" id="mf-user-avatar" src="" style="display:none;">
@@ -652,7 +673,7 @@ header{
       <div style="display:flex;align-items:center;gap:10px;width:100%;" onclick="mfToggle('commSearch')">
         <input type="checkbox" id="mf-commSearch" onchange="mfToggle('commSearch')" onclick="event.stopPropagation()">
         <span class="mf-dot red"></span>
-        <span class="mf-label">커뮤니티 검색</span>
+        <span class="mf-label"><span data-i18n="comm_search">Community Search</span></span>
       </div>
       <div style="display:flex;align-items:center;gap:6px;padding-left:26px;width:100%;">
         <img class="mf-avatar" id="mf-comm-avatar" src="" style="display:none;">
@@ -664,7 +685,7 @@ header{
   <!-- 공지사항 -->
   <div id="h-notice">
     <div class="h-notice-inner">
-      <span class="h-notice-badge">📢 공지</span>
+      <span class="h-notice-badge"><span data-i18n="notice_badge">📢 Notice</span></span>
       <div class="h-notice-marquee">
         <span class="h-notice-text" id="h-notice-text">불러오는 중...</span>
       </div>
@@ -672,20 +693,20 @@ header{
   </div>
   <!-- 비로그인 -->
   <button class="h-login-btn" id="login-btn" onclick="signInGoogle()">
-    <img src="https://www.google.com/favicon.ico" alt="G"> LOG IN
+    <img src="https://www.google.com/favicon.ico" alt="G"> <span data-i18n="login">LOG IN</span>
   </button>
   <!-- 로그인 후: 타이머 + HIVE잔액 + 프로필 -->
   <div class="h-timers" id="h-timers">
     <!-- Daily Wage 카운트다운 -->
     <div class="h-timer-block" id="daily-wage-block" title="매일 UTC 00:00에 10 HIVE가 자동 지급됩니다">
-      <span class="t-label">Daily Wage</span>
+      <span class="t-label"><span data-i18n="daily_wage">Daily Wage</span></span>
       <span class="h-timer-val" id="timer-daily">--:--:--</span>
       <div class="h-timer-info">!</div>
       <div class="h-timer-tooltip">매일 UTC 00:00에 10 HIVE가 자동으로 지급됩니다! 🍯</div>
     </div>
     <!-- Monthly Tax 카운트다운 -->
     <div class="h-timer-block">
-      <span class="t-label">Monthly Tax</span>
+      <span class="t-label"><span data-i18n="monthly_tax">Monthly Tax</span></span>
       <span class="h-timer-val" id="timer-tax">--:--:--:--</span>
       <div class="h-timer-info">!</div>
       <div class="h-timer-tooltip">소유한 방의 가치가 ZONE에 따라<br>매달 3, 2 or 1 HIVE 씩 하락합니다.</div>
@@ -705,11 +726,11 @@ header{
         <div class="h-dd-name" id="dd-name"></div>
         <div class="h-dd-email" id="dd-email"></div>
       </div>
-      <button class="h-dd-btn" onclick="openEditRoom()">✏️ 방 수정하기</button>
+      <button class="h-dd-btn" onclick="openEditRoom()">✏️ <span data-i18n="edit_room">Edit Room</span></button>
       <button class="h-dd-btn" onclick="openEstate()">🏘️ 부동산 관리하기</button>
       <div class="h-dd-sep"></div>
-      <button class="h-dd-btn" onclick="openHelp()">❓ 도움말</button>
-      <button class="h-dd-btn logout" onclick="signOut()">🚪 로그아웃</button>
+      <button class="h-dd-btn" onclick="openHelp()">❓ <span data-i18n="help">Help</span></button>
+      <button class="h-dd-btn logout" onclick="signOut()">🚪 <span data-i18n="logout">Logout</span></button>
     </div>
   </div>
 </header>
@@ -840,10 +861,10 @@ header{
     <!-- 헤더바 -->
     <div class="con-head">
       <div class="con-title">
-        🏠 방 만들기
+        🏠 <span data-i18n="make_room">Make Room</span>
       </div>
       <div class="con-right-acts">
-        <button class="con-finish-btn" id="finish-btn" onclick="showDone()">완성하기 ✦</button>
+        <button class="con-finish-btn" id="finish-btn" onclick="showDone()"><span data-i18n="finish">Finish</span> ✦</button>
         <button class="con-close-btn" onclick="closeConsole()">✕</button>
       </div>
     </div>
@@ -969,7 +990,7 @@ header{
       잔액: <b id="ir-bal">—</b> HIVE → <b id="ir-bal-after">—</b> HIVE
     </div>
     <div class="invest-btns">
-      <button class="invest-confirm" id="invest-confirm-btn" onclick="confirmInvest()">투자하기</button>
+      <button class="invest-confirm" id="invest-confirm-btn" onclick="confirmInvest()"><span data-i18n="invest_btn">Invest</span></button>
       <button class="invest-cancel" onclick="closeInvest()">취소</button>
     </div>
   </div>
@@ -997,15 +1018,15 @@ header{
         <span id="rp-owner" style="font-size:10px;color:var(--muted);"></span>
       </div>
     </div>
-    <div class="rp-row"><span class="rp-lbl">현재 가치</span><span class="rp-val" id="rp-value">—</span></div>
-    <button class="rp-buy-btn" id="rp-buy-btn" onclick="requestBuyRoom()">구매하기</button>
+    <div class="rp-row"><span class="rp-lbl"><span data-i18n="current_value">Current Value</span></span><span class="rp-val" id="rp-value">—</span></div>
+    <button class="rp-buy-btn" id="rp-buy-btn" onclick="requestBuyRoom()"><span data-i18n="buy">Buy</span></button>
     <div id="rp-cooltime" style="display:none;text-align:center;font-size:12px;font-weight:700;color:#A87800;margin-top:6px;padding:6px 0;background:#FFF8E8;border-radius:8px;letter-spacing:.3px;">⏳ 00:00:00</div>
-    <div class="rp-insufficient" id="rp-insufficient" style="display:none">잔액이 부족합니다</div>
-    <div class="rp-own-badge" id="rp-own-badge" style="display:none">내 방입니다</div>
-    <button class="rp-move-btn" id="rp-edit-btn" onclick="openEditRoomFromPanel()" style="display:none;margin-top:8px;">✏️ 방 수정하기</button>
-    <button class="rp-move-btn" id="rp-invest-btn" onclick="openInvestFromPanel()" style="display:none;margin-top:6px;background:#FFF0E8;border-color:#E07820;color:#C05010;">📈 방 가치 올리기</button>
-    <button class="rp-move-btn" id="rp-move-btn" onclick="openMoveOv()" style="display:none">🚚 이사하기</button>
-    <button class="rp-buy-btn" id="rp-attend-btn" onclick="openAttendanceQuiz()" style="display:none;background:linear-gradient(135deg,#4A8A50,#2E6B35);margin-top:8px;">📅 출석체크 (+5 HIVE)</button>
+    <div class="rp-insufficient" id="rp-insufficient" style="display:none"><span data-i18n="insufficient">Insufficient balance</span></div>
+    <div class="rp-own-badge" id="rp-own-badge" style="display:none"><span data-i18n="my_room_badge">My Room</span></div>
+    <button class="rp-move-btn" id="rp-edit-btn" onclick="openEditRoomFromPanel()" style="display:none;margin-top:8px;">✏️ <span data-i18n="edit_room">Edit Room</span></button>
+    <button class="rp-move-btn" id="rp-invest-btn" onclick="openInvestFromPanel()" style="display:none;margin-top:6px;background:#FFF0E8;border-color:#E07820;color:#C05010;">📈 <span data-i18n="invest">Invest</span></button>
+    <button class="rp-move-btn" id="rp-move-btn" onclick="openMoveOv()" style="display:none">🚚 <span data-i18n="move">Move</span></button>
+    <button class="rp-buy-btn" id="rp-attend-btn" onclick="openAttendanceQuiz()" style="display:none;background:linear-gradient(135deg,#4A8A50,#2E6B35);margin-top:8px;">📅 <span data-i18n="checkin_btn">Check-in (+5 HIVE)</span></button>
   </div>
 </div>
 
@@ -1024,7 +1045,7 @@ header{
     <div style="margin-top:6px;padding:10px 12px;background:#FFF8E8;border-radius:10px;font-size:11px;color:#A87800;line-height:1.6;">
       💡 이 타일을 구매하면 나만의 방을 꾸밀 수 있어요!<br>구매 후 방 꾸미기 화면이 바로 열립니다.
     </div>
-    <button class="rp-buy-btn" id="ep-buy-btn" style="margin-top:16px;">방 만들기</button>
+    <button class="rp-buy-btn" id="ep-buy-btn" style="margin-top:16px;"><span data-i18n="create_room">Create Room</span></button>
     <div class="rp-insufficient" id="ep-insufficient" style="display:none;">잔액이 부족합니다</div>
     <div id="ep-login-msg" style="display:none;text-align:center;font-size:12px;color:var(--muted);margin-top:10px;">로그인이 필요합니다</div>
   </div>
@@ -1447,7 +1468,7 @@ async function startEditRoom(room){
 
   // 4. 콘솔 열기
   document.getElementById('console').classList.add('open');
-  document.querySelector('.con-title').textContent = `✏️ ${room.room_number}번 방 수정`;
+  document.querySelector('.con-title').textContent = `✏️ ${room.room_number} ` + (LANG==='ko'?'번 방 수정':'Room Edit');
 
   // 5. SEL 상태가 설정된 상태에서 buildGrids (sel 클래스 포함)
   buildGrids();
@@ -1503,7 +1524,7 @@ function resetConsole(){
   CTRL_SEL={cat:null,id:null};
   hideCtrl();
   buildGrids(); renderRoom(); updateProg();
-  document.querySelector('.con-title').textContent = '🏠 방 만들기';
+  document.querySelector('.con-title').textContent = '🏠 ' + t('make_room');
 }
 
 // ══════════════════════════════════════
@@ -2412,7 +2433,7 @@ async function registerRoom(){
   document.getElementById('post-x-wrap').style.display = 'block';
   rb.textContent='🗺 맵에서 확인하기'; rb.disabled=false; rb.onclick=()=>goToMap(targetNum);
   // 완료 토스트
-  showToast(isEdit ? '✅ 방 수정이 완료됐어요! 🏠' : '✅ 방 만들기가 완료됐어요! 🏠');
+  showToast(isEdit ? t('toast_edit_done') : t('toast_create_done'));
 }
 async function goToMap(roomNum){
   const twitterId = document.getElementById('tw-id').value.replace('@','').trim();
@@ -3390,7 +3411,7 @@ function openRoomPanel(num){
   const tilePrice = ROOM_BALANCES[num] ?? room.tileValue ?? 0;
 
   // reserved: 거래불가 / 일반: HIVE 가격
-  document.getElementById('rp-value').textContent = room.reserved ? '거래불가' : `${tilePrice.toLocaleString()} HIVE`;
+  document.getElementById('rp-value').textContent = room.reserved ? t('reserved_label') : `${tilePrice.toLocaleString()} HIVE`;
 
   // 소유자 아바타 + 관심사 뱃지
   const avatarImg  = document.getElementById('rp-avatar-img');
@@ -3452,14 +3473,14 @@ function openRoomPanel(num){
       // 비로그인
       buyBtn.disabled = true;
       insuf.style.display = 'block';
-      insuf.textContent = '로그인이 필요합니다';
+      insuf.textContent = t('ep_login');
     } else {
       // 로그인: 쿨타임 + 소유자 서버 재확인 (잔액 무관하게 항상 실행)
       buyBtn.disabled = true;
       buyBtn.textContent = '구매하기';
       insuf.style.display = 'none';
       const _ct = document.getElementById('rp-cooltime');
-      if(_ct){ _ct.style.display = 'block'; _ct.textContent = '⏳ 확인 중...'; }
+      if(_ct){ _ct.style.display = 'block'; _ct.textContent = t('cooltime_checking'); }
       checkBuyCooltime(num, buyBtn, 0, myBal, price);
     }
   }
@@ -3536,7 +3557,7 @@ function startCooltimeCountdown(buyBtn, endsAt, roomNum){
     const h = Math.floor(r/3600000).toString().padStart(2,'0');
     const m = Math.floor((r%3600000)/60000).toString().padStart(2,'0');
     const s = Math.floor((r%60000)/1000).toString().padStart(2,'0');
-    if(ctDiv) ctDiv.textContent = `⏳ 쿨타임 ${h}:${m}:${s}`;
+    if(ctDiv) ctDiv.textContent = t('cooltime_prefix') + `${h}:${m}:${s}`;
     setTimeout(tick, 1000);
   };
   tick();
@@ -3620,7 +3641,7 @@ function _activateBuyBtn(buyBtn, roomNum, myBal, price){
   if(myBal !== null && price !== null && myBal < price){
     buyBtn.disabled = true;
     buyBtn.textContent = '구매하기';
-    if(insuf){ insuf.style.display = 'block'; insuf.textContent = '잔액이 부족합니다'; }
+    if(insuf){ insuf.style.display = 'block'; insuf.textContent = t('insufficient'); }
   } else {
     buyBtn.disabled = false;
     buyBtn.textContent = '구매하기';
@@ -3775,7 +3796,7 @@ async function confirmBuyRoom(){
   ov.dataset.boughtNum = _boughtNum;
   ov.classList.add('show');
   btn.disabled = false; btn.textContent = '구매하기';
-  showToast('✅ 구매가 완료됐어요! 🏠');
+  showToast(t('toast_buy_done'));
 }
 function closeBuySuccess(){
   const ov = document.getElementById('buy-success-ov');
@@ -4297,6 +4318,208 @@ function initTips(){
 // ══════════════════════════════════════
 // 랭킹 팝업
 // ══════════════════════════════════════
+
+// ══════════════════════════════════════
+// i18n 다국어 시스템
+// ══════════════════════════════════════
+const I18N = {
+  en: {
+    // 헤더
+    help: '❓ Help',
+    ranking: '🏆 Ranking',
+    tile_search: '🔎 Tile Search',
+    login: 'LOG IN',
+    logout: 'Logout',
+    daily_wage: 'Daily Wage',
+    monthly_tax: 'Monthly Tax',
+    notice_badge: '📢 Notice',
+    // 드롭다운
+    edit_room: 'Edit Room',
+    // 타일 필터
+    show_tile_num: 'Show Tile No.',
+    checkin: 'Check-in',
+    my_room: 'My Room',
+    user_search: 'User Search',
+    comm_search: 'Community Search',
+    user_input_ph: 'Enter Twitter ID',
+    comm_input_ph: 'Enter Twitter ID',
+    // 방 패널
+    current_value: 'Current Value',
+    my_room_badge: 'My Room',
+    buy: 'Buy',
+    invest: 'Invest',
+    move: 'Move',
+    checkin_btn: 'Check-in (+5 HIVE)',
+    // 빈 타일 패널
+    create_room: 'Create Room',
+    insufficient: 'Insufficient balance',
+    // 방 만들기 콘솔
+    make_room: 'Make Room',
+    finish: 'Finish',
+    // 투자
+    invest_btn: 'Invest',
+    cancel: 'Cancel',
+    // 랭킹
+    ranking_title: '🏆 HiveRoom Ranking',
+    ranking_loading: '🍯 Loading rankings...',
+    ranking_refresh: '🔄 Refresh',
+    ranking_no_data: 'No data',
+    // 모바일 배너
+    mobile_line1: '🖥️ FULL ACCESS ON PC',
+    mobile_line2: 'Please access from a PC',
+    // 구매 확인
+    buy_confirm_title: 'Confirm Purchase',
+    buy_confirm_desc: 'This action cannot be undone.<br>Do you want to buy this room?',
+    create_confirm_title: 'Confirm Purchase',
+    create_confirm_desc: 'This action cannot be undone.<br>Do you want to purchase this tile?',
+    yes: 'Yes',
+    no: 'No',
+    // 토스트/알림
+    toast_buy_done: '✅ Purchase complete! 🏠',
+    toast_edit_done: '✅ Room updated! 🏠',
+    toast_create_done: '✅ Room created! 🏠',
+    // 쿨타임
+    cooltime_checking: '⏳ Checking...',
+    cooltime_prefix: '⏳ Cooltime ',
+    // 방 패널 reserved
+    reserved_label: 'Reserved',
+    zone_label: v => `ZONE ${v}`,
+    // 빈 타일 패널 안내
+    ep_hint: '💡 Purchase this tile to decorate your own room!<br>Room editor opens right after purchase.',
+    ep_state: 'Empty',
+    ep_login: 'Login required',
+    ep_price_lbl: 'Tile Price',
+    ep_bal_lbl: 'My Balance',
+    ep_state_lbl: 'Status',
+    // 완성하기 팝업
+    done_tw_ph: 'Your Twitter ID',
+    done_interest_ph: 'Twitter ID you support',
+    // 랭킹 섹션 타이틀
+    rank_tiles: '📍 Top 3 Tile Holders',
+    rank_estate: '📈 Top 3 Estate Value',
+    rank_comm: '🌐 Top 3 Community',
+  },
+  ko: {
+    // 헤더
+    help: '❓ 도움말',
+    ranking: '🏆 랭킹',
+    tile_search: '🔎 타일 검색',
+    login: 'LOG IN',
+    logout: '로그아웃',
+    daily_wage: 'Daily Wage',
+    monthly_tax: 'Monthly Tax',
+    notice_badge: '📢 공지',
+    // 드롭다운
+    edit_room: '방 수정하기',
+    // 타일 필터
+    show_tile_num: '타일 번호 보기',
+    checkin: '출석체크',
+    my_room: 'My Room',
+    user_search: '유저 검색',
+    comm_search: '커뮤니티 검색',
+    user_input_ph: '트위터 ID 입력',
+    comm_input_ph: '트위터 ID 입력',
+    // 방 패널
+    current_value: '현재 가치',
+    my_room_badge: '내 방입니다',
+    buy: '구매하기',
+    invest: '방 가치 올리기',
+    move: '이사하기',
+    checkin_btn: '출석체크 (+5 HIVE)',
+    // 빈 타일 패널
+    create_room: '방 만들기',
+    insufficient: '잔액이 부족합니다',
+    // 방 만들기 콘솔
+    make_room: '방 만들기',
+    finish: '완성하기',
+    // 투자
+    invest_btn: '투자하기',
+    cancel: '취소',
+    // 랭킹
+    ranking_title: '🏆 HiveRoom 랭킹',
+    ranking_loading: '🍯 랭킹 불러오는 중...',
+    ranking_refresh: '🔄 새로고침',
+    ranking_no_data: t('ranking_no_data'),
+    // 모바일 배너
+    mobile_line1: '🖥️ FULL ACCESS ON PC',
+    mobile_line2: 'PC에서 접속해주세요',
+    // 구매 확인
+    buy_confirm_title: '구매 확인',
+    buy_confirm_desc: '방 구매 후 되돌릴 수 없습니다.<br>구매 하시겠습니까?',
+    create_confirm_title: '타일 구매 확인',
+    create_confirm_desc: '타일 구매 후 되돌릴 수 없습니다.<br>구매 하시겠습니까?',
+    yes: 'Yes',
+    no: 'No',
+    // 토스트/알림
+    toast_buy_done: '✅ 구매가 완료됐어요! 🏠',
+    toast_edit_done: '✅ 방 수정이 완료됐어요! 🏠',
+    toast_create_done: '✅ 방 만들기가 완료됐어요! 🏠',
+    // 쿨타임
+    cooltime_checking: '⏳ 확인 중...',
+    cooltime_prefix: '⏳ 쿨타임 ',
+    // reserved
+    reserved_label: '거래불가',
+    zone_label: v => `ZONE ${v}`,
+    // 빈 타일 패널 안내
+    ep_hint: '💡 이 타일을 구매하면 나만의 방을 꾸밀 수 있어요!<br>구매 후 방 꾸미기 화면이 바로 열립니다.',
+    ep_state: '비어있음',
+    ep_login: '로그인이 필요합니다',
+    ep_price_lbl: '타일 가격',
+    ep_bal_lbl: '내 잔액',
+    ep_state_lbl: '상태',
+    // 완성하기 팝업
+    done_tw_ph: '내 트위터 ID',
+    done_interest_ph: '응원하는 트위터 ID',
+    // 랭킹 섹션 타이틀
+    rank_tiles: t('rank_tiles'),
+    rank_estate: t('rank_estate'),
+    rank_comm: t('rank_comm'),
+  }
+};
+
+// 현재 언어 (브라우저 언어 자동 감지, 기본 영어)
+let LANG = (() => {
+  try { const s = localStorage.getItem('hr_lang'); if(s === 'ko' || s === 'en') return s; } catch(e){}
+  return (navigator.language || navigator.userLanguage || 'en').startsWith('ko') ? 'ko' : 'en';
+})();
+
+function t(key, ...args){
+  const dict = I18N[LANG] || I18N.en;
+  const val = dict[key] ?? I18N.en[key] ?? key;
+  return typeof val === 'function' ? val(...args) : val;
+}
+
+function applyI18n(){
+  // data-i18n 속성으로 텍스트 교체
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const val = t(key);
+    if(typeof val === 'string') el.innerHTML = val;
+  });
+  // placeholder
+  const userInput = document.getElementById('mf-user-input');
+  const commInput = document.getElementById('mf-comm-input');
+  if(userInput) userInput.placeholder = t('user_input_ph');
+  if(commInput) commInput.placeholder = t('comm_input_ph');
+  // html lang
+  document.documentElement.lang = LANG;
+  // 언어 버튼 표시
+  const btn = document.getElementById('lang-btn');
+  if(btn) btn.textContent = LANG === 'ko' ? '🌐 EN' : '🌐 한';
+}
+
+function toggleLang(){
+  LANG = LANG === 'ko' ? 'en' : 'ko';
+  try { localStorage.setItem('hr_lang', LANG); } catch(e){}
+  applyI18n();
+  // 도움말 iframe 언어도 갱신
+  const iframe = document.getElementById('help-iframe');
+  if(iframe && iframe.contentWindow) {
+    try { iframe.contentWindow.postMessage({type:'setLang', lang:LANG}, '*'); } catch(e){}
+  }
+  if(PANEL_ROOM_NUM) openRoomPanel(PANEL_ROOM_NUM);
+}
+
 function openRanking(){
   document.getElementById('ranking-ov').classList.add('show');
   loadRankingData();
@@ -4312,7 +4535,7 @@ document.addEventListener('click', e => {
 
 async function loadRankingData(){
   const body = document.getElementById('ranking-body');
-  body.innerHTML = '<div class="ranking-loading">🍯 랭킹 불러오는 중...</div>';
+  body.innerHTML = `<div class="ranking-loading">${t('ranking_loading')}</div>`;
 
   try {
     const h = { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` };
@@ -4409,7 +4632,7 @@ async function loadRankingData(){
       ${renderSection('📈 부동산 가치 TOP 3', topEstate, v => `${Number(v).toLocaleString()} 🍯`)}
       <div class="ranking-section"><div class="ranking-section-title">🌐 커뮤니티 TOP 3</div>${commRows || '<div style="color:#ccc;font-size:12px;padding:8px 10px;">데이터 없음</div>'}</div>
       <div style="text-align:center;font-size:10px;color:#CCC;margin-top:4px;padding-bottom:4px;">${updatedAt} 기준</div>
-      <button class="ranking-refresh" onclick="loadRankingData()">🔄 새로고침</button>
+      <button class="ranking-refresh" onclick="loadRankingData()">${t('ranking_refresh')}</button>
     `;
   } catch(e){
     document.getElementById('ranking-body').innerHTML = `<div class="ranking-loading">❌ 불러오기 실패: ${e.message}</div>`;
@@ -4451,6 +4674,9 @@ async function loadNotice(){
 
 function openHelp(){
   closeMenu();
+  // iframe에 현재 언어 파라미터 전달
+  const iframe = document.getElementById('help-iframe');
+  if(iframe) iframe.src = `help.html?lang=${LANG}&t=${Date.now()}`;
   document.getElementById('help-ov').classList.add('show');
 }
 function closeHelp(){
@@ -4814,6 +5040,7 @@ loadAssets();  // Supabase에서 에셋 로드
 
 loadRooms().then(()=>{ applyUrlHash(); }); // URL 해시 적용 (방 로드 후)
 loadNotice(); // 공지사항 로드
+applyI18n(); // 언어 초기화
 subscribeRooms(); // Supabase Realtime 구독
 
 // ── URL 해시 네비게이션 ──
