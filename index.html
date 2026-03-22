@@ -2376,7 +2376,10 @@ async function registerRoom(){
     flip: { furniture: {...FLIP.furniture}, walldeco: {...FLIP.walldeco}, item: {...FLIP.item} },
     layerOrder: { furniture: [...LAYER_ORDER.furniture], walldeco: [...LAYER_ORDER.walldeco], item: [...LAYER_ORDER.item] },
   });
-  const twitterAvatar = `https://unavatar.io/x/${twitterId}`;
+  // unavatar로 실제 pbs.twimg.com URL resolve → DB에 직접 이미지 URL 저장
+  // 이후 맵/패널에서 unavatar 요청 없이 직접 트위터 서버에서 이미지 로드
+  st.textContent='🖼 아바타 URL 확인 중...'; bar.style.width='80%';
+  const twitterAvatar = await resolveAvatarUrl(twitterId);
   const zonePrice = 0; // 신규: create-room EF는 confirmTileBuy에서 이미 호출됨
   const dbPayload = {
     twitter_id: twitterId, occupied: 'Y', email,
@@ -2661,33 +2664,89 @@ function ltn(hex,a){const n=parseInt(hex.replace('#',''),16);const c=(v,d)=>Math
 // ── 아바타 이미지 캐시 ──
 
 const AVATAR_CACHE = {};
-// 캐시 버스팅: unavatar.io는 1시간 버킷(Math.floor(Date.now()/3600000)) 사용
-// → 브라우저 HTTP 캐시 및 메모리 캐시 모두 최대 1시간 유지
-// → 탭을 오래 열어둬도 갱신됨 (날짜 단위보다 훨씬 빠름)
+// _loadingSet: 현재 로딩 중인 URL 추적 → 중복 요청 방지
+const _avatarLoading = new Set();
+
+// resolveAvatarUrl: unavatar로 실제 트위터 이미지 URL(pbs.twimg.com) 취득 후 반환
+// 실패 시 unavatar URL 그대로 반환 (fallback)
+async function resolveAvatarUrl(twitterId){
+  const unavatarUrl = `https://unavatar.io/x/${twitterId}`;
+  try {
+    // unavatar는 리디렉션으로 실제 URL을 알려줌 → fetch로 최종 URL 추출
+    const res = await fetch(unavatarUrl, { method: 'HEAD', redirect: 'follow' });
+    if(res.ok && res.url && res.url !== unavatarUrl){
+      // pbs.twimg.com 또는 다른 실제 URL
+      return res.url;
+    }
+  } catch(e){ /* 네트워크 오류 시 fallback */ }
+  // fallback: unavatar URL 그대로 저장
+  return unavatarUrl;
+}
+
+// bustAvatarUrl: 24시간 버킷 → 하루 1회만 재요청
 function bustAvatarUrl(url){
   if(!url) return url;
   if(url.includes('unavatar.io')){
-    const bucket = Math.floor(Date.now() / (3600000 * 12)); // 12시간 버킷
+    const bucket = Math.floor(Date.now() / (3600000 * 24)); // 24시간 버킷
     return `${url}?t=${bucket}`;
   }
   return url;
 }
+
 function loadAvatarImg(url){
   if(!url) return null;
   const bustedUrl = bustAvatarUrl(url);
-  // 메모리 캐시 히트 여부 확인
+  // 1. 메모리 캐시 히트
   if(AVATAR_CACHE[bustedUrl] !== undefined) return AVATAR_CACHE[bustedUrl];
+  // 2. 이미 로딩 중이면 중복 요청 생략
+  if(_avatarLoading.has(bustedUrl)) return null;
+  _avatarLoading.add(bustedUrl);
   const img = new Image();
   img.crossOrigin = 'anonymous';
-  img.onload = () => { AVATAR_CACHE[bustedUrl] = img; drawMap(); };
-  img.onerror = () => { AVATAR_CACHE[bustedUrl] = null; };
+  img.onload = () => {
+    AVATAR_CACHE[bustedUrl] = img;
+    _avatarLoading.delete(bustedUrl);
+    drawMap();
+  };
+  img.onerror = () => {
+    _avatarLoading.delete(bustedUrl);
+    // pbs.twimg.com 등 직접 URL 실패 → unavatar URL로 fallback 시도
+    if(!url.includes('unavatar.io')){
+      // ROOMS에서 이 avatar_url을 가진 방의 twitterId를 찾아 unavatar로 재시도
+      let fallbackDone = false;
+      for(const num in ROOMS){
+        const r = ROOMS[num];
+        if(r && r.avatarUrl === url && r.twitterId){
+          const fbUrl = bustAvatarUrl(`https://unavatar.io/x/${r.twitterId}`);
+          if(AVATAR_CACHE[fbUrl] === undefined && !_avatarLoading.has(fbUrl)){
+            _avatarLoading.add(fbUrl);
+            const fbImg = new Image();
+            fbImg.crossOrigin = 'anonymous';
+            fbImg.onload = () => { AVATAR_CACHE[fbUrl] = fbImg; _avatarLoading.delete(fbUrl); drawMap(); };
+            fbImg.onerror = () => { AVATAR_CACHE[fbUrl] = null; _avatarLoading.delete(fbUrl); };
+            fbImg.src = fbUrl;
+            // 원래 URL도 fbImg로 연결
+            AVATAR_CACHE[bustedUrl] = fbImg;
+          }
+          fallbackDone = true;
+          break;
+        }
+      }
+      if(!fallbackDone) AVATAR_CACHE[bustedUrl] = null;
+    } else {
+      AVATAR_CACHE[bustedUrl] = null;
+    }
+    drawMap();
+  };
   img.src = bustedUrl;
   return null;
 }
-// 12시간마다 AVATAR_CACHE 초기화 → 새 버킷으로 자동 갱신
+
+// 24시간마다 AVATAR_CACHE 초기화 → 새 버킷으로 자동 갱신
 setInterval(() => {
   Object.keys(AVATAR_CACHE).forEach(k => delete AVATAR_CACHE[k]);
-}, 3600000 * 12);
+  _avatarLoading.clear();
+}, 3600000 * 24);
 
 function drawCircleImg(ctx, img, cx, cy, r){
   ctx.save();
@@ -3414,7 +3473,11 @@ function openRoomPanel(num){
   const interestImg = document.getElementById('rp-interest-img');
   const ownerEl    = document.getElementById('rp-owner');
   if(room.twitterId){
-    avatarImg.src = bustAvatarUrl(`https://unavatar.io/x/${room.twitterId}`);
+    // AVATAR_CACHE 활용 — 맵에서 이미 로드된 이미지 재사용
+    const _twUrl = `https://unavatar.io/x/${room.twitterId}`;
+    const _cached = AVATAR_CACHE[bustAvatarUrl(_twUrl)];
+    if(_cached && _cached.src) avatarImg.src = _cached.src;
+    else { loadAvatarImg(_twUrl); avatarImg.src = bustAvatarUrl(_twUrl); }
     avatarImg.style.display = 'block';
     ownerEl.textContent = `@${room.twitterId}`;
   } else {
@@ -3422,7 +3485,10 @@ function openRoomPanel(num){
     ownerEl.textContent = '';
   }
   if(room.interest){
-    interestImg.src = bustAvatarUrl(`https://unavatar.io/x/${room.interest}`);
+    const _intUrl = `https://unavatar.io/x/${room.interest}`;
+    const _intCached = AVATAR_CACHE[bustAvatarUrl(_intUrl)];
+    if(_intCached && _intCached.src) interestImg.src = _intCached.src;
+    else { loadAvatarImg(_intUrl); interestImg.src = bustAvatarUrl(_intUrl); }
     interestImg.style.display = 'block';
   } else {
     interestImg.style.display = 'none';
