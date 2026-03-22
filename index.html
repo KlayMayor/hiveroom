@@ -2380,11 +2380,13 @@ async function registerRoom(){
   // 이후 맵/패널에서 unavatar 요청 없이 직접 트위터 서버에서 이미지 로드
   st.textContent='🖼 아바타 URL 확인 중...'; bar.style.width='80%';
   const twitterAvatar = await resolveAvatarUrl(twitterId);
+  const interestAvatarUrl = SEL_INTEREST ? await resolveAvatarUrl(SEL_INTEREST) : '';
   const zonePrice = 0; // 신규: create-room EF는 confirmTileBuy에서 이미 호출됨
   const dbPayload = {
     twitter_id: twitterId, occupied: 'Y', email,
     design_json: designJson, avatar_url: twitterAvatar,
-    interest: SEL_INTEREST || ''
+    interest: SEL_INTEREST || '',
+    interest_avatar_url: interestAvatarUrl,
   };
   const insRes = await fetch(
     `${SUPA_URL}/rest/v1/rooms?room_number=eq.${targetNum}`,
@@ -2965,16 +2967,18 @@ async function loadRooms(){
       img.onload = () => {
         ROOMS[row.room_number] = {
           img: isIncomplete ? null : img,  // 미완성이면 이미지 무시
-          twitterId:    row.twitter_id,
-          avatarUrl:    row.avatar_url  || '',
-          interest:     row.interest    || '',
-          reserved:     row.reserved    || false,
-          incomplete:   isIncomplete,
-          tileValue:    ROOM_BALANCES[row.room_number] || 0,
-          ownerEmail:   row.email       || '',
-          creatorEmail: row.email       || ''
+          twitterId:         row.twitter_id,
+          avatarUrl:         row.avatar_url          || '',
+          interest:          row.interest            || '',
+          interestAvatarUrl: row.interest_avatar_url || '',
+          reserved:          row.reserved    || false,
+          incomplete:        isIncomplete,
+          tileValue:         ROOM_BALANCES[row.room_number] || 0,
+          ownerEmail:        row.email       || '',
+          creatorEmail:      row.email       || ''
         };
         if(!isIncomplete && row.avatar_url) loadAvatarImg(row.avatar_url);
+        if(!isIncomplete && row.interest_avatar_url) loadAvatarImg(row.interest_avatar_url);
         resolve();
       };
       img.onerror = () => {
@@ -2982,27 +2986,30 @@ async function loadRooms(){
         if(row.reserved){
           ROOMS[row.room_number] = {
             img: null, reserved: true,
-            twitterId:  row.twitter_id  || '',
-            avatarUrl:  row.avatar_url  || '',
-            interest:   row.interest    || '',
+            twitterId:         row.twitter_id          || '',
+            avatarUrl:         row.avatar_url          || '',
+            interest:          row.interest            || '',
+            interestAvatarUrl: row.interest_avatar_url || '',
             incomplete: false,
             tileValue:  ROOM_BALANCES[row.room_number] || 0,
             ownerEmail: row.email       || '',
             creatorEmail: row.email     || ''
           };
           if(row.avatar_url) loadAvatarImg(row.avatar_url);
+          if(row.interest_avatar_url) loadAvatarImg(row.interest_avatar_url);
         } else {
           // 이미지 없는 일반 방 (미완성 포함)
           ROOMS[row.room_number] = {
             img: null,
-            twitterId:    row.twitter_id  || '',
-            avatarUrl:    row.avatar_url  || '',
-            interest:     row.interest    || '',
-            reserved:     false,
-            incomplete:   isIncomplete,
-            tileValue:    ROOM_BALANCES[row.room_number] || 0,
-            ownerEmail:   row.email       || '',
-            creatorEmail: row.email       || ''
+            twitterId:         row.twitter_id          || '',
+            avatarUrl:         row.avatar_url          || '',
+            interest:          row.interest            || '',
+            interestAvatarUrl: row.interest_avatar_url || '',
+            reserved:          false,
+            incomplete:        isIncomplete,
+            tileValue:         ROOM_BALANCES[row.room_number] || 0,
+            ownerEmail:        row.email       || '',
+            creatorEmail:      row.email       || ''
           };
         }
         resolve();
@@ -3485,7 +3492,8 @@ function openRoomPanel(num){
     ownerEl.textContent = '';
   }
   if(room.interest){
-    const _intUrl = `https://unavatar.io/x/${room.interest}`;
+    // interestAvatarUrl(pbs.twimg.com)이 있으면 우선 사용, 없으면 unavatar fallback
+    const _intUrl = room.interestAvatarUrl || `https://unavatar.io/x/${room.interest}`;
     const _intCached = AVATAR_CACHE[bustAvatarUrl(_intUrl)];
     if(_intCached && _intCached.src) interestImg.src = _intCached.src;
     else { loadAvatarImg(_intUrl); interestImg.src = bustAvatarUrl(_intUrl); }

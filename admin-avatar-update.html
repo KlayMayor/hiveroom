@@ -90,7 +90,7 @@ async function startUpdate(){
   const limit = 1000;
   while(true){
     const res = await fetch(
-      `${SUPA_URL}/rest/v1/rooms?avatar_url=like.https://unavatar.io%*&select=room_number,twitter_id,avatar_url&occupied=eq.Y&order=room_number.asc&limit=${limit}&offset=${offset}`,
+      `${SUPA_URL}/rest/v1/rooms?select=room_number,twitter_id,avatar_url,interest,interest_avatar_url&occupied=eq.Y&order=room_number.asc&limit=${limit}&offset=${offset}`,
       { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Range-Unit': 'items' } }
     );
     if(!res.ok){ log('❌ DB 조회 실패: ' + await res.text(), 'err'); break; }
@@ -101,9 +101,15 @@ async function startUpdate(){
     offset += limit;
   }
 
-  log(`📋 업데이트 대상: ${allRooms.length}개 방`, 'info');
+  // unavatar URL인 방만 필터링 (avatar_url 또는 interest_avatar_url)
+  const targetRooms = allRooms.filter(r =>
+    (r.avatar_url && r.avatar_url.includes('unavatar.io')) ||
+    (r.interest && !r.interest_avatar_url) ||
+    (r.interest_avatar_url && r.interest_avatar_url.includes('unavatar.io'))
+  );
+  log(`📋 전체 방: ${allRooms.length}개 / 업데이트 대상: ${targetRooms.length}개`, 'info');
 
-  if(allRooms.length === 0){
+  if(targetRooms.length === 0){
     log('✅ 모든 방의 avatar_url이 이미 최신입니다!', 'ok');
     document.getElementById('startBtn').disabled = false;
     document.getElementById('stopBtn').disabled  = true;
@@ -113,7 +119,10 @@ async function startUpdate(){
 
   // twitterId 중복 제거 → 같은 ID는 한 번만 resolve
   const twitterIdMap = {}; // twitterId → resolvedUrl
-  const uniqueIds = [...new Set(allRooms.map(r => r.twitter_id).filter(Boolean))];
+  const uniqueIds = [...new Set([
+    ...targetRooms.map(r => r.twitter_id),
+    ...targetRooms.map(r => r.interest)
+  ].filter(Boolean))];
   log(`🔍 고유 Twitter ID: ${uniqueIds.length}개 resolve 시작...`, 'info');
 
   for(const tid of uniqueIds){
@@ -128,24 +137,32 @@ async function startUpdate(){
 
   if(_stop){ log('⏹ 중단됨', 'err'); finish(); return; }
 
-  log(`\n💾 DB 업데이트 시작 (${allRooms.length}개)...`, 'info');
+  log(`\n💾 DB 업데이트 시작 (${targetRooms.length}개)...`, 'info');
 
-  // 방별 DB 업데이트
-  for(const room of allRooms){
+  for(const room of targetRooms){
     if(_stop) break;
     stats.total++;
     const tid = room.twitter_id;
-    const newUrl = twitterIdMap[tid] || room.avatar_url;
+    const newAvatarUrl    = twitterIdMap[tid]           || room.avatar_url          || '';
+    const newIntAvatarUrl = twitterIdMap[room.interest] || room.interest_avatar_url || '';
 
-    // 이미 같은 URL이면 skip
-    if(newUrl === room.avatar_url){
+    const needUpdate =
+      (newAvatarUrl && newAvatarUrl !== room.avatar_url) ||
+      (room.interest && newIntAvatarUrl && newIntAvatarUrl !== room.interest_avatar_url);
+
+    if(!needUpdate){
       log(`  ⏭ room#${room.room_number} (@${tid}) skip`, 'skip');
       stats.skip++;
       updateSummary();
       continue;
     }
 
-    // DB PATCH
+    const patch = {};
+    if(newAvatarUrl && newAvatarUrl !== room.avatar_url)
+      patch.avatar_url = newAvatarUrl;
+    if(room.interest && newIntAvatarUrl && newIntAvatarUrl !== room.interest_avatar_url)
+      patch.interest_avatar_url = newIntAvatarUrl;
+
     const pRes = await fetch(
       `${SUPA_URL}/rest/v1/rooms?room_number=eq.${room.room_number}`,
       {
@@ -156,7 +173,7 @@ async function startUpdate(){
           'Content-Type': 'application/json',
           'Prefer': 'return=minimal',
         },
-        body: JSON.stringify({ avatar_url: newUrl }),
+        body: JSON.stringify(patch),
       }
     );
 
