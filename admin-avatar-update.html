@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HiveRoom - Avatar URL 업데이트</title>
+<style>
+  body { font-family: 'Noto Sans KR', sans-serif; background: #1a1a2e; color: #eee; padding: 24px; max-width: 800px; margin: 0 auto; }
+  h1 { color: #F2B830; font-size: 20px; margin-bottom: 8px; }
+  .desc { font-size: 13px; color: #aaa; margin-bottom: 24px; line-height: 1.7; }
+  button { padding: 12px 28px; background: linear-gradient(135deg, #F2B830, #E07820); border: none; border-radius: 12px; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; }
+  button:disabled { background: #555; cursor: not-allowed; }
+  #log { margin-top: 20px; background: #0d0d1a; border-radius: 12px; padding: 16px; font-size: 12px; font-family: monospace; height: 400px; overflow-y: auto; }
+  .ok  { color: #4CAF50; }
+  .err { color: #FF5555; }
+  .skip{ color: #888; }
+  .info{ color: #F2B830; }
+  #summary { margin-top: 16px; padding: 14px 18px; background: #0d0d1a; border-radius: 12px; font-size: 13px; display: none; }
+  .s-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #222; }
+  .s-row:last-child { border: none; }
+</style>
+</head>
+<body>
+<h1>🍯 HiveRoom — Avatar URL 일괄 업데이트</h1>
+<div class="desc">
+  rooms 테이블에서 <code>avatar_url</code>이 <code>unavatar.io</code> URL인 방을 찾아<br>
+  실제 <code>pbs.twimg.com</code> URL로 resolve 후 DB에 업데이트합니다.<br>
+  <b style="color:#F2B830;">⚠️ 이 페이지는 관리자만 사용하세요. 완료 후 삭제해주세요.</b>
+</div>
+
+<button id="startBtn" onclick="startUpdate()">🚀 업데이트 시작</button>
+<button id="stopBtn" onclick="stopUpdate()" disabled style="margin-left:10px;background:#555;">⏹ 중단</button>
+
+<div id="log"></div>
+<div id="summary">
+  <div class="s-row"><span>✅ 업데이트 성공</span><span id="s-ok">0</span></div>
+  <div class="s-row"><span>⏭ 이미 최신 (skip)</span><span id="s-skip">0</span></div>
+  <div class="s-row"><span>❌ 실패</span><span id="s-fail">0</span></div>
+  <div class="s-row"><span>📊 전체 처리</span><span id="s-total">0</span></div>
+</div>
+
+<script>
+const SUPA_URL = 'https://rnnzawmbxjgbwkiiypxl.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJubnphd21ieGpnYndraWl5cHhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2OTgwNjEsImV4cCI6MjA4ODI3NDA2MX0.lsoYZv8fjVyuJ9qXdUeu_-8aQQ9ds7uRufr6rNYc-_0';
+
+let _stop = false;
+let stats = { ok: 0, skip: 0, fail: 0, total: 0 };
+
+function log(msg, cls = ''){
+  const div = document.getElementById('log');
+  const line = document.createElement('div');
+  line.className = cls;
+  line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  div.appendChild(line);
+  div.scrollTop = div.scrollHeight;
+}
+
+function updateSummary(){
+  document.getElementById('s-ok').textContent    = stats.ok;
+  document.getElementById('s-skip').textContent  = stats.skip;
+  document.getElementById('s-fail').textContent  = stats.fail;
+  document.getElementById('s-total').textContent = stats.total;
+  document.getElementById('summary').style.display = 'block';
+}
+
+async function resolveAvatarUrl(twitterId){
+  const unavatarUrl = `https://unavatar.io/x/${twitterId}`;
+  try {
+    const res = await fetch(unavatarUrl, { method: 'HEAD', redirect: 'follow' });
+    if(res.ok && res.url && res.url !== unavatarUrl){
+      return res.url;
+    }
+  } catch(e){}
+  return unavatarUrl; // fallback
+}
+
+async function startUpdate(){
+  _stop = false;
+  stats = { ok:0, skip:0, fail:0, total:0 };
+  document.getElementById('startBtn').disabled = true;
+  document.getElementById('stopBtn').disabled  = false;
+  document.getElementById('log').innerHTML = '';
+  document.getElementById('summary').style.display = 'none';
+
+  log('📡 rooms 테이블 조회 중...', 'info');
+
+  // unavatar.io URL인 방 전체 조회 (페이지네이션 포함)
+  let allRooms = [];
+  let offset = 0;
+  const limit = 1000;
+  while(true){
+    const res = await fetch(
+      `${SUPA_URL}/rest/v1/rooms?avatar_url=like.https://unavatar.io%*&select=room_number,twitter_id,avatar_url&occupied=eq.Y&order=room_number.asc&limit=${limit}&offset=${offset}`,
+      { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Range-Unit': 'items' } }
+    );
+    if(!res.ok){ log('❌ DB 조회 실패: ' + await res.text(), 'err'); break; }
+    const data = await res.json();
+    if(!data || data.length === 0) break;
+    allRooms = allRooms.concat(data);
+    if(data.length < limit) break;
+    offset += limit;
+  }
+
+  log(`📋 업데이트 대상: ${allRooms.length}개 방`, 'info');
+
+  if(allRooms.length === 0){
+    log('✅ 모든 방의 avatar_url이 이미 최신입니다!', 'ok');
+    document.getElementById('startBtn').disabled = false;
+    document.getElementById('stopBtn').disabled  = true;
+    updateSummary();
+    return;
+  }
+
+  // twitterId 중복 제거 → 같은 ID는 한 번만 resolve
+  const twitterIdMap = {}; // twitterId → resolvedUrl
+  const uniqueIds = [...new Set(allRooms.map(r => r.twitter_id).filter(Boolean))];
+  log(`🔍 고유 Twitter ID: ${uniqueIds.length}개 resolve 시작...`, 'info');
+
+  for(const tid of uniqueIds){
+    if(_stop) break;
+    const resolved = await resolveAvatarUrl(tid);
+    twitterIdMap[tid] = resolved;
+    const isResolved = !resolved.includes('unavatar.io');
+    log(`  @${tid} → ${isResolved ? resolved.split('?')[0].slice(-50) : '(unavatar fallback)'}`,
+        isResolved ? 'ok' : 'skip');
+    await new Promise(r => setTimeout(r, 300)); // 요청 간격
+  }
+
+  if(_stop){ log('⏹ 중단됨', 'err'); finish(); return; }
+
+  log(`\n💾 DB 업데이트 시작 (${allRooms.length}개)...`, 'info');
+
+  // 방별 DB 업데이트
+  for(const room of allRooms){
+    if(_stop) break;
+    stats.total++;
+    const tid = room.twitter_id;
+    const newUrl = twitterIdMap[tid] || room.avatar_url;
+
+    // 이미 같은 URL이면 skip
+    if(newUrl === room.avatar_url){
+      log(`  ⏭ room#${room.room_number} (@${tid}) skip`, 'skip');
+      stats.skip++;
+      updateSummary();
+      continue;
+    }
+
+    // DB PATCH
+    const pRes = await fetch(
+      `${SUPA_URL}/rest/v1/rooms?room_number=eq.${room.room_number}`,
+      {
+        method: 'PATCH',
+        headers: {
+          'apikey': SUPA_KEY,
+          'Authorization': `Bearer ${SUPA_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal',
+        },
+        body: JSON.stringify({ avatar_url: newUrl }),
+      }
+    );
+
+    if(pRes.ok){
+      log(`  ✅ room#${room.room_number} (@${tid}) 업데이트 완료`, 'ok');
+      stats.ok++;
+    } else {
+      log(`  ❌ room#${room.room_number} (@${tid}) 실패: ${await pRes.text()}`, 'err');
+      stats.fail++;
+    }
+    updateSummary();
+    await new Promise(r => setTimeout(r, 100));
+  }
+
+  finish();
+}
+
+function stopUpdate(){ _stop = true; }
+
+function finish(){
+  document.getElementById('startBtn').disabled = false;
+  document.getElementById('stopBtn').disabled  = true;
+  log(`\n🏁 완료! 성공:${stats.ok} / skip:${stats.skip} / 실패:${stats.fail}`, 'info');
+  updateSummary();
+}
+</script>
+</body>
+</html>
