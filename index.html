@@ -443,7 +443,7 @@ header{
 .rs-close:hover{background:#DDD;}
 
 /* ── 카운트다운 타이머 ── */
-.h-timers{display:none;align-items:center;gap:6px;margin-left:auto;}
+.h-timers{display:none;align-items:center;gap:6px;}
 .h-timers.show{display:flex;}
 .h-timer-block{display:flex;align-items:center;gap:4px;background:#F8F5F0;border:1px solid var(--border);border-radius:12px;padding:4px 10px;font-size:11px;font-weight:700;color:var(--hdk);white-space:nowrap;position:relative;}
 .h-timer-block .t-label{font-size:9px;font-weight:600;color:var(--muted);margin-right:2px;}
@@ -628,8 +628,6 @@ header{
 <header>
   <div class="logo">🍯 HiveRoom</div>
   <div class="h-sep"></div>
-  <button class="h-lang-btn" id="lang-btn" onclick="toggleLang()">🌐 KO</button>
-  <div class="h-sep"></div>
   <button class="h-badge" onclick="openHelp()" style="cursor:pointer;border:1px solid var(--honey);background:var(--hlt);color:var(--hdk);font-family:'Noto Sans KR',sans-serif;" data-i18n="help">❓ Help</button>
   <div class="h-sep"></div>
   <button class="h-badge" onclick="openRanking()" style="cursor:pointer;border:1px solid #B8A0E8;background:#F5F0FF;color:#6040B0;font-family:'Noto Sans KR',sans-serif;" data-i18n="ranking">🏆 Ranking</button>
@@ -687,10 +685,13 @@ header{
       </div>
     </div>
   </div>
-  <!-- 비로그인 -->
-  <button class="h-login-btn" id="login-btn" onclick="signInGoogle()">
-    <img src="https://www.google.com/favicon.ico" alt="G"> <span data-i18n="login">LOG IN</span>
-  </button>
+  <!-- 우측 고정 영역: 언어버튼 + 로그인버튼 -->
+  <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0;">
+    <button class="h-lang-btn" id="lang-btn" onclick="toggleLang()">🌐 KO</button>
+    <button class="h-login-btn" id="login-btn" onclick="signInGoogle()" style="margin-left:0;">
+      <img src="https://www.google.com/favicon.ico" alt="G"> <span data-i18n="login">LOG IN</span>
+    </button>
+  </div>
   <!-- 로그인 후: 타이머 + HIVE잔액 + 프로필 -->
   <div class="h-timers" id="h-timers">
     <!-- Daily Wage 카운트다운 -->
