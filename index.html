@@ -464,7 +464,7 @@ header{
 /* ── Tips 팝업 ── */
 #tips-ov{position:fixed;inset:0;z-index:1100;background:rgba(10,8,20,.82);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;}
 #tips-ov.hidden{display:none;}
-.tips-box{background:#fff;border-radius:24px;width:360px;max-width:92vw;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.45);display:flex;flex-direction:column;}
+.tips-box{background:#fff;border-radius:24px;width:360px;max-width:92vw;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.45);display:flex;flex-direction:column;position:relative;}
 .tips-viewport{overflow:hidden;}
 .tips-slides{display:flex;transition:transform .4s cubic-bezier(.4,0,.2,1);}
 .tips-slide{min-width:360px;max-width:92vw;display:flex;flex-direction:column;}
@@ -484,6 +484,8 @@ header{
 .tips-next:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(224,120,32,.4);}
 .tips-skip{font-size:11px;color:#bbb;cursor:pointer;background:none;border:none;font-family:'Noto Sans KR',sans-serif;}
 .tips-skip:hover{color:#888;}
+.tips-lang-btn{position:absolute;top:12px;right:14px;font-size:11px;color:#aaa;cursor:pointer;background:rgba(0,0,0,.06);border:none;border-radius:10px;padding:3px 9px;font-family:'Noto Sans KR',sans-serif;transition:all .18s;}
+.tips-lang-btn:hover{background:rgba(0,0,0,.12);color:#666;}
 .help-box{background:#fff;border-radius:20px;width:min(680px,94vw);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(0,0,0,.25);overflow:hidden;animation:popin .35s cubic-bezier(.34,1.56,.64,1);}
 .help-head{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--border);background:var(--hlt);}
 .help-title{font-family:'Jua',sans-serif;font-size:18px;color:var(--hdk);}
@@ -735,6 +737,7 @@ header{
 <!-- Tips 팝업 (페이지 로드 시 표시) -->
 <div id="tips-ov">
   <div class="tips-box">
+    <button class="tips-lang-btn" id="tips-lang-btn" onclick="tipToggleLang()">🌐 EN</button>
     <div class="tips-viewport">
       <div class="tips-slides" id="tips-slides">
 
@@ -4387,21 +4390,27 @@ function _tipsUpdateContent(){
   const slides = document.querySelectorAll('.tips-slide');
   slides.forEach((sl, i) => {
     const titleEl = sl.querySelector('.tips-title');
-    const descEl = sl.querySelector('.tips-desc');
+    const descEl  = sl.querySelector('.tips-desc');
     if(titleEl) titleEl.innerHTML = t(pages[i].titleKey);
-    if(descEl) descEl.innerHTML = t(pages[i].descKey);
+    if(descEl)  descEl.innerHTML  = t(pages[i].descKey);
   });
-  const btn = document.getElementById('tips-next-btn');
-  if(btn) btn.textContent = _tipsPage === _tipsTotalPages-1 ? t('tips_start') : t('tips_next');
+  const nextBtn = document.getElementById('tips-next-btn');
+  if(nextBtn) nextBtn.textContent = _tipsPage === _tipsTotalPages-1 ? t('tips_start') : t('tips_next');
   const skipBtn = document.getElementById('tips-skip-btn');
   if(skipBtn) skipBtn.textContent = t('tips_skip');
+  const langBtn = document.getElementById('tips-lang-btn');
+  if(langBtn) langBtn.textContent = t('tips_lang_btn');
+}
+function tipToggleLang(){
+  // 팝업 내 언어 버튼 — 전역 LANG 토글 후 전체 i18n 갱신
+  LANG = LANG === 'ko' ? 'en' : 'ko';
+  try { localStorage.setItem('hr_lang', LANG); } catch(e){}
+  applyI18n();
 }
 function closeTips(){
   document.getElementById('tips-ov').classList.add('hidden');
-  // (localStorage 저장 제거 — 항상 표시)
 }
 function initTips(){
-  // 항상 표시 (새로고침 포함)
   _tipsPage = 0;
   _tipsUpdateUI();
 }
@@ -4493,6 +4502,7 @@ const I18N = {
     rank_estate: '📈 Top 3 Estate Value',
     rank_comm: '🌐 Top 3 Community',
     // Tips 팝업
+    tips_lang_btn: '🌐 한',
     tips_skip: 'Skip',
     tips_next: 'Next →',
     tips_start: '🍯 Start',
@@ -4583,6 +4593,7 @@ const I18N = {
     rank_estate: '📈 부동산 가치 TOP 3',
     rank_comm: '🌐 커뮤니티 TOP 3',
     // Tips 팝업
+    tips_lang_btn: '🌐 EN',
     tips_skip: '건너뛰기',
     tips_next: '다음 →',
     tips_start: '🍯 시작하기',
