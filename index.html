@@ -816,7 +816,7 @@ header{
       </div><!-- /tips-slides -->
     </div><!-- /tips-viewport -->
     <div class="tips-footer">
-      <button class="tips-skip" onclick="closeTips()">건너뛰기</button>
+      <button class="tips-skip" id="tips-skip-btn" onclick="closeTips()">건너뛰기</button>
       <div class="tips-dots">
         <div class="tips-dot on" id="td0" onclick="tipsGoTo(0)" style="cursor:pointer;"></div>
         <div class="tips-dot" id="td1" onclick="tipsGoTo(1)" style="cursor:pointer;"></div>
@@ -4374,8 +4374,27 @@ function _tipsUpdateUI(){
   for(let i=0;i<_tipsTotalPages;i++){
     document.getElementById('td'+i).classList.toggle('on', i===_tipsPage);
   }
+  _tipsUpdateContent();
+}
+function _tipsUpdateContent(){
+  const pages = [
+    {titleKey:'tips_p1_title', descKey:'tips_p1_desc'},
+    {titleKey:'tips_p2_title', descKey:'tips_p2_desc'},
+    {titleKey:'tips_p3_title', descKey:'tips_p3_desc'},
+    {titleKey:'tips_p4_title', descKey:'tips_p4_desc'},
+    {titleKey:'tips_p5_title', descKey:'tips_p5_desc'},
+  ];
+  const slides = document.querySelectorAll('.tips-slide');
+  slides.forEach((sl, i) => {
+    const titleEl = sl.querySelector('.tips-title');
+    const descEl = sl.querySelector('.tips-desc');
+    if(titleEl) titleEl.innerHTML = t(pages[i].titleKey);
+    if(descEl) descEl.innerHTML = t(pages[i].descKey);
+  });
   const btn = document.getElementById('tips-next-btn');
-  btn.textContent = _tipsPage === _tipsTotalPages-1 ? '🍯 시작하기' : '다음 →';
+  if(btn) btn.textContent = _tipsPage === _tipsTotalPages-1 ? t('tips_start') : t('tips_next');
+  const skipBtn = document.getElementById('tips-skip-btn');
+  if(skipBtn) skipBtn.textContent = t('tips_skip');
 }
 function closeTips(){
   document.getElementById('tips-ov').classList.add('hidden');
@@ -4473,6 +4492,20 @@ const I18N = {
     rank_tiles: '📍 Top 3 Tile Holders',
     rank_estate: '📈 Top 3 Estate Value',
     rank_comm: '🌐 Top 3 Community',
+    // Tips 팝업
+    tips_skip: 'Skip',
+    tips_next: 'Next →',
+    tips_start: '🍯 Start',
+    tips_p1_title: '🏠 Welcome to HiveRoom!',
+    tips_p1_desc: 'HiveRoom is a <b>hexagonal tile map social interior platform</b>.<br>Purchase a tile, decorate your room,<br>and build relationships with neighbors!<br><small>※ Reserved tiles (gold shimmer) are special spaces.</small>',
+    tips_p2_title: '📅 Earn HIVE with Check-in!',
+    tips_p2_desc: 'Tap <b>Check-in</b> in the header daily.<br>Solve a simple addition quiz → earn <b>5 HIVE</b>!<br>Resets every day at <b>UTC 00:00</b>.<br><small>※ 27 reserved tiles are maintained by the admin.</small>',
+    tips_p3_title: '🏘️ Build a Village Together!',
+    tips_p3_desc: 'Tiles owned by neighbors form a <b>community territory</b>.<br>Gather friends and build your own village!<br>Expand and grow your neighborhood together.',
+    tips_p4_title: '🔒 Protect Your Room!',
+    tips_p4_desc: '<b>Anyone can buy your room.</b><br>Keep your tile value high so it\'s not taken.<br>Check your portfolio in <b>My Estate</b>!<br><small>※ Rooms can be forcibly purchased.</small>',
+    tips_p5_title: '💡 It\'s Not Too Late!',
+    tips_p5_desc: 'Low-value rooms are a <b>great opportunity</b>!<br>New users get <b>300 HIVE</b> to start.<br>Earn <b>10 HIVE daily wage</b> + check-in bonus.<br><small>※ Monthly tile TAX is deducted automatically.</small>',
   },
   ko: {
     // 헤더
@@ -4549,6 +4582,20 @@ const I18N = {
     rank_tiles: '📍 타일 보유 TOP 3',
     rank_estate: '📈 부동산 가치 TOP 3',
     rank_comm: '🌐 커뮤니티 TOP 3',
+    // Tips 팝업
+    tips_skip: '건너뛰기',
+    tips_next: '다음 →',
+    tips_start: '🍯 시작하기',
+    tips_p1_title: '🏠 HiveRoom에 오신 것을 환영합니다!',
+    tips_p1_desc: 'HiveRoom은 <b>육각형 타일 맵 소셜 인테리어 플랫폼</b>입니다.<br>타일을 구매하고, 방을 꾸미고,<br>이웃과 관계를 맺어보세요!<br><small>※ 반짝이는 금색 타일은 Reserved(예약) 타일입니다.</small>',
+    tips_p2_title: '📅 출석체크로 HIVE 획득!',
+    tips_p2_desc: '매일 헤더의 <b>출석체크</b> 버튼을 눌러보세요.<br>간단한 덧셈 퀴즈 풀기 → <b>5 HIVE</b> 획득!<br><b>UTC 00:00</b>마다 초기화됩니다.<br><small>※ 27개의 예약 타일은 관리자가 운영합니다.</small>',
+    tips_p3_title: '🏘️ 함께 마을을 이루어요!',
+    tips_p3_desc: '이웃이 소유한 타일끼리 <b>커뮤니티 영역</b>을 이룹니다.<br>친구를 모아 나만의 마을을 만들어보세요!<br>함께 확장하고 성장하세요.',
+    tips_p4_title: '🔒 내 방을 지켜내세요!',
+    tips_p4_desc: '<b>누구든 내 방을 구매할 수 있습니다.</b><br>타일 가치를 높게 유지해 빼앗기지 마세요.<br><b>My Estate</b>에서 포트폴리오를 확인하세요!<br><small>※ 방은 강제 매입될 수 있습니다.</small>',
+    tips_p5_title: '💡 늦었다고 생각하지 마세요!',
+    tips_p5_desc: '가치가 낮은 방은 <b>기회</b>입니다!<br>신규 유저는 <b>300 HIVE</b>로 시작합니다.<br><b>일당 10 HIVE</b> + 출석 보너스로 모아가세요.<br><small>※ 매월 타일 TAX가 자동 차감됩니다.</small>',
   }
 };
 
@@ -4581,6 +4628,8 @@ function applyI18n(){
   // 언어 버튼 표시
   const btn = document.getElementById('lang-btn');
   if(btn) btn.textContent = LANG === 'ko' ? '🌐 EN' : '🌐 한';
+  // Tips 팝업 내용 갱신
+  if(typeof _tipsUpdateContent === 'function') _tipsUpdateContent();
 }
 
 function toggleLang(){
