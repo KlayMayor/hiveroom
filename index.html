@@ -183,15 +183,6 @@ header{
 .con-finish-btn.on:hover{background:rgba(255,255,255,.3);}
 .con-close-btn{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;}
 .con-close-btn:hover{background:rgba(255,255,255,.35);}
-/* 도움말 드롭다운 */
-.con-help-btn{padding:5px 11px;background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.35);color:#fff;border-radius:14px;font-size:11px;font-weight:700;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:all .15s;position:relative;}
-.con-help-btn:hover{background:rgba(255,255,255,.25);}
-.con-help-drop{display:none;position:absolute;top:calc(100% + 8px);right:0;width:290px;background:#fff;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.18);padding:14px 16px;z-index:500;text-align:left;}
-.con-help-drop.open{display:block;}
-.con-help-drop-title{font-size:12px;font-weight:700;color:#A87800;margin-bottom:8px;}
-.con-help-drop-body{font-size:11.5px;color:#444;line-height:1.8;}
-.con-help-drop-body b{color:#A87800;}
-.con-help-drop-tip{margin-top:9px;font-size:11px;color:#E07820;font-weight:600;background:#FFF8E8;border-radius:8px;padding:6px 10px;}
 
 /* 콘솔 바디 — 세로 구조: 상단(미리보기+아이템) / 하단(광고) */
 .con-body{
@@ -735,7 +726,7 @@ header{
         <div class="h-dd-email" id="dd-email"></div>
       </div>
       <button class="h-dd-btn" onclick="openEditRoom()">✏️ <span data-i18n="edit_room">Edit Room</span></button>
-      <button class="h-dd-btn" onclick="openEstate()">🏘️ 부동산 관리하기</button>
+      <button class="h-dd-btn" onclick="openEstate()">🏘️ <span data-i18n="estate_menu">My Estate</span></button>
       <div class="h-dd-sep"></div>
       <button class="h-dd-btn" onclick="openHelp()">❓ <span data-i18n="help">Help</span></button>
       <button class="h-dd-btn logout" onclick="signOut()">🚪 <span data-i18n="logout">Logout</span></button>
@@ -845,7 +836,7 @@ header{
 <div id="help-ov">
   <div class="help-box">
     <div class="help-head">
-      <div class="help-title">❓ HiveRoom 도움말</div>
+      <div class="help-title" data-i18n="help_popup_title">❓ HiveRoom Help</div>
       <button class="help-close" onclick="closeHelp()">✕</button>
     </div>
     <iframe class="help-iframe" id="help-iframe" src="help.html"></iframe>
@@ -873,13 +864,6 @@ header{
         🏠 <span data-i18n="make_room">Make Room</span>
       </div>
       <div class="con-right-acts">
-        <div style="position:relative;">
-          <button class="con-help-btn" id="con-help-btn" onclick="toggleConHelp(event)">❓ <span data-i18n="con_help">Help</span></button>
-          <div class="con-help-drop" id="con-help-drop">
-            <div class="con-help-drop-title" data-i18n="con_help_title">🔧 Item Controls</div>
-            <div class="con-help-drop-body" id="con-help-drop-body"></div>
-          </div>
-        </div>
         <button class="con-finish-btn" id="finish-btn" onclick="showDone()"><span data-i18n="finish">Finish</span> ✦</button>
         <button class="con-close-btn" onclick="closeConsole()">✕</button>
       </div>
@@ -901,7 +885,7 @@ header{
           <!-- 컨트롤 핸들 -->
           <div id="item-ctrl">
             <div class="ctrl-size">
-              <span data-i18n="ctrl_size">Size</span>
+              <span>크기</span>
               <input type="range" id="ctrl-size-range" min="30" max="200" value="100"
                 oninput="onSizeChange(this.value)">
               <span id="ctrl-size-val">100%</span>
@@ -911,8 +895,8 @@ header{
             <button class="ctrl-btn" id="ctrl-layer-up" title="앞으로" onclick="onCtrlLayerUp()">↑</button>
             <button class="ctrl-btn" id="ctrl-layer-dn" title="뒤로" onclick="onCtrlLayerDn()">↓</button>
             <div class="ctrl-sep"></div>
-            <button class="ctrl-btn" title="선택해제" onclick="onCtrlDeselect()" style="font-size:10px;width:44px;color:#666;" data-i18n="ctrl_deselect">Desel</button>
-            <button class="ctrl-btn" title="삭제" onclick="onCtrlDelete()" style="font-size:10px;width:36px;color:#C44;background:#FFF0F0;" data-i18n="ctrl_delete">Del</button>
+            <button class="ctrl-btn" title="선택해제" onclick="onCtrlDeselect()" style="font-size:10px;width:44px;color:#666;">해제</button>
+            <button class="ctrl-btn" title="삭제" onclick="onCtrlDelete()" style="font-size:10px;width:36px;color:#C44;background:#FFF0F0;">삭제</button>
           </div>
         </div>
 
@@ -921,11 +905,11 @@ header{
 
           <!-- 에셋 탭 -->
           <div class="asset-tabs">
-            <button class="atab on"  onclick="switchTab(this,'wall')">🎨 <span data-i18n="tab_wall">Wallpaper</span></button>
-            <button class="atab"     onclick="switchTab(this,'floor')">🟫 <span data-i18n="tab_floor">Floor</span></button>
-            <button class="atab"     onclick="switchTab(this,'furniture')">🪑 <span data-i18n="tab_furniture">Furniture</span></button>
-            <button class="atab"     onclick="switchTab(this,'walldeco')">✨ <span data-i18n="tab_deco">Decor</span></button>
-            <button class="atab"     onclick="switchTab(this,'item')">🎁 <span data-i18n="tab_item">Item</span></button>
+            <button class="atab on"  onclick="switchTab(this,'wall')">🎨 벽지</button>
+            <button class="atab"     onclick="switchTab(this,'floor')">🟫 바닥</button>
+            <button class="atab"     onclick="switchTab(this,'furniture')">🪑 가구</button>
+            <button class="atab"     onclick="switchTab(this,'walldeco')">✨ 장식</button>
+            <button class="atab"     onclick="switchTab(this,'item')">🎁 아이템</button>
           </div>
 
           <div class="asset-pane on" id="pane-wall">
@@ -1484,7 +1468,7 @@ async function startEditRoom(room){
 
   // 4. 콘솔 열기
   document.getElementById('console').classList.add('open');
-  document.querySelector('.con-title').textContent = `✏️ ${room.room_number} ` + (LANG==='ko'?'번 방 수정':'Room Edit');
+  document.querySelector('.con-title').textContent = t('room_edit_fmt', room.room_number);
 
   // 5. SEL 상태가 설정된 상태에서 buildGrids (sel 클래스 포함)
   buildGrids();
@@ -3189,7 +3173,7 @@ function subscribeRooms(){
 
                 // 패널이 열려 있으면 강제 닫기 + 알림
                 if(PANEL_ROOM_NUM === row.room_number){
-                  alert(`⚠️ ${row.room_number}번 방이 다른 유저에게 구매되었습니다.`);
+                  alert(`⚠️ ${t('room_num_fmt', row.room_number)} ${LANG==='ko'?'이 다른 유저에게 구매되었습니다.':'was purchased by another user.'}`);
                   await loadRooms();
                   closeRoomPanel();
                 }
@@ -3373,10 +3357,10 @@ async function openEstate(){
   const grid = document.getElementById('estate-grid');
   const sub  = document.getElementById('estate-sub');
   document.getElementById('estate-bal-text').textContent = MY_BALANCE !== null ? MY_BALANCE.toLocaleString() : '—';
-  sub.textContent = LANG==='ko' ? `내 방 ${(rooms||[]).length}개` : `${(rooms||[]).length} Room${(rooms||[]).length!==1?'s':''}`;
+  sub.textContent = `내 방 ${(rooms||[]).length}개`;
   grid.innerHTML = '';
   if(!rooms || !rooms.length){
-    grid.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:8px">${t('estate_loading_text')}</div>`;
+    grid.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px">등록된 방이 없어요.</div>';
   } else {
     rooms.forEach(room => {
       const imgUrl = `${SUPA_URL}/storage/v1/object/public/room-pic/${room.room_number}/room.jpg?t=${Date.now()}`;
@@ -3402,7 +3386,7 @@ function closeEstate(){ document.getElementById('estate-ov').classList.remove('s
 let INVEST_ROOM = null;
 function openInvest(room){
   INVEST_ROOM = { ...room, tile_value: ROOM_BALANCES[room.room_number] || 0 };
-  document.getElementById('invest-title').textContent = `🍯 ${t('room_num_fmt', room.room_number)} ${t('invest_title_fmt')}`;
+  document.getElementById('invest-title').textContent = `🍯 ${t('room_num_fmt', room.room_number)} ${LANG==='ko'?'투자하기':'Invest'}`;
   document.getElementById('invest-amount').max = MY_BALANCE || 0;
   document.getElementById('invest-amount').value = 0;
   updateInvestPreview();
@@ -3490,7 +3474,7 @@ function openRoomPanel(num){
   const zCfg = getZoneConfig(num);
   const imgUrl = `${SUPA_URL}/storage/v1/object/public/room-pic/${num}/room.jpg?t=${Date.now()}`;
   document.getElementById('rp-img').src = imgUrl;
-  document.getElementById('rp-num').textContent = `${num}번 방`;
+  document.getElementById('rp-num').textContent = t('room_num_fmt', num);
   const zoneEl = document.getElementById('rp-zone');
   zoneEl.textContent = zCfg.label;
   zoneEl.className = `rp-zone rp-zone-${getZone(num)}`;
@@ -3763,7 +3747,7 @@ function openAttendanceQuiz(){
   const b = Math.floor(Math.random()*9)+1;
   _attendQuizAnswer = a + b;
   const _attendRoomNum = PANEL_ROOM_NUM;
-  const ans = prompt(`📅 출석체크 퀴즈 — ${_attendRoomNum}번 방\n\n${a} + ${b} = ?\n\n정답을 입력하세요 (5 HIVE 지급)`);
+  const ans = prompt(LANG==='ko'?`📅 출석체크 퀴즈 — ${_attendRoomNum}번 방\n\n${a} + ${b} = ?\n\n정답을 입력하세요 (5 HIVE 지급)`:`📅 Check-in Quiz — Room ${_attendRoomNum}\n\n${a} + ${b} = ?\n\nEnter your answer (+5 HIVE)`);
   if(ans === null) return;
   if(parseInt(ans) === _attendQuizAnswer){
     claimAttendance(todayKey, _attendRoomNum);
@@ -3824,7 +3808,7 @@ function requestBuyRoom(){
   const quotedPrice = (roomBal != null && roomBal > 0)
     ? roomBal : getZoneConfig(PANEL_ROOM_NUM).price;
   // 팝업에 견적 가격 표시
-  document.getElementById('buy-confirm-price').textContent = `${quotedPrice.toLocaleString()} HIVE 차감`;
+  document.getElementById('buy-confirm-price').textContent = `${quotedPrice.toLocaleString()} HIVE${LANG==='ko'?' 차감':''}`;
   // 견적 가격을 팝업에 저장 (confirmBuyRoom에서 mismatch 체크에 사용)
   document.getElementById('buy-confirm-ov').dataset.quotedPrice = quotedPrice;
   document.getElementById('buy-confirm-ov').style.display = 'flex';
@@ -4062,7 +4046,7 @@ function openIncompleteTilePanel(num){
   EMPTY_PANEL_NUM = num;
   const zCfg = getZoneConfig(num);
   const tilePrice = ROOM_BALANCES[num] ?? room.tileValue ?? zCfg.price;
-  document.getElementById('ep-num').textContent = `${num}번 타일`;
+  document.getElementById('ep-num').textContent = t('tile_num_fmt', num);
   const zoneEl = document.getElementById('ep-zone');
   zoneEl.textContent = zCfg.label;
   zoneEl.className = `rp-zone rp-zone-${getZone(num)}`;
@@ -4103,7 +4087,7 @@ function openEmptyPanel(num){
     // 비로그인: 로그인 안내만 표시
     EMPTY_PANEL_NUM = num;
     const zCfg = getZoneConfig(num);
-    document.getElementById('ep-num').textContent = `${num}번 타일`;
+    document.getElementById('ep-num').textContent = t('tile_num_fmt', num);
     const zoneEl = document.getElementById('ep-zone');
     zoneEl.textContent = zCfg.label;
     zoneEl.className = `rp-zone rp-zone-${getZone(num)}`;
@@ -4120,7 +4104,7 @@ function openEmptyPanel(num){
   EMPTY_PANEL_NUM = num;
   const zCfg = getZoneConfig(num);
   const price = zCfg.price;
-  document.getElementById('ep-num').textContent = `${num}번 타일`;
+  document.getElementById('ep-num').textContent = t('tile_num_fmt', num);
   const zoneEl = document.getElementById('ep-zone');
   zoneEl.textContent = zCfg.label;
   zoneEl.className = `rp-zone rp-zone-${getZone(num)}`;
@@ -4445,15 +4429,28 @@ const I18N = {
   en: {
     // 헤더
     help: '❓ Help',
+    help_popup_title: '❓ HiveRoom Help',
     ranking: '🏆 Ranking',
     tile_search: '🔎 Tile Search',
     login: 'LOG IN',
     logout: 'Logout',
+    // 드롭다운 메뉴
+    estate_menu: '🏘️ My Estate',
     daily_wage: 'Daily Wage',
     monthly_tax: 'Monthly Tax',
     notice_badge: '📢 Notice',
     // 드롭다운
     edit_room: 'Edit Room',
+    estate_title: '🏘️ My Estate',
+    close_btn: 'Close',
+    rs_select_title: '✏️ Select Room to Edit',
+    rs_my_rooms: 'My Rooms',
+    // 번호 포맷 (함수형)
+    room_num_fmt: v => `Room ${v}`,
+    tile_num_fmt: v => `Tile ${v}`,
+    room_edit_fmt: v => `✏️ Room ${v} Edit`,
+    estate_item_num: v => `Room ${v}`,
+    estate_loading_text: 'No rooms registered.',
     // 타일 필터
     show_tile_num: 'Show Tile No.',
     checkin: 'Check-in',
@@ -4478,25 +4475,6 @@ const I18N = {
     // 투자
     invest_btn: 'Invest',
     cancel: 'Cancel',
-    // 방 선택 팝업
-    rs_select_title: '✏️ Select Room to Edit',
-    rs_my_rooms: 'My Rooms',
-    close_btn: 'Close',
-    // 에셋 탭
-    tab_wall: 'Wallpaper',
-    tab_floor: 'Floor',
-    tab_furniture: 'Furniture',
-    tab_deco: 'Decor',
-    tab_item: 'Item',
-    // 아이템 컨트롤
-    ctrl_size: 'Size',
-    ctrl_deselect: 'Desel',
-    ctrl_delete: 'Del',
-    // 도움말 드롭다운
-    con_help: 'Help',
-    con_help_title: '🔧 Item Controls',
-    con_help_body: '<b>Click</b> a placed item to show the control overlay.<br>・<b>Size slider</b> — resize the item<br>・<b>⇄</b> — flip horizontally<br>・<b>↑↓</b> — change layer order (furniture / deco / item)<br>・<b>Desel</b> — keep item, hide overlay<br>・<b>Del</b> — remove from preview',
-    con_help_tip: '💡 Drag any item to freely reposition it!',
     // 랭킹
     ranking_title: '🏆 HiveRoom Ranking',
     ranking_loading: '🍯 Loading rankings...',
@@ -4555,6 +4533,7 @@ const I18N = {
   ko: {
     // 헤더
     help: '❓ 도움말',
+    help_popup_title: '❓ HiveRoom 도움말',
     ranking: '🏆 랭킹',
     tile_search: '🔎 타일 검색',
     login: 'LOG IN',
@@ -4564,6 +4543,17 @@ const I18N = {
     notice_badge: '📢 공지',
     // 드롭다운
     edit_room: '방 수정하기',
+    estate_menu: '🏘️ 부동산 관리하기',
+    estate_title: '🏘️ 부동산 관리',
+    close_btn: '닫기',
+    rs_select_title: '✏️ 수정할 방 선택',
+    rs_my_rooms: '내 방 목록',
+    // 번호 포맷 (함수형)
+    room_num_fmt: v => `${v}번 방`,
+    tile_num_fmt: v => `${v}번 타일`,
+    room_edit_fmt: v => `✏️ ${v}번 방 수정`,
+    estate_item_num: v => `${v}번 방`,
+    estate_loading_text: '등록된 방이 없어요.',
     // 타일 필터
     show_tile_num: '타일 번호 보기',
     checkin: '출석체크',
@@ -4588,25 +4578,6 @@ const I18N = {
     // 투자
     invest_btn: '투자하기',
     cancel: '취소',
-    // 방 선택 팝업
-    rs_select_title: '✏️ 수정할 방 선택',
-    rs_my_rooms: '내 방 목록',
-    close_btn: '닫기',
-    // 에셋 탭
-    tab_wall: '벽지',
-    tab_floor: '바닥',
-    tab_furniture: '가구',
-    tab_deco: '장식',
-    tab_item: '아이템',
-    // 아이템 컨트롤
-    ctrl_size: '크기',
-    ctrl_deselect: '해제',
-    ctrl_delete: '삭제',
-    // 도움말 드롭다운
-    con_help: '도움말',
-    con_help_title: '🔧 아이템 컨트롤',
-    con_help_body: '배치된 아이템을 <b>클릭</b>하면 컨트롤 오버레이가 나타납니다.<br>・<b>크기 슬라이더</b> — 크기 조절<br>・<b>⇄</b> — 좌우 반전<br>・<b>↑↓</b> — 레이어 순서 변경 (가구·장식·아이템 간 이동 가능)<br>・<b>해제</b> — 선택 해제 (아이템은 유지)<br>・<b>삭제</b> — 미리보기에서 제거',
-    con_help_tip: '💡 아이템을 드래그해서 원하는 위치로 자유롭게 이동할 수 있어요!',
     // 랭킹
     ranking_title: '🏆 HiveRoom 랭킹',
     ranking_loading: '🍯 랭킹 불러오는 중...',
@@ -4695,26 +4666,7 @@ function applyI18n(){
   if(btn) btn.textContent = LANG === 'ko' ? '🌐 EN' : '🌐 한';
   // Tips 팝업 내용 갱신
   if(typeof _tipsUpdateContent === 'function') _tipsUpdateContent();
-  // 도움말 드롭다운 내용 갱신
-  const helpBody = document.getElementById('con-help-drop-body');
-  if(helpBody) helpBody.innerHTML = t('con_help_body') + `<div class="con-help-drop-tip">${t('con_help_tip')}</div>`;
 }
-
-// 방 만들기/수정 도움말 드롭다운
-function toggleConHelp(e){
-  e.stopPropagation();
-  const drop = document.getElementById('con-help-drop');
-  if(!drop) return;
-  drop.classList.toggle('open');
-}
-// 드롭다운 외부 클릭 시 닫기
-document.addEventListener('click', function(e){
-  const drop = document.getElementById('con-help-drop');
-  const btn  = document.getElementById('con-help-btn');
-  if(drop && drop.classList.contains('open') && !drop.contains(e.target) && e.target !== btn){
-    drop.classList.remove('open');
-  }
-});
 
 function toggleLang(){
   LANG = LANG === 'ko' ? 'en' : 'ko';
@@ -4850,10 +4802,10 @@ async function loadRankingData(){
 
     const updatedAt = new Date().toLocaleTimeString('ko-KR');
     body.innerHTML = `
-      ${renderSection('📍 타일 보유 TOP 3', topRooms, v => `${v}🏠`)}
-      ${renderSection('📈 부동산 가치 TOP 3', topEstate, v => `${Number(v).toLocaleString()} 🍯`)}
-      <div class="ranking-section"><div class="ranking-section-title">🌐 커뮤니티 TOP 3</div>${commRows || '<div style="color:#ccc;font-size:12px;padding:8px 10px;">데이터 없음</div>'}</div>
-      <div style="text-align:center;font-size:10px;color:#CCC;margin-top:4px;padding-bottom:4px;">${updatedAt} 기준</div>
+      ${renderSection(t('rank_tiles'), topRooms, v => `${v}🏠`)}
+      ${renderSection(t('rank_estate'), topEstate, v => `${Number(v).toLocaleString()} 🍯`)}
+      <div class="ranking-section"><div class="ranking-section-title">${t('rank_comm')}</div>${commRows || `<div style="color:#ccc;font-size:12px;padding:8px 10px;">${t('ranking_no_data')}</div>`}</div>
+      <div style="text-align:center;font-size:10px;color:#CCC;margin-top:4px;padding-bottom:4px;">${updatedAt} ${LANG==='ko'?'기준':'as of'}</div>
       <button class="ranking-refresh" onclick="loadRankingData()">${t('ranking_refresh')}</button>
     `;
   } catch(e){
