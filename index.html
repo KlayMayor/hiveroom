@@ -183,6 +183,15 @@ header{
 .con-finish-btn.on:hover{background:rgba(255,255,255,.3);}
 .con-close-btn{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;}
 .con-close-btn:hover{background:rgba(255,255,255,.35);}
+/* 도움말 드롭다운 */
+.con-help-btn{padding:5px 11px;background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.35);color:#fff;border-radius:14px;font-size:11px;font-weight:700;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:all .15s;position:relative;}
+.con-help-btn:hover{background:rgba(255,255,255,.25);}
+.con-help-drop{display:none;position:absolute;top:calc(100% + 8px);right:0;width:290px;background:#fff;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.18);padding:14px 16px;z-index:500;text-align:left;}
+.con-help-drop.open{display:block;}
+.con-help-drop-title{font-size:12px;font-weight:700;color:#A87800;margin-bottom:8px;}
+.con-help-drop-body{font-size:11.5px;color:#444;line-height:1.8;}
+.con-help-drop-body b{color:#A87800;}
+.con-help-drop-tip{margin-top:9px;font-size:11px;color:#E07820;font-weight:600;background:#FFF8E8;border-radius:8px;padding:6px 10px;}
 
 /* 콘솔 바디 — 세로 구조: 상단(미리보기+아이템) / 하단(광고) */
 .con-body{
@@ -464,7 +473,7 @@ header{
 /* ── Tips 팝업 ── */
 #tips-ov{position:fixed;inset:0;z-index:1100;background:rgba(10,8,20,.82);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;}
 #tips-ov.hidden{display:none;}
-.tips-box{background:#fff;border-radius:24px;width:360px;max-width:92vw;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.45);display:flex;flex-direction:column;}
+.tips-box{background:#fff;border-radius:24px;width:360px;max-width:92vw;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.45);display:flex;flex-direction:column;position:relative;}
 .tips-viewport{overflow:hidden;}
 .tips-slides{display:flex;transition:transform .4s cubic-bezier(.4,0,.2,1);}
 .tips-slide{min-width:360px;max-width:92vw;display:flex;flex-direction:column;}
@@ -484,9 +493,8 @@ header{
 .tips-next:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(224,120,32,.4);}
 .tips-skip{font-size:11px;color:#bbb;cursor:pointer;background:none;border:none;font-family:'Noto Sans KR',sans-serif;}
 .tips-skip:hover{color:#888;}
-.tips-wrap{position:relative;width:360px;max-width:92vw;}
-.tips-lang-btn{position:absolute;top:-38px;right:0;font-size:12px;color:#fff;cursor:pointer;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);border-radius:12px;padding:4px 12px;font-family:'Noto Sans KR',sans-serif;transition:all .18s;}
-.tips-lang-btn:hover{background:rgba(255,255,255,.30);}
+.tips-lang-btn{position:absolute;top:12px;right:14px;font-size:11px;color:#aaa;cursor:pointer;background:rgba(0,0,0,.06);border:none;border-radius:10px;padding:3px 9px;font-family:'Noto Sans KR',sans-serif;transition:all .18s;}
+.tips-lang-btn:hover{background:rgba(0,0,0,.12);color:#666;}
 .help-box{background:#fff;border-radius:20px;width:min(680px,94vw);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(0,0,0,.25);overflow:hidden;animation:popin .35s cubic-bezier(.34,1.56,.64,1);}
 .help-head{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--border);background:var(--hlt);}
 .help-title{font-family:'Jua',sans-serif;font-size:18px;color:var(--hdk);}
@@ -737,9 +745,8 @@ header{
 
 <!-- Tips 팝업 (페이지 로드 시 표시) -->
 <div id="tips-ov">
-  <div class="tips-wrap">
-    <button class="tips-lang-btn" id="tips-lang-btn" onclick="tipToggleLang()">🌐 EN</button>
   <div class="tips-box">
+    <button class="tips-lang-btn" id="tips-lang-btn" onclick="tipToggleLang()">🌐 EN</button>
     <div class="tips-viewport">
       <div class="tips-slides" id="tips-slides">
 
@@ -831,8 +838,7 @@ header{
       </div>
       <button class="tips-next" id="tips-next-btn" onclick="tipsNext()">다음 →</button>
     </div>
-  </div><!-- /tips-box -->
-  </div><!-- /tips-wrap -->
+  </div>
 </div>
 
 <!-- 도움말 팝업 -->
@@ -867,6 +873,13 @@ header{
         🏠 <span data-i18n="make_room">Make Room</span>
       </div>
       <div class="con-right-acts">
+        <div style="position:relative;">
+          <button class="con-help-btn" id="con-help-btn" onclick="toggleConHelp(event)">❓ <span data-i18n="con_help">Help</span></button>
+          <div class="con-help-drop" id="con-help-drop">
+            <div class="con-help-drop-title" data-i18n="con_help_title">🔧 Item Controls</div>
+            <div class="con-help-drop-body" id="con-help-drop-body"></div>
+          </div>
+        </div>
         <button class="con-finish-btn" id="finish-btn" onclick="showDone()"><span data-i18n="finish">Finish</span> ✦</button>
         <button class="con-close-btn" onclick="closeConsole()">✕</button>
       </div>
@@ -4462,6 +4475,10 @@ const I18N = {
     // 방 만들기 콘솔
     make_room: 'Make Room',
     finish: 'Finish',
+    con_help: 'Help',
+    con_help_title: '🔧 Item Controls',
+    con_help_body: '<b>Click</b> a placed item to show the control overlay.<br>・<b>Size slider</b> — resize the item<br>・<b>⇄</b> — flip horizontally<br>・<b>↑↓</b> — change layer order (furniture / deco / item)<br>・<b>Deselect</b> — keep item, hide overlay<br>・<b>Delete</b> — remove from preview',
+    con_help_tip: '💡 Drag any item to freely reposition it!',
     // 투자
     invest_btn: 'Invest',
     cancel: 'Cancel',
@@ -4553,6 +4570,10 @@ const I18N = {
     // 방 만들기 콘솔
     make_room: '방 만들기',
     finish: '완성하기',
+    con_help: '도움말',
+    con_help_title: '🔧 아이템 컨트롤',
+    con_help_body: '배치된 아이템을 <b>클릭</b>하면 컨트롤 오버레이가 나타납니다.<br>・<b>크기 슬라이더</b> — 크기 조절<br>・<b>⇄</b> — 좌우 반전<br>・<b>↑↓</b> — 레이어 순서 변경 (가구·장식·아이템 간 이동 가능)<br>・<b>해제</b> — 선택 해제 (아이템은 유지)<br>・<b>삭제</b> — 미리보기에서 제거',
+    con_help_tip: '💡 아이템을 드래그해서 원하는 위치로 자유롭게 이동할 수 있어요!',
     // 투자
     invest_btn: '투자하기',
     cancel: '취소',
@@ -4644,7 +4665,27 @@ function applyI18n(){
   if(btn) btn.textContent = LANG === 'ko' ? '🌐 EN' : '🌐 한';
   // Tips 팝업 내용 갱신
   if(typeof _tipsUpdateContent === 'function') _tipsUpdateContent();
+  // 도움말 드롭다운 내용 갱신
+  const helpBody = document.getElementById('con-help-drop-body');
+  if(helpBody) helpBody.innerHTML = t('con_help_body') + `<div class="con-help-drop-tip">${t('con_help_tip')}</div>`;
 }
+
+// 방 만들기/수정 도움말 드롭다운
+function toggleConHelp(e){
+  e.stopPropagation();
+  const drop = document.getElementById('con-help-drop');
+  if(!drop) return;
+  const isOpen = drop.classList.contains('open');
+  drop.classList.toggle('open', !isOpen);
+}
+// 드롭다운 외부 클릭 시 닫기
+document.addEventListener('click', function(e){
+  const drop = document.getElementById('con-help-drop');
+  const btn  = document.getElementById('con-help-btn');
+  if(drop && !drop.contains(e.target) && e.target !== btn){
+    drop.classList.remove('open');
+  }
+});
 
 function toggleLang(){
   LANG = LANG === 'ko' ? 'en' : 'ko';
