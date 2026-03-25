@@ -183,14 +183,6 @@ header{
 .con-finish-btn.on:hover{background:rgba(255,255,255,.3);}
 .con-close-btn{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;}
 .con-close-btn:hover{background:rgba(255,255,255,.35);}
-.con-help-btn{padding:5px 11px;background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.35);color:#fff;border-radius:14px;font-size:11px;font-weight:700;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:all .15s;position:relative;}
-.con-help-btn:hover{background:rgba(255,255,255,.25);}
-.con-help-drop{display:none;position:absolute;top:calc(100% + 8px);right:0;width:290px;background:#fff;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.18);padding:14px 16px;z-index:500;text-align:left;}
-.con-help-drop.open{display:block;}
-.con-help-drop-title{font-size:12px;font-weight:700;color:#A87800;margin-bottom:8px;}
-.con-help-drop-body{font-size:11.5px;color:#444;line-height:1.8;}
-.con-help-drop-body b{color:#A87800;}
-.con-help-drop-tip{margin-top:9px;font-size:11px;color:#E07820;font-weight:600;background:#FFF8E8;border-radius:8px;padding:6px 10px;}
 
 /* 콘솔 바디 — 세로 구조: 상단(미리보기+아이템) / 하단(광고) */
 .con-body{
@@ -492,8 +484,8 @@ header{
 .tips-next:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(224,120,32,.4);}
 .tips-skip{font-size:11px;color:#bbb;cursor:pointer;background:none;border:none;font-family:'Noto Sans KR',sans-serif;}
 .tips-skip:hover{color:#888;}
-.tips-lang-btn{position:absolute;top:12px;right:14px;font-size:11px;color:#aaa;cursor:pointer;background:rgba(0,0,0,.06);border:none;border-radius:10px;padding:3px 9px;font-family:'Noto Sans KR',sans-serif;transition:all .18s;}
-.tips-lang-btn:hover{background:rgba(0,0,0,.12);color:#666;}
+.tips-wrap{position:relative;}.tips-lang-btn{position:absolute;top:-36px;right:0;font-size:11px;color:rgba(255,255,255,.8);cursor:pointer;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:10px;padding:3px 10px;font-family:'Noto Sans KR',sans-serif;transition:all .18s;}
+.tips-lang-btn:hover{background:rgba(255,255,255,.25);color:#fff;}
 .help-box{background:#fff;border-radius:20px;width:min(680px,94vw);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(0,0,0,.25);overflow:hidden;animation:popin .35s cubic-bezier(.34,1.56,.64,1);}
 .help-head{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--border);background:var(--hlt);}
 .help-title{font-family:'Jua',sans-serif;font-size:18px;color:var(--hdk);}
@@ -705,18 +697,18 @@ header{
   <!-- 로그인 후: 타이머 + HIVE잔액 + 프로필 -->
   <div class="h-timers" id="h-timers">
     <!-- Daily Wage 카운트다운 -->
-    <div class="h-timer-block" id="daily-wage-block" title="매일 UTC 00:00에 10 HIVE가 자동 지급됩니다">
+    <div class="h-timer-block" id="daily-wage-block" title="">
       <span class="t-label"><span data-i18n="daily_wage">Daily Wage</span></span>
       <span class="h-timer-val" id="timer-daily">--:--:--</span>
       <div class="h-timer-info">!</div>
-      <div class="h-timer-tooltip">매일 UTC 00:00에 10 HIVE가 자동으로 지급됩니다! 🍯</div>
+      <div class="h-timer-tooltip" data-i18n="wage_tooltip">10 HIVE is automatically paid every day at UTC 00:00! 🍯</div>
     </div>
     <!-- Monthly Tax 카운트다운 -->
     <div class="h-timer-block">
       <span class="t-label"><span data-i18n="monthly_tax">Monthly Tax</span></span>
       <span class="h-timer-val" id="timer-tax">--:--:--:--</span>
       <div class="h-timer-info">!</div>
-      <div class="h-timer-tooltip">소유한 방의 가치가 ZONE에 따라<br>매달 3, 2 or 1 HIVE 씩 하락합니다.</div>
+      <div class="h-timer-tooltip" data-i18n="tax_tooltip">Your room value drops by 3, 2 or 1 HIVE<br>each month depending on the ZONE.</div>
     </div>
     <div class="h-sep"></div>
     <!-- HIVE 잔액 -->
@@ -744,8 +736,8 @@ header{
 
 <!-- Tips 팝업 (페이지 로드 시 표시) -->
 <div id="tips-ov">
+  <button class="tips-lang-btn" id="tips-lang-btn" onclick="tipToggleLang()">🌐 EN</button>
   <div class="tips-box">
-    <button class="tips-lang-btn" id="tips-lang-btn" onclick="tipToggleLang()">🌐 EN</button>
     <div class="tips-viewport">
       <div class="tips-slides" id="tips-slides">
 
@@ -872,13 +864,6 @@ header{
         🏠 <span data-i18n="make_room">Make Room</span>
       </div>
       <div class="con-right-acts">
-        <div style="position:relative;">
-          <button class="con-help-btn" id="con-help-btn" onclick="toggleConHelp(event)">❓ <span data-i18n="con_help">Help</span></button>
-          <div class="con-help-drop" id="con-help-drop">
-            <div class="con-help-drop-title" data-i18n="con_help_title">🔧 Item Controls</div>
-            <div class="con-help-drop-body" id="con-help-drop-body"></div>
-          </div>
-        </div>
         <button class="con-finish-btn" id="finish-btn" onclick="showDone()"><span data-i18n="finish">Finish</span> ✦</button>
         <button class="con-close-btn" onclick="closeConsole()">✕</button>
       </div>
@@ -900,18 +885,18 @@ header{
           <!-- 컨트롤 핸들 -->
           <div id="item-ctrl">
             <div class="ctrl-size">
-              <span data-i18n="ctrl_size">Size</span>
+              <span>크기</span>
               <input type="range" id="ctrl-size-range" min="30" max="200" value="100"
                 oninput="onSizeChange(this.value)">
               <span id="ctrl-size-val">100%</span>
             </div>
             <div class="ctrl-sep"></div>
-            <button class="ctrl-btn" id="ctrl-flip-btn" title="좌우반전" onclick="onCtrlFlip()">⇄</button>
-            <button class="ctrl-btn" id="ctrl-layer-up" title="앞으로" onclick="onCtrlLayerUp()">↑</button>
-            <button class="ctrl-btn" id="ctrl-layer-dn" title="뒤로" onclick="onCtrlLayerDn()">↓</button>
+            <button class="ctrl-btn" id="ctrl-flip-btn" id="ctrl-flip-title" title="Flip" onclick="onCtrlFlip()">⇄</button>
+            <button class="ctrl-btn" id="ctrl-layer-up" id="ctrl-up-title" title="Forward" onclick="onCtrlLayerUp()">↑</button>
+            <button class="ctrl-btn" id="ctrl-layer-dn" id="ctrl-dn-title" title="Backward" onclick="onCtrlLayerDn()">↓</button>
             <div class="ctrl-sep"></div>
-            <button class="ctrl-btn" title="선택해제" onclick="onCtrlDeselect()" style="font-size:10px;width:44px;color:#666;" data-i18n="ctrl_deselect">Desel</button>
-            <button class="ctrl-btn" title="삭제" onclick="onCtrlDelete()" style="font-size:10px;width:36px;color:#C44;background:#FFF0F0;" data-i18n="ctrl_delete">Del</button>
+            <button class="ctrl-btn" title="Deselect" onclick="onCtrlDeselect()" style="font-size:10px;width:44px;color:#666;">해제</button>
+            <button class="ctrl-btn" title="Delete" onclick="onCtrlDelete()" style="font-size:10px;width:36px;color:#C44;background:#FFF0F0;">삭제</button>
           </div>
         </div>
 
@@ -920,32 +905,32 @@ header{
 
           <!-- 에셋 탭 -->
           <div class="asset-tabs">
-            <button class="atab on"  onclick="switchTab(this,'wall')">🎨 <span data-i18n="tab_wall">Wallpaper</span></button>
-            <button class="atab"     onclick="switchTab(this,'floor')">🟫 <span data-i18n="tab_floor">Floor</span></button>
-            <button class="atab"     onclick="switchTab(this,'furniture')">🪑 <span data-i18n="tab_furniture">Furniture</span></button>
-            <button class="atab"     onclick="switchTab(this,'walldeco')">✨ <span data-i18n="tab_deco">Decor</span></button>
-            <button class="atab"     onclick="switchTab(this,'item')">🎁 <span data-i18n="tab_item">Item</span></button>
+            <button class="atab on"  onclick="switchTab(this,'wall')">🎨 벽지</button>
+            <button class="atab"     onclick="switchTab(this,'floor')">🟫 바닥</button>
+            <button class="atab"     onclick="switchTab(this,'furniture')">🪑 가구</button>
+            <button class="atab"     onclick="switchTab(this,'walldeco')">✨ 장식</button>
+            <button class="atab"     onclick="switchTab(this,'item')">🎁 아이템</button>
           </div>
 
           <div class="asset-pane on" id="pane-wall">
             <div class="agrid" id="grid-wall"></div>
-            <div class="pane-sel-lbl none" id="sel-wall">미선택</div>
+            <div class="pane-sel-lbl none" id="sel-wall" data-i18n="sel_none">None</div>
           </div>
           <div class="asset-pane" id="pane-floor">
             <div class="agrid" id="grid-floor"></div>
-            <div class="pane-sel-lbl none" id="sel-floor">미선택</div>
+            <div class="pane-sel-lbl none" id="sel-floor" data-i18n="sel_none">None</div>
           </div>
           <div class="asset-pane" id="pane-furniture">
             <div class="agrid" id="grid-furniture"></div>
-            <div class="pane-sel-lbl none" id="sel-furniture">미선택 (복수선택)</div>
+            <div class="pane-sel-lbl none" id="sel-furniture" data-i18n="sel_none_multi">None (multi)</div>
           </div>
           <div class="asset-pane" id="pane-walldeco">
             <div class="agrid" id="grid-walldeco"></div>
-            <div class="pane-sel-lbl none" id="sel-walldeco">미선택 (복수선택)</div>
+            <div class="pane-sel-lbl none" id="sel-walldeco" data-i18n="sel_none_multi">None (multi)</div>
           </div>
           <div class="asset-pane" id="pane-item">
             <div class="agrid" id="grid-item"></div>
-            <div class="pane-sel-lbl none" id="sel-item">미선택 (복수선택)</div>
+            <div class="pane-sel-lbl none" id="sel-item" data-i18n="sel_none_multi">None (multi)</div>
           </div>
 
         </div>
@@ -990,9 +975,9 @@ header{
 <div id="invest-ov">
   <div class="invest-box">
     <div class="invest-title" id="invest-title">🍯 타일에 투자하기</div>
-    <div class="invest-info" id="invest-info" data-i18n="invest_info">Your investment raises the tile value.</div>
+    <div class="invest-info" id="invest-info">투자금만큼 타일 가치가 상승합니다</div>
     <div class="invest-row">
-      <div class="invest-label" data-i18n="invest_label">Amount (HIVE)</div>
+      <div class="invest-label">투자 금액 (HIVE)</div>
       <input class="invest-input" id="invest-amount" type="number" min="0" value="0" oninput="onInvestInput()">
       <div class="invest-spin">
         <button onclick="adjustInvest(1)">▲</button>
@@ -1000,13 +985,13 @@ header{
       </div>
     </div>
     <div class="invest-result" id="invest-result">
-      <span data-i18n="invest_cur">Current Value</span>: <b id="ir-cur">—</b> HIVE<br>
-      <span data-i18n="invest_after">After Investment</span>: <b id="ir-after">—</b> HIVE<br>
-      잔액: <b id="ir-bal">—</b> HIVE → <b id="ir-bal-after">—</b> HIVE
+      현재 가치: <b id="ir-cur">—</b> HIVE<br>
+      투자 후 가치: <b id="ir-after">—</b> HIVE<br>
+      <span data-i18n="invest_bal">Balance</span>: <b id="ir-bal">—</b> HIVE → <b id="ir-bal-after">—</b> HIVE
     </div>
     <div class="invest-btns">
       <button class="invest-confirm" id="invest-confirm-btn" onclick="confirmInvest()"><span data-i18n="invest_btn">Invest</span></button>
-      <button class="invest-cancel" onclick="closeInvest()">취소</button>
+      <button class="invest-cancel" onclick="closeInvest()" data-i18n="cancel">Cancel</button>
     </div>
   </div>
 </div>
@@ -1054,14 +1039,14 @@ header{
     <div id="ep-zone" style="font-size:11px;font-weight:700;margin-top:4px;padding:3px 10px;border-radius:20px;display:inline-block;"></div>
   </div>
   <div style="padding:16px 20px;flex:1;">
-    <div class="rp-row"><span class="rp-lbl" data-i18n="ep_price_lbl">Tile Price</span><span class="rp-val" id="ep-price">—</span></div>
-    <div class="rp-row"><span class="rp-lbl" data-i18n="ep_bal_lbl">My Balance</span><span class="rp-val" id="ep-mybal">—</span></div>
-    <div class="rp-row"><span class="rp-lbl" data-i18n="ep_state_lbl">Status</span><span class="rp-val" style="color:#4CAF50;font-weight:700;" data-i18n="ep_state">Empty</span></div>
+    <div class="rp-row"><span class="rp-lbl">타일 가격</span><span class="rp-val" id="ep-price">—</span></div>
+    <div class="rp-row"><span class="rp-lbl">내 잔액</span><span class="rp-val" id="ep-mybal">—</span></div>
+    <div class="rp-row"><span class="rp-lbl">상태</span><span class="rp-val" style="color:#4CAF50;font-weight:700;">비어있음</span></div>
     <div style="margin-top:6px;padding:10px 12px;background:#FFF8E8;border-radius:10px;font-size:11px;color:#A87800;line-height:1.6;">
-      <span data-i18n="ep_hint">💡 Purchase this tile to decorate your own room!<br>Room editor opens right after purchase.</span>
+      💡 이 타일을 구매하면 나만의 방을 꾸밀 수 있어요!<br>구매 후 방 꾸미기 화면이 바로 열립니다.
     </div>
     <button class="rp-buy-btn" id="ep-buy-btn" style="margin-top:16px;"><span data-i18n="create_room">Create Room</span></button>
-    <div class="rp-insufficient" id="ep-insufficient" style="display:none;">잔액이 부족합니다</div>
+    <div class="rp-insufficient" id="ep-insufficient" style="display:none;" data-i18n="insufficient">Insufficient balance</div>
     <div id="ep-login-msg" style="display:none;text-align:center;font-size:12px;color:var(--muted);margin-top:10px;">로그인이 필요합니다</div>
   </div>
 </div>
@@ -1098,35 +1083,35 @@ header{
 <div id="buy-success-ov">
   <div class="buy-success-box">
     <div class="buy-success-icon">🎉</div>
-    <div class="buy-success-title" data-i18n="buy_success_title">Purchase Complete!</div>
+    <div class="buy-success-title">구매 완료!</div>
     <div class="buy-success-desc">타일을 성공적으로 구매했어요.<br>방 꾸미기 패널에서<br>나만의 방을 완성해보세요! 🍯</div>
-    <button class="buy-success-btn" onclick="closeBuySuccess()" data-i18n="close_btn">Close</button>
+    <button class="buy-success-btn" onclick="closeBuySuccess()">확인</button>
   </div>
 </div>
 
 <!-- 이사하기 맵 선택 안내 배너 -->
-<div id="move-map-banner">🗺 빈 타일을 클릭하세요 — ESC로 취소</div>
+<div id="move-map-banner" data-i18n="move_banner">🗺 Click an empty tile — ESC to cancel</div>
 
 <!-- 이사하기 모달 -->
 <div id="move-ov">
   <div class="move-box">
     <div class="move-head">
-      <div class="move-head-title">🚚 이사하기</div>
+      <div class="move-head-title" data-i18n="move_banner_title">🚚 Move Room</div>
       <button class="move-head-close" onclick="closeMoveOv()">✕</button>
     </div>
     <div class="move-body">
 
       <!-- STEP 1: 방 번호 입력 -->
       <div class="move-step on" id="move-step1">
-        <div class="move-label">이사할 빈 방 번호</div>
+        <div class="move-label" data-i18n="move_label">Target Empty Room Number</div>
         <div class="move-input-row">
-          <input class="move-num-input" id="move-target-input" type="number" min="1" max="1027" placeholder="방 번호 입력">
-          <button class="move-map-btn" id="move-map-btn" onclick="toggleMoveMapSelect()">🗺 맵에서 선택</button>
+          <input class="move-num-input" id="move-target-input" type="number" min="1" max="1027" placeholder="Room number">
+          <button class="move-map-btn" id="move-map-btn" onclick="toggleMoveMapSelect()" data-i18n="move_map_btn">🗺 Pick on Map</button>
         </div>
-        <div class="move-map-hint" id="move-map-hint">맵에서 빈 타일을 클릭하세요</div>
+        <div class="move-map-hint" id="move-map-hint" data-i18n="move_map_hint">Click an empty tile on the map</div>
         <div class="move-btns">
-          <button class="move-btn-cancel" onclick="closeMoveOv()">취소</button>
-          <button class="move-btn-ok" onclick="moveStep1Next()">다음 →</button>
+          <button class="move-btn-cancel" onclick="closeMoveOv()" data-i18n="cancel">Cancel</button>
+          <button class="move-btn-ok" onclick="moveStep1Next()" data-i18n="move_next">Next →</button>
         </div>
       </div>
 
@@ -1134,8 +1119,8 @@ header{
       <div class="move-step" id="move-step2">
         <div class="move-confirm-text" id="move-confirm-text"></div>
         <div class="move-btns">
-          <button class="move-btn-cancel" onclick="moveStep2Back()">← 뒤로</button>
-          <button class="move-btn-ok" onclick="moveStep2Next()">Yes, 계속</button>
+          <button class="move-btn-cancel" onclick="moveStep2Back()" data-i18n="move_back">← Back</button>
+          <button class="move-btn-ok" onclick="moveStep2Next()" data-i18n="move_yes">Yes, Continue</button>
         </div>
       </div>
 
@@ -1145,8 +1130,8 @@ header{
         <div id="move-sim-total" class="move-sim-total" style="display:none;"></div>
         <div id="move-warn" class="move-warn" style="display:none;"></div>
         <div class="move-btns">
-          <button class="move-btn-cancel" onclick="moveStep3Back()">← 뒤로</button>
-          <button class="move-btn-ok" id="move-final-btn" onclick="confirmMove()">이사하기 🚚</button>
+          <button class="move-btn-cancel" onclick="moveStep3Back()" data-i18n="move_back">← Back</button>
+          <button class="move-btn-ok" id="move-final-btn" onclick="confirmMove()" data-i18n="move_confirm">Move 🚚</button>
         </div>
       </div>
 
@@ -1158,13 +1143,13 @@ header{
 <div id="done-ov">
   <div class="done-box">
     <canvas id="done-cv" width="160" height="160" style="border-radius:8px;"></canvas>
-    <div class="done-title">🎉 방 디자인 완성!</div>
-    <div class="done-desc" id="done-desc">나만의 방을 맵에 등록할까요?</div>
+    <div class="done-title" data-i18n="done_title">🎉 Room Design Complete!</div>
+    <div class="done-desc" id="done-desc" data-i18n="done_desc">Ready to register your room on the map?</div>
 
     <!-- STEP 1: Twitter ID -->
     <div id="done-step1">
       <div style="font-size:11.5px;color:var(--muted);background:var(--hlt);border-radius:10px;padding:9px 13px;margin-bottom:10px;line-height:1.7;text-align:left;">
-        🐦 입력하신 트위터 아이디의 프로필 사진과 링크가 생성됩니다.
+        <span data-i18n="done_step1_hint">🐦 Your profile photo and link will be generated from your X (Twitter) ID.</span>
       </div>
       <div class="tw-input-wrap">
         <label>🐦 Twitter(X) ID <span style="color:#E05050;">*</span></label>
@@ -1174,25 +1159,24 @@ header{
         <div id="tw-preview" style="margin-top:8px;min-height:40px;display:flex;align-items:center;gap:10px;"></div>
       </div>
       <div class="done-btns" style="margin-top:12px;">
-        <button class="done-main-btn" onclick="doneStep1Next()">다음 →</button>
-        <button class="done-sub-btn" onclick="closeDone()">✏️ 계속 수정</button>
+        <button class="done-main-btn" onclick="doneStep1Next()" data-i18n="done_next">Next →</button>
+        <button class="done-sub-btn" onclick="closeDone()" data-i18n="done_keep_edit">✏️ Keep Editing</button>
       </div>
     </div>
 
     <!-- STEP 2: 관심사 Twitter ID -->
     <div id="done-step2" style="display:none;">
       <div style="font-size:11.5px;color:var(--muted);background:var(--hlt);border-radius:10px;padding:9px 13px;margin-bottom:10px;line-height:1.7;text-align:left;">
-        ✨ 관심있는 트위터 아이디를 입력하시면 해당 프로필 사진이 작은 뱃지로 표시됩니다.<br>
-        <span style="color:var(--hdk);font-weight:600;">(예. @Tesla, @Bitcoin 등)</span>
+        <span data-i18n="done_step2_hint">✨ Enter an X (Twitter) ID you support — their profile photo appears as a small badge on your tile.<br><span style="color:var(--hdk);font-weight:600;">(e.g. @Tesla, @Bitcoin)</span></span>
       </div>
       <div class="tw-input-wrap">
-        <label>✨ 관심사 Twitter ID <span style="color:var(--muted);font-weight:400;">(선택사항)</span></label>
+        <label>✨ <span data-i18n="done_interest_lbl">Supporter Twitter ID</span> <span style="color:var(--muted);font-weight:400;" data-i18n="done_optional">(optional)</span></label>
         <input class="tw-input" id="interest-id" type="text" placeholder="@없이 입력 (예: Tesla)" maxlength="50">
         <div id="interest-preview" style="margin-top:8px;min-height:40px;display:flex;align-items:center;gap:10px;"></div>
       </div>
       <div class="done-btns" style="margin-top:12px;">
-        <button class="done-main-btn" onclick="doneStep2Next()">다음 →</button>
-        <button class="done-sub-btn" onclick="doneStep2Back()">◀ 뒤로</button>
+        <button class="done-main-btn" onclick="doneStep2Next()" data-i18n="done_next">Next →</button>
+        <button class="done-sub-btn" onclick="doneStep2Back()" data-i18n="done_back">◀ Back</button>
       </div>
     </div>
 
@@ -1212,12 +1196,12 @@ header{
     </div>
     <div id="post-x-wrap" style="display:none;margin:6px 0;">
       <button onclick="postToXAfterReg()" style="width:100%;padding:10px;border-radius:12px;border:none;background:#000;color:#fff;font-size:13px;font-weight:700;font-family:'Noto Sans KR',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
-        𝕏 POST to X — 입주 소식 알리기
+        𝕏 <span data-i18n="done_post_x">POST to X — Share your move-in!</span>
       </button>
     </div>
     <div class="done-btns">
-      <button class="done-main-btn" id="reg-btn" onclick="registerRoom()">✅ 맵에 등록하기</button>
-      <button class="done-sub-btn" onclick="doneStep3Back()">◀ 뒤로</button>
+      <button class="done-main-btn" id="reg-btn" onclick="registerRoom()" data-i18n="reg_btn">✅ Register on Map</button>
+      <button class="done-sub-btn" onclick="doneStep3Back()" data-i18n="done_back">◀ Back</button>
     </div>
     </div>
   </div>
@@ -1626,7 +1610,7 @@ let pngUrl=null;
 function openConsole() {
   document.getElementById('console').classList.add('open');
   document.getElementById('make-btn').classList.add('active');
-  document.getElementById('make-btn').textContent = '✕ 닫기';
+  document.getElementById('make-btn').textContent = LANG==='ko'?'✕ 닫기':'✕ Close';
   document.getElementById('make-btn').onclick = closeConsole;
 }
 function closeConsole() {
@@ -1634,7 +1618,7 @@ function closeConsole() {
   const makeBtn = document.getElementById('make-btn');
   if(makeBtn){
     makeBtn.classList.remove('active');
-    makeBtn.textContent = '🏠 방 만들기';
+    makeBtn.textContent = LANG==='ko'?'🏠 방 만들기':'🏠 Make Room';
     makeBtn.onclick = openConsole;
   }
 }
@@ -1858,7 +1842,7 @@ function refreshLabel(cat){
   if(!el) return;
   const s=SEL[cat]; let txt='',filled=false;
   if(cat==='wall'||cat==='floor'){if(s){const a=ASSETS[cat].find(x=>x.id===s);txt=a?a.name:'';filled=true;}}
-  else{if(s.size>0){txt=`${s.size}개 선택됨`;filled=true;}}
+  else{if(s.size>0){txt=LANG==='ko'?`${s.size}개 선택됨`:`${s.size} selected`;filled=true;}}
   el.textContent=txt||(cat==='furniture'||cat==='walldeco'||cat==='item'?'미선택 (복수선택)':'미선택');
   el.classList.toggle('none',!filled);
 }
@@ -3372,7 +3356,7 @@ async function openEstate(){
   const grid = document.getElementById('estate-grid');
   const sub  = document.getElementById('estate-sub');
   document.getElementById('estate-bal-text').textContent = MY_BALANCE !== null ? MY_BALANCE.toLocaleString() : '—';
-  sub.textContent = LANG==='ko' ? `내 방 ${(rooms||[]).length}개` : `${(rooms||[]).length} Room${(rooms||[]).length!==1?'s':''}`;
+  sub.textContent = `내 방 ${(rooms||[]).length}개`;
   grid.innerHTML = '';
   if(!rooms || !rooms.length){
     grid.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px">등록된 방이 없어요.</div>';
@@ -3812,7 +3796,9 @@ function postToXAfterReg(){
   if(!num) return;
   const handle = CURRENT_USER?.email?.split('@')[0] || 'HiveRoom';
   const url = `${location.origin}${location.pathname}#room=${num}&zoom=2`;
-  const text = `🍯 HiveRoom에 입주했어요!\n\n나의 방을 꾸미고 맵에 등록했습니다.\n지금 바로 방문하여 저의 이웃이 되어주세요! 🏠\n👉 ${url}`;
+  const text = LANG==='ko'
+    ? `🍯 HiveRoom에 입주했어요!\n\n나의 방을 꾸미고 맵에 등록했습니다.\n지금 바로 방문하여 저의 이웃이 되어주세요! 🏠\n👉 ${url}`
+    : `🍯 Just moved into HiveRoom!\n\nI decorated my room and registered it on the map.\nCome visit and be my neighbor! 🏠\n👉 ${url}`;
   window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank', 'width=600,height=450');
 }
 
@@ -3942,14 +3928,15 @@ function toggleMoveMapSelect(){
 function moveStep1Next(){
   const val = parseInt(document.getElementById('move-target-input').value);
   if(!val || val < 1 || val > 1027){ alert('유효한 방 번호를 입력하세요 (1~1027)'); return; }
-  if(ROOMS[val]){ alert(`${val}번은 이미 사용 중인 방입니다`); return; }
-  if(val === MOVE_FROM_NUM){ alert('현재 방과 같은 번호입니다'); return; }
+  if(ROOMS[val]){ alert(LANG==='ko'?`${val}번은 이미 사용 중인 방입니다`:`Room ${val} is already occupied.`); return; }
+  if(val === MOVE_FROM_NUM){ alert(LANG==='ko'?'현재 방과 같은 번호입니다':'That is your current room.'); return; }
   MOVE_TO_NUM = val;
   MOVE_MAP_SELECT = false;
   document.getElementById('move-map-btn').classList.remove('active');
   document.getElementById('move-map-hint').classList.remove('on');
   document.getElementById('move-confirm-text').textContent =
-    `${MOVE_FROM_NUM}번에서 ${MOVE_TO_NUM}번으로 이사 하시겠습니까?`;
+    LANG==='ko' ? `${MOVE_FROM_NUM}번에서 ${MOVE_TO_NUM}번으로 이사 하시겠습니까?`
+    : `Move from Room ${MOVE_FROM_NUM} to Room ${MOVE_TO_NUM}?`;
   document.getElementById('move-step1').classList.remove('on');
   document.getElementById('move-step2').classList.add('on');
 }
@@ -4021,7 +4008,7 @@ async function confirmMove(){
     // 명시적 서버 오류만 차단 (4xx)
     if(!res.ok && res.status >= 400 && res.status < 500){
       const msg = serverData?.error || '이사 실패';
-      alert(msg); btn.disabled=false; btn.textContent='이사하기 🚚'; return;
+      alert(msg); btn.disabled=false; btn.textContent=LANG==='ko'?'이사하기 🚚':'Move 🚚'; return;
     }
     serverOk = true;
   } catch(e) {
@@ -4048,7 +4035,7 @@ async function confirmMove(){
     closeRoomPanel();
     showToast(`🚚 ${fromNum}번 → ${toNum}번 이사 완료!`);
   }
-  btn.disabled=false; btn.textContent='이사하기 🚚';
+  btn.disabled=false; btn.textContent=LANG==='ko'?'이사하기 🚚':'Move 🚚';
 }
 
 // ── 빈 타일 패널 ──
@@ -4483,35 +4470,42 @@ const I18N = {
     checkin_btn: 'Check-in (+5 HIVE)',
     // 빈 타일 패널
     create_room: 'Create Room',
-    insufficient: 'Insufficient balance',
     // 방 만들기 콘솔
     make_room: 'Make Room',
     finish: 'Finish',
     // 투자
     invest_btn: 'Invest',
     cancel: 'Cancel',
-    // 에셋 탭
-    tab_wall: 'Wallpaper',
-    tab_floor: 'Floor',
-    tab_furniture: 'Furniture',
-    tab_deco: 'Decor',
-    tab_item: 'Item',
-    // 아이템 컨트롤
-    ctrl_size: 'Size',
-    ctrl_deselect: 'Desel',
-    ctrl_delete: 'Del',
-    // 도움말 드롭다운
-    con_help: 'Help',
-    con_help_title: '🔧 Item Controls',
-    con_help_body: '<b>Click</b> a placed item to show the control overlay.<br>・<b>Size slider</b> — resize<br>・<b>⇄</b> — flip horizontally<br>・<b>↑↓</b> — change layer order<br>・<b>Desel</b> — keep item, hide overlay<br>・<b>Del</b> — remove from preview',
-    con_help_tip: '💡 Drag any item to freely reposition it!',
+    // 헤더 툴팁
+    wage_tooltip: '10 HIVE is automatically paid every day at UTC 00:00! 🍯',
+    tax_tooltip: 'Your room value drops by 3, 2 or 1 HIVE each month depending on the ZONE.',
+    // 선택 상태
+    sel_none: 'None',
+    sel_none_multi: 'None (multi)',
     // 투자 팝업
-    invest_info: 'Your investment raises the tile value.',
-    invest_label: 'Amount (HIVE)',
-    invest_cur: 'Current Value',
-    invest_after: 'After Investment',
-    // 구매 성공
-    buy_success_title: 'Purchase Complete!',
+    invest_bal: 'Balance',
+    insufficient: 'Insufficient balance',
+    // 완성하기 팝업
+    done_title: '🎉 Room Design Complete!',
+    done_desc: 'Ready to register your room on the map?',
+    done_step1_hint: '🐦 Your profile photo and link will be generated from your X (Twitter) ID.',
+    done_next: 'Next →',
+    done_keep_edit: '✏️ Keep Editing',
+    done_step2_hint: '✨ Enter an X ID you support — their profile photo appears as a small badge on your tile.',
+    done_interest_lbl: 'Supporter Twitter ID',
+    done_optional: '(optional)',
+    done_back: '◀ Back',
+    done_post_x: 'POST to X — Share your move-in!',
+    reg_btn: '✅ Register on Map',
+    // 이사하기 팝업
+    move_banner_title: '🚚 Move Room',
+    move_label: 'Target Empty Room Number',
+    move_map_btn: '🗺 Pick on Map',
+    move_map_hint: 'Click an empty tile on the map',
+    move_next: 'Next →',
+    move_back: '← Back',
+    move_yes: 'Yes, Continue',
+    move_confirm: 'Move 🚚',
     // 랭킹
     ranking_title: '🏆 HiveRoom Ranking',
     ranking_loading: '🍯 Loading rankings...',
@@ -4608,35 +4602,42 @@ const I18N = {
     checkin_btn: '출석체크 (+5 HIVE)',
     // 빈 타일 패널
     create_room: '방 만들기',
-    insufficient: '잔액이 부족합니다',
     // 방 만들기 콘솔
     make_room: '방 만들기',
     finish: '완성하기',
     // 투자
     invest_btn: '투자하기',
     cancel: '취소',
-    // 에셋 탭
-    tab_wall: '벽지',
-    tab_floor: '바닥',
-    tab_furniture: '가구',
-    tab_deco: '장식',
-    tab_item: '아이템',
-    // 아이템 컨트롤
-    ctrl_size: '크기',
-    ctrl_deselect: '해제',
-    ctrl_delete: '삭제',
-    // 도움말 드롭다운
-    con_help: '도움말',
-    con_help_title: '🔧 아이템 컨트롤',
-    con_help_body: '배치된 아이템을 <b>클릭</b>하면 컨트롤 오버레이가 나타납니다.<br>・<b>크기 슬라이더</b> — 크기 조절<br>・<b>⇄</b> — 좌우 반전<br>・<b>↑↓</b> — 레이어 순서 변경<br>・<b>해제</b> — 선택 해제 (아이템 유지)<br>・<b>삭제</b> — 미리보기에서 제거',
-    con_help_tip: '💡 아이템을 드래그해서 원하는 위치로 이동할 수 있어요!',
+    // 헤더 툴팁
+    wage_tooltip: '매일 UTC 00:00에 10 HIVE가 자동으로 지급됩니다! 🍯',
+    tax_tooltip: '소유한 방의 가치가 ZONE에 따라<br>매달 3, 2 or 1 HIVE 씩 하락합니다.',
+    // 선택 상태
+    sel_none: '미선택',
+    sel_none_multi: '미선택 (복수선택)',
     // 투자 팝업
-    invest_info: '투자금만큼 타일 가치가 상승합니다',
-    invest_label: '투자 금액 (HIVE)',
-    invest_cur: '현재 가치',
-    invest_after: '투자 후 가치',
-    // 구매 성공
-    buy_success_title: '구매 완료!',
+    invest_bal: '잔액',
+    insufficient: '잔액이 부족합니다',
+    // 완성하기 팝업
+    done_title: '🎉 방 디자인 완성!',
+    done_desc: '나만의 방을 맵에 등록할까요?',
+    done_step1_hint: '🐦 입력하신 트위터 아이디의 프로필 사진과 링크가 생성됩니다.',
+    done_next: '다음 →',
+    done_keep_edit: '✏️ 계속 수정',
+    done_step2_hint: '✨ 관심있는 트위터 아이디를 입력하시면 해당 프로필 사진이 작은 뱃지로 표시됩니다.',
+    done_interest_lbl: '관심사 Twitter ID',
+    done_optional: '(선택사항)',
+    done_back: '◀ 뒤로',
+    done_post_x: '입주 소식 알리기',
+    reg_btn: '✅ 맵에 등록하기',
+    // 이사하기 팝업
+    move_banner_title: '🚚 이사하기',
+    move_label: '이사할 빈 방 번호',
+    move_map_btn: '🗺 맵에서 선택',
+    move_map_hint: '맵에서 빈 타일을 클릭하세요',
+    move_next: '다음 →',
+    move_back: '← 뒤로',
+    move_yes: 'Yes, 계속',
+    move_confirm: '이사하기 🚚',
     // 랭킹
     ranking_title: '🏆 HiveRoom 랭킹',
     ranking_loading: '🍯 랭킹 불러오는 중...',
@@ -4663,7 +4664,7 @@ const I18N = {
     reserved_label: '거래불가',
     zone_label: v => `ZONE ${v}`,
     // 빈 타일 패널 안내
-    ep_hint: '<span data-i18n="ep_hint">💡 Purchase this tile to decorate your own room!<br>Room editor opens right after purchase.</span>',
+    ep_hint: '💡 이 타일을 구매하면 나만의 방을 꾸밀 수 있어요!<br>구매 후 방 꾸미기 화면이 바로 열립니다.',
     ep_state: '비어있음',
     ep_login: '로그인이 필요합니다',
     ep_price_lbl: '타일 가격',
@@ -4725,24 +4726,7 @@ function applyI18n(){
   if(btn) btn.textContent = LANG === 'ko' ? '🌐 EN' : '🌐 한';
   // Tips 팝업 내용 갱신
   if(typeof _tipsUpdateContent === 'function') _tipsUpdateContent();
-  // 도움말 드롭다운 내용 갱신
-  const helpBody = document.getElementById('con-help-drop-body');
-  if(helpBody) helpBody.innerHTML = t('con_help_body') + `<div class="con-help-drop-tip">${t('con_help_tip')}</div>`;
 }
-
-function toggleConHelp(e){
-  e.stopPropagation();
-  const drop = document.getElementById('con-help-drop');
-  if(!drop) return;
-  drop.classList.toggle('open');
-}
-document.addEventListener('click', function(e){
-  const drop = document.getElementById('con-help-drop');
-  const btn  = document.getElementById('con-help-btn');
-  if(drop && drop.classList.contains('open') && !drop.contains(e.target) && e.target !== btn){
-    drop.classList.remove('open');
-  }
-});
 
 function toggleLang(){
   LANG = LANG === 'ko' ? 'en' : 'ko';
