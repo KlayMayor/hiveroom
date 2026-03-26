@@ -1064,7 +1064,7 @@ header{
     </div>
     <button class="rp-buy-btn" id="ep-buy-btn" style="margin-top:16px;"><span data-i18n="create_room">Create Room</span></button>
     <div class="rp-insufficient" id="ep-insufficient" style="display:none;" data-i18n="insufficient">Insufficient balance</div>
-    <div id="ep-login-msg" style="display:none;text-align:center;font-size:12px;color:var(--muted);margin-top:10px;">로그인이 필요합니다</div>
+    <div id="ep-login-msg" style="display:none;text-align:center;font-size:12px;color:var(--muted);margin-top:10px;" data-i18n="login_required">Login required</div>
   </div>
 </div>
 
@@ -1074,7 +1074,7 @@ header{
     <div style="font-size:36px;margin-bottom:12px;">🏠</div>
     <div style="font-family:'Jua',sans-serif;font-size:17px;color:#A87800;margin-bottom:8px;" data-i18n="buy_confirm_title">Confirm Purchase</div>
     <div style="font-size:13px;color:#555;line-height:1.7;margin-bottom:6px;" data-i18n="buy_confirm_desc">This cannot be undone.<br>Purchase this room?</div>
-    <div id="buy-confirm-price" style="font-size:15px;font-weight:700;color:#A87800;margin-bottom:16px;background:#FFF8E8;border-radius:10px;padding:8px 0;">— HIVE 차감</div>
+    <div id="buy-confirm-price" style="font-size:15px;font-weight:700;color:#A87800;margin-bottom:16px;background:#FFF8E8;border-radius:10px;padding:8px 0;">—</div>
     <div style="display:flex;gap:10px;justify-content:center;">
       <button onclick="confirmBuyRoom()" style="flex:1;padding:10px;background:#F2B830;border:none;border-radius:12px;font-family:'Jua',sans-serif;font-size:14px;color:#fff;cursor:pointer;">Yes</button>
       <button onclick="cancelBuyRoom()" style="flex:1;padding:10px;background:#EEE;border:none;border-radius:12px;font-family:'Jua',sans-serif;font-size:14px;color:#666;cursor:pointer;">No</button>
@@ -1410,7 +1410,7 @@ let _pendingTileNum = null; // 빈 타일 클릭으로 방 만들기 시작한 �
 
 function openMakeRoom(){
   closeMenu();
-  if(!CURRENT_USER){ alert('로그인이 필요해요!'); return; }
+  if(!CURRENT_USER){ alert(LANG==='ko'?'로그인이 필요해요!':'Login required.'); return; }
   EDIT_ROOM_NUM = null;
   resetConsole();
   openConsole();
@@ -1419,7 +1419,7 @@ function openMakeRoom(){
 // ── 방 수정하기 ──
 async function openEditRoom(){
   closeMenu();
-  if(!CURRENT_USER){ alert('로그인이 필요해요!'); return; }
+  if(!CURRENT_USER){ alert(LANG==='ko'?'로그인이 필요해요!':'Login required.'); return; }
   const res = await fetch(
     `${SUPA_URL}/rest/v1/rooms?email=eq.${encodeURIComponent(CURRENT_USER.email)}&order=room_number.asc`,
     { headers:{ 'apikey':SUPA_KEY, 'Authorization':`Bearer ${SUPA_KEY}` } }
@@ -3364,7 +3364,7 @@ function updateBalanceUI(){
 // ══════════════════════════════════════
 async function openEstate(){
   closeMenu();
-  if(!CURRENT_USER){ alert('로그인이 필요해요!'); return; }
+  if(!CURRENT_USER){ alert(LANG==='ko'?'로그인이 필요해요!':'Login required.'); return; }
   const res = await fetch(
     `${SUPA_URL}/rest/v1/rooms?email=eq.${encodeURIComponent(CURRENT_USER.email)}&order=room_number.asc&select=room_number`,
     { headers:{ 'apikey':SUPA_KEY, 'Authorization':`Bearer ${await getValidToken() || SUPA_KEY}` } }
@@ -3573,7 +3573,7 @@ function openRoomPanel(num){
     } else {
       // 로그인: 쿨타임 + 소유자 서버 재확인 (잔액 무관하게 항상 실행)
       buyBtn.disabled = true;
-      buyBtn.textContent = '구매하기';
+      buyBtn.textContent = t('buy');
       insuf.style.display = 'none';
       const _ct = document.getElementById('rp-cooltime');
       if(_ct){ _ct.style.display = 'block'; _ct.textContent = t('cooltime_checking'); }
@@ -3633,7 +3633,7 @@ function startCooltimeCountdown(buyBtn, endsAt, roomNum){
   // 버튼은 항상 비활성화 + 텍스트 '구매하기' 유지
   // 카운트다운은 rp-cooltime div에 표시
   buyBtn.disabled = true;
-  buyBtn.textContent = '구매하기';
+  buyBtn.textContent = t('buy');
   const ctDiv = document.getElementById('rp-cooltime');
   if(ctDiv) ctDiv.style.display = 'block';
   const tick = () => {
@@ -3736,11 +3736,11 @@ function _activateBuyBtn(buyBtn, roomNum, myBal, price){
   const insuf = document.getElementById('rp-insufficient');
   if(myBal !== null && price !== null && myBal < price){
     buyBtn.disabled = true;
-    buyBtn.textContent = '구매하기';
+    buyBtn.textContent = t('buy');
     if(insuf){ insuf.style.display = 'block'; insuf.textContent = t('insufficient'); }
   } else {
     buyBtn.disabled = false;
-    buyBtn.textContent = '구매하기';
+    buyBtn.textContent = t('buy');
     if(insuf) insuf.style.display = 'none';
   }
 }
@@ -3752,7 +3752,7 @@ function _afterBuyRoom(roomNum){   /* no-op */ }
 // ── 출석체크 퀴즈 (방마다 별도, UTC 자정 기준) ──
 let _attendQuizAnswer = null;
 function openAttendanceQuiz(){
-  if(!CURRENT_USER){ alert('로그인이 필요합니다.'); return; }
+  if(!CURRENT_USER){ alert(LANG==='ko'?'로그인이 필요합니다.':'Login required.'); return; }
   if(!PANEL_ROOM_NUM){ alert('방을 선택해주세요.'); return; }
   // UI 중복 클릭 방지용 로컬 캐시 (실제 검증은 서버)
   const todayUTC = new Date().toISOString().split('T')[0];
@@ -3855,7 +3855,7 @@ async function confirmBuyRoom(){
   });
   const efData = await efRes.json();
   if(!efRes.ok){
-    btn.disabled = false; btn.textContent = '구매하기';
+    btn.disabled = false; btn.textContent = t('buy');
     if(efRes.status === 425){
       // 서버 쿨타임 — 남은 시간을 서버에서 받아 표시
       const remainingMs = efData.cooltime_remaining_ms;
@@ -3893,7 +3893,7 @@ async function confirmBuyRoom(){
   const ov = document.getElementById('buy-success-ov');
   ov.dataset.boughtNum = _boughtNum;
   ov.classList.add('show');
-  btn.disabled = false; btn.textContent = '구매하기';
+  btn.disabled = false; btn.textContent = t('buy');
   showToast(t('toast_buy_done'));
 }
 function closeBuySuccess(){
@@ -4090,7 +4090,7 @@ function openIncompleteTilePanel(num){
     // 타인의 미완성 방 → 구매하기 버튼
     btn.style.display='block'; loginMsg.style.display='none';
     btn.disabled = !(myBal >= tilePrice);
-    btn.textContent = '구매하기';
+    btn.textContent = t('buy');
     btn.onclick = () => requestBuyIncomplete(num, tilePrice);
     insuf.style.display = (myBal < tilePrice) ? 'block' : 'none';
   }
@@ -4101,7 +4101,7 @@ function openIncompleteTilePanel(num){
 function requestBuyIncomplete(num, price){
   // 미완성 방 구매 확인 팝업
   PANEL_ROOM_NUM = num;
-  document.getElementById('buy-confirm-price').textContent = `${price.toLocaleString()} HIVE 차감`;
+  document.getElementById('buy-confirm-price').textContent = `${price.toLocaleString()} HIVE${LANG==='ko'?' 차감':' deducted'}`;
   document.getElementById('buy-confirm-ov').dataset.quotedPrice = price;
   document.getElementById('buy-confirm-ov').style.display = 'flex';
 }
@@ -4161,7 +4161,7 @@ function closeEmptyPanel(){
 function requestTileBuy(){
   if(!CURRENT_USER || EMPTY_PANEL_NUM === null) return;
   const price = getZoneConfig(EMPTY_PANEL_NUM).price;
-  document.getElementById('tile-confirm-price').textContent = `${price.toLocaleString()} HIVE 차감`;
+  document.getElementById('tile-confirm-price').textContent = `${price.toLocaleString()} HIVE${LANG==='ko'?' 차감':' deducted'}`;
   const ov = document.getElementById('tile-confirm-ov');
   ov.style.display = 'flex';
 }
@@ -4524,6 +4524,7 @@ const I18N = {
     // 투자 팝업
     invest_bal: 'Balance',
     insufficient: 'Insufficient balance',
+    login_required: 'Login required',
     // 완성하기 팝업
     done_title: '🎉 Room Design Complete!',
     done_desc: 'Ready to register your room on the map?',
@@ -4674,6 +4675,7 @@ const I18N = {
     // 투자 팝업
     invest_bal: '잔액',
     insufficient: '잔액이 부족합니다',
+    login_required: '로그인이 필요합니다',
     // 완성하기 팝업
     done_title: '🎉 방 디자인 완성!',
     done_desc: '나만의 방을 맵에 등록할까요?',
