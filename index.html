@@ -664,8 +664,7 @@ header{
     height:calc(100vh - 46px) !important;
     overflow-y:auto !important;
     -webkit-overflow-scrolling:touch !important;
-    display:flex !important;
-    flex-direction:column !important;
+    display:block !important;
   }
   #room-panel.open{ left:0 !important; }
   #empty-panel{
@@ -676,11 +675,9 @@ header{
     overflow-y:auto !important;
     -webkit-overflow-scrolling:touch !important;
   }
-  /* rp-body가 패널 전체를 채우도록 */
+  /* rp-body 하단 여백 (마지막 버튼 안 잘리게) */
   #room-panel .rp-body{
-    flex:1;
-    min-height:0;
-    padding-bottom:40px !important;
+    padding-bottom:60px !important;
   }
 
   /* 헤더 overflow 해제 (드롭다운 잘림 방지) */
@@ -689,8 +686,9 @@ header{
   /* 햄버거 버튼 표시 */
   #mob-hamburger{ display:flex !important; }
 
-  /* 헤더 로고 숨김 (햄버거+로고가 겹치지 않게) */
+  /* 헤더 로고 숨김, 모바일 타이틀 표시 */
   .logo{ display:none !important; }
+  #mob-title{ display:inline !important; }
 
   /* 프로필 드롭다운: 모바일에서 잘림 방지 */
   .h-dropdown{ right:0 !important; top:46px !important; position:fixed !important; }
@@ -805,6 +803,7 @@ header{
     <span></span><span></span><span></span>
   </button>
   <div class="logo">🍯 HiveRoom</div>
+  <span id="mob-title" style="display:none;font-family:'Jua',sans-serif;font-size:17px;color:var(--hdk);margin-left:4px;flex-shrink:0;">🍯 HiveRoom</span>
   <div class="h-sep"></div>
   <button class="h-badge" onclick="openHelp()" style="cursor:pointer;border:1px solid var(--honey);background:var(--hlt);color:var(--hdk);font-family:'Noto Sans KR',sans-serif;" data-i18n="help">❓ Help</button>
   <div class="h-sep"></div>
@@ -4559,10 +4558,12 @@ function openEmptyPanel(num){
   // 빈 패널 열고, 방 패널 닫기
   document.getElementById('room-panel').classList.remove('open');
   PANEL_ROOM_NUM = null;
+  const epMob = window.innerWidth <= 768;
   document.getElementById('empty-panel').style.left = '0';
 }
 function closeEmptyPanel(){
-  document.getElementById('empty-panel').style.left = '-340px';
+  const epMob = window.innerWidth <= 768;
+  document.getElementById('empty-panel').style.left = epMob ? '-100%' : '-340px';
   EMPTY_PANEL_NUM = null;
 }
 
