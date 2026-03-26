@@ -183,6 +183,14 @@ header{
 .con-finish-btn.on:hover{background:rgba(255,255,255,.3);}
 .con-close-btn{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;}
 .con-close-btn:hover{background:rgba(255,255,255,.35);}
+.con-help-btn{padding:5px 11px;background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.35);color:#fff;border-radius:14px;font-size:11px;font-weight:700;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:all .15s;position:relative;}
+.con-help-btn:hover{background:rgba(255,255,255,.25);}
+.con-help-drop{display:none;position:absolute;top:calc(100% + 8px);right:0;width:290px;background:#fff;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.18);padding:14px 16px;z-index:500;text-align:left;}
+.con-help-drop.open{display:block;}
+.con-help-drop-title{font-size:12px;font-weight:700;color:#A87800;margin-bottom:8px;}
+.con-help-drop-body{font-size:11.5px;color:#444;line-height:1.8;}
+.con-help-drop-body b{color:#A87800;}
+.con-help-drop-tip{margin-top:9px;font-size:11px;color:#E07820;font-weight:600;background:#FFF8E8;border-radius:8px;padding:6px 10px;}
 
 /* 콘솔 바디 — 세로 구조: 상단(미리보기+아이템) / 하단(광고) */
 .con-body{
@@ -864,6 +872,13 @@ header{
         🏠 <span data-i18n="make_room">Make Room</span>
       </div>
       <div class="con-right-acts">
+        <div style="position:relative;">
+          <button class="con-help-btn" id="con-help-btn" onclick="toggleConHelp(event)">❓ <span data-i18n="con_help">Help</span></button>
+          <div class="con-help-drop" id="con-help-drop">
+            <div class="con-help-drop-title" data-i18n="con_help_title">🔧 Item Controls</div>
+            <div class="con-help-drop-body" id="con-help-drop-body"></div>
+          </div>
+        </div>
         <button class="con-finish-btn" id="finish-btn" onclick="showDone()"><span data-i18n="finish">Finish</span> ✦</button>
         <button class="con-close-btn" onclick="closeConsole()">✕</button>
       </div>
@@ -885,7 +900,7 @@ header{
           <!-- 컨트롤 핸들 -->
           <div id="item-ctrl">
             <div class="ctrl-size">
-              <span>크기</span>
+              <span data-i18n="ctrl_size">Size</span>
               <input type="range" id="ctrl-size-range" min="30" max="200" value="100"
                 oninput="onSizeChange(this.value)">
               <span id="ctrl-size-val">100%</span>
@@ -895,8 +910,8 @@ header{
             <button class="ctrl-btn" id="ctrl-layer-up" id="ctrl-up-title" title="Forward" onclick="onCtrlLayerUp()">↑</button>
             <button class="ctrl-btn" id="ctrl-layer-dn" id="ctrl-dn-title" title="Backward" onclick="onCtrlLayerDn()">↓</button>
             <div class="ctrl-sep"></div>
-            <button class="ctrl-btn" title="Deselect" onclick="onCtrlDeselect()" style="font-size:10px;width:44px;color:#666;">해제</button>
-            <button class="ctrl-btn" title="Delete" onclick="onCtrlDelete()" style="font-size:10px;width:36px;color:#C44;background:#FFF0F0;">삭제</button>
+            <button class="ctrl-btn" title="Deselect" onclick="onCtrlDeselect()" style="font-size:10px;width:44px;color:#666;" data-i18n="ctrl_deselect">Desel</button>
+            <button class="ctrl-btn" title="Delete" onclick="onCtrlDelete()" style="font-size:10px;width:36px;color:#C44;background:#FFF0F0;" data-i18n="ctrl_delete">Del</button>
           </div>
         </div>
 
@@ -905,11 +920,11 @@ header{
 
           <!-- 에셋 탭 -->
           <div class="asset-tabs">
-            <button class="atab on"  onclick="switchTab(this,'wall')">🎨 벽지</button>
-            <button class="atab"     onclick="switchTab(this,'floor')">🟫 바닥</button>
-            <button class="atab"     onclick="switchTab(this,'furniture')">🪑 가구</button>
-            <button class="atab"     onclick="switchTab(this,'walldeco')">✨ 장식</button>
-            <button class="atab"     onclick="switchTab(this,'item')">🎁 아이템</button>
+            <button class="atab on"  onclick="switchTab(this,'wall')">🎨 <span data-i18n="tab_wall">Wallpaper</span></button>
+            <button class="atab"     onclick="switchTab(this,'floor')">🟫 <span data-i18n="tab_floor">Floor</span></button>
+            <button class="atab"     onclick="switchTab(this,'furniture')">🪑 <span data-i18n="tab_furniture">Furniture</span></button>
+            <button class="atab"     onclick="switchTab(this,'walldeco')">✨ <span data-i18n="tab_deco">Decor</span></button>
+            <button class="atab"     onclick="switchTab(this,'item')">🎁 <span data-i18n="tab_item">Item</span></button>
           </div>
 
           <div class="asset-pane on" id="pane-wall">
@@ -975,9 +990,9 @@ header{
 <div id="invest-ov">
   <div class="invest-box">
     <div class="invest-title" id="invest-title">🍯 타일에 투자하기</div>
-    <div class="invest-info" id="invest-info">투자금만큼 타일 가치가 상승합니다</div>
+    <div class="invest-info" id="invest-info" data-i18n="invest_info">Your investment raises the tile value.</div>
     <div class="invest-row">
-      <div class="invest-label">투자 금액 (HIVE)</div>
+      <div class="invest-label" data-i18n="invest_label">Amount (HIVE)</div>
       <input class="invest-input" id="invest-amount" type="number" min="0" value="0" oninput="onInvestInput()">
       <div class="invest-spin">
         <button onclick="adjustInvest(1)">▲</button>
@@ -985,8 +1000,8 @@ header{
       </div>
     </div>
     <div class="invest-result" id="invest-result">
-      현재 가치: <b id="ir-cur">—</b> HIVE<br>
-      투자 후 가치: <b id="ir-after">—</b> HIVE<br>
+      <span data-i18n="invest_cur">Current Value</span>: <b id="ir-cur">—</b> HIVE<br>
+      <span data-i18n="invest_after">After Investment</span>: <b id="ir-after">—</b> HIVE<br>
       <span data-i18n="invest_bal">Balance</span>: <b id="ir-bal">—</b> HIVE → <b id="ir-bal-after">—</b> HIVE
     </div>
     <div class="invest-btns">
@@ -1039,11 +1054,11 @@ header{
     <div id="ep-zone" style="font-size:11px;font-weight:700;margin-top:4px;padding:3px 10px;border-radius:20px;display:inline-block;"></div>
   </div>
   <div style="padding:16px 20px;flex:1;">
-    <div class="rp-row"><span class="rp-lbl">타일 가격</span><span class="rp-val" id="ep-price">—</span></div>
-    <div class="rp-row"><span class="rp-lbl">내 잔액</span><span class="rp-val" id="ep-mybal">—</span></div>
-    <div class="rp-row"><span class="rp-lbl">상태</span><span class="rp-val" style="color:#4CAF50;font-weight:700;">비어있음</span></div>
+    <div class="rp-row"><span class="rp-lbl" data-i18n="ep_price_lbl">Tile Price</span><span class="rp-val" id="ep-price">—</span></div>
+    <div class="rp-row"><span class="rp-lbl" data-i18n="ep_bal_lbl">My Balance</span><span class="rp-val" id="ep-mybal">—</span></div>
+    <div class="rp-row"><span class="rp-lbl" data-i18n="ep_state_lbl">Status</span><span class="rp-val" style="color:#4CAF50;font-weight:700;" data-i18n="ep_state">Empty</span></div>
     <div style="margin-top:6px;padding:10px 12px;background:#FFF8E8;border-radius:10px;font-size:11px;color:#A87800;line-height:1.6;">
-      💡 이 타일을 구매하면 나만의 방을 꾸밀 수 있어요!<br>구매 후 방 꾸미기 화면이 바로 열립니다.
+      <span data-i18n="ep_hint">💡 Purchase this tile to decorate your own room!<br>Room editor opens right after purchase.</span>
     </div>
     <button class="rp-buy-btn" id="ep-buy-btn" style="margin-top:16px;"><span data-i18n="create_room">Create Room</span></button>
     <div class="rp-insufficient" id="ep-insufficient" style="display:none;" data-i18n="insufficient">Insufficient balance</div>
@@ -1083,9 +1098,9 @@ header{
 <div id="buy-success-ov">
   <div class="buy-success-box">
     <div class="buy-success-icon">🎉</div>
-    <div class="buy-success-title">구매 완료!</div>
+    <div class="buy-success-title" data-i18n="buy_success_title">Purchase Complete!</div>
     <div class="buy-success-desc">타일을 성공적으로 구매했어요.<br>방 꾸미기 패널에서<br>나만의 방을 완성해보세요! 🍯</div>
-    <button class="buy-success-btn" onclick="closeBuySuccess()">확인</button>
+    <button class="buy-success-btn" onclick="closeBuySuccess()" data-i18n="close_btn">Close</button>
   </div>
 </div>
 
@@ -3356,7 +3371,7 @@ async function openEstate(){
   const grid = document.getElementById('estate-grid');
   const sub  = document.getElementById('estate-sub');
   document.getElementById('estate-bal-text').textContent = MY_BALANCE !== null ? MY_BALANCE.toLocaleString() : '—';
-  sub.textContent = `내 방 ${(rooms||[]).length}개`;
+  sub.textContent = LANG==='ko' ? `내 방 ${(rooms||[]).length}개` : `${(rooms||[]).length} Room${(rooms||[]).length!==1?'s':''}`;
   grid.innerHTML = '';
   if(!rooms || !rooms.length){
     grid.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px">등록된 방이 없어요.</div>';
@@ -4476,6 +4491,23 @@ const I18N = {
     // 투자
     invest_btn: 'Invest',
     cancel: 'Cancel',
+    tab_wall: 'Wallpaper',
+    tab_floor: 'Floor',
+    tab_furniture: 'Furniture',
+    tab_deco: 'Decor',
+    tab_item: 'Item',
+    ctrl_size: 'Size',
+    ctrl_deselect: 'Desel',
+    ctrl_delete: 'Del',
+    con_help: 'Help',
+    con_help_title: '🔧 Item Controls',
+    con_help_body: '<b>Click</b> a placed item to show the control overlay.<br>・<b>Size slider</b> — resize<br>・<b>⇄</b> — flip horizontally<br>・<b>↑↓</b> — change layer order<br>・<b>Desel</b> — keep item, hide overlay<br>・<b>Del</b> — remove from preview',
+    con_help_tip: '💡 Drag any item to freely reposition it!',
+    invest_info: 'Your investment raises the tile value.',
+    invest_label: 'Amount (HIVE)',
+    invest_cur: 'Current Value',
+    invest_after: 'After Investment',
+    buy_success_title: 'Purchase Complete!',
     // 헤더 툴팁
     wage_tooltip: '10 HIVE is automatically paid every day at UTC 00:00! 🍯',
     tax_tooltip: 'Your room value drops by 3, 2 or 1 HIVE each month depending on the ZONE.',
@@ -4608,6 +4640,23 @@ const I18N = {
     // 투자
     invest_btn: '투자하기',
     cancel: '취소',
+    tab_wall: '벽지',
+    tab_floor: '바닥',
+    tab_furniture: '가구',
+    tab_deco: '장식',
+    tab_item: '아이템',
+    ctrl_size: '크기',
+    ctrl_deselect: '해제',
+    ctrl_delete: '삭제',
+    con_help: '도움말',
+    con_help_title: '🔧 아이템 컨트롤',
+    con_help_body: '배치된 아이템을 <b>클릭</b>하면 컨트롤 오버레이가 나타납니다.<br>・<b>크기 슬라이더</b> — 크기 조절<br>・<b>⇄</b> — 좌우 반전<br>・<b>↑↓</b> — 레이어 순서 변경<br>・<b>해제</b> — 선택 해제 (아이템 유지)<br>・<b>삭제</b> — 미리보기에서 제거',
+    con_help_tip: '💡 아이템을 드래그해서 원하는 위치로 이동할 수 있어요!',
+    invest_info: '투자금만큼 타일 가치가 상승합니다',
+    invest_label: '투자 금액 (HIVE)',
+    invest_cur: '현재 가치',
+    invest_after: '투자 후 가치',
+    buy_success_title: '구매 완료!',
     // 헤더 툴팁
     wage_tooltip: '매일 UTC 00:00에 10 HIVE가 자동으로 지급됩니다! 🍯',
     tax_tooltip: '소유한 방의 가치가 ZONE에 따라<br>매달 3, 2 or 1 HIVE 씩 하락합니다.',
@@ -4664,7 +4713,7 @@ const I18N = {
     reserved_label: '거래불가',
     zone_label: v => `ZONE ${v}`,
     // 빈 타일 패널 안내
-    ep_hint: '💡 이 타일을 구매하면 나만의 방을 꾸밀 수 있어요!<br>구매 후 방 꾸미기 화면이 바로 열립니다.',
+    ep_hint: '<span data-i18n="ep_hint">💡 Purchase this tile to decorate your own room!<br>Room editor opens right after purchase.</span>',
     ep_state: '비어있음',
     ep_login: '로그인이 필요합니다',
     ep_price_lbl: '타일 가격',
@@ -4726,7 +4775,24 @@ function applyI18n(){
   if(btn) btn.textContent = LANG === 'ko' ? '🌐 EN' : '🌐 한';
   // Tips 팝업 내용 갱신
   if(typeof _tipsUpdateContent === 'function') _tipsUpdateContent();
+  // 도움말 드롭다운 내용 갱신
+  const helpBody = document.getElementById('con-help-drop-body');
+  if(helpBody) helpBody.innerHTML = t('con_help_body') + `<div class="con-help-drop-tip">${t('con_help_tip')}</div>`;
 }
+
+function toggleConHelp(e){
+  e.stopPropagation();
+  const drop = document.getElementById('con-help-drop');
+  if(!drop) return;
+  drop.classList.toggle('open');
+}
+document.addEventListener('click', function(e){
+  const drop = document.getElementById('con-help-drop');
+  const helpBtn = document.getElementById('con-help-btn');
+  if(drop && drop.classList.contains('open') && !drop.contains(e.target) && e.target !== helpBtn){
+    drop.classList.remove('open');
+  }
+});
 
 function toggleLang(){
   LANG = LANG === 'ko' ? 'en' : 'ko';
