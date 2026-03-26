@@ -662,6 +662,10 @@ header{
     left:-100% !important;
     top:46px !important;
     height:calc(100vh - 46px) !important;
+    overflow-y:auto !important;
+    -webkit-overflow-scrolling:touch !important;
+    display:flex !important;
+    flex-direction:column !important;
   }
   #room-panel.open{ left:0 !important; }
   #empty-panel{
@@ -669,6 +673,14 @@ header{
     left:-100% !important;
     top:46px !important;
     height:calc(100vh - 46px) !important;
+    overflow-y:auto !important;
+    -webkit-overflow-scrolling:touch !important;
+  }
+  /* rp-body가 패널 전체를 채우도록 */
+  #room-panel .rp-body{
+    flex:1;
+    min-height:0;
+    padding-bottom:40px !important;
   }
 
   /* 헤더 overflow 해제 (드롭다운 잘림 방지) */
@@ -748,6 +760,21 @@ header{
   /* 줌 버튼 */
   .map-zoom{ bottom:16px;right:12px; }
   .zoom-btn{ width:36px;height:36px;font-size:16px; }
+  /* 모바일 타일검색 드롭다운 — h-filter-wrap 밖에 독립 위치 */
+  #mob-filter-dropdown{
+    display:none;
+    position:fixed;
+    top:46px; left:0; right:0;
+    z-index:800;
+    background:#fff;
+    border-bottom:1px solid var(--border);
+    box-shadow:0 8px 24px rgba(0,0,0,.15);
+    padding:14px 16px;
+    max-height:60vh;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  #mob-filter-dropdown.open{ display:block; }
 }
 </style>
 </head>
@@ -902,10 +929,52 @@ header{
       <span class="mob-menu-icon">🏆</span>
       <span data-i18n="ranking">Ranking</span>
     </button>
-    <button class="mob-menu-btn" onclick="toggleMapFilter();closeMobMenu()">
+    <button class="mob-menu-btn" onclick="openMobFilter();closeMobMenu()">
       <span class="mob-menu-icon">🔎</span>
       <span data-i18n="tile_search">Tile Search</span>
     </button>
+  </div>
+</div>
+
+<!-- 모바일 타일검색 드롭다운 (햄버거 메뉴에서 열림) -->
+<div id="mob-filter-dropdown">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+    <span style="font-size:13px;font-weight:700;color:var(--hdk);">🔎 <span data-i18n="tile_search">Tile Search</span></span>
+    <button onclick="closeMobFilter()" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--muted);padding:2px 6px;">✕</button>
+  </div>
+  <div class="mf-row" onclick="mfToggle('roomNum')">
+    <input type="checkbox" id="mf-roomNum-m" onchange="mfToggle('roomNum');document.getElementById('mf-roomNum').checked=this.checked;" onclick="event.stopPropagation()">
+    <span class="mf-label"><span data-i18n="show_tile_num">Show Tile No.</span></span>
+  </div>
+  <div class="mf-row" onclick="mfToggle('attend')">
+    <input type="checkbox" id="mf-attend-m" onchange="mfToggle('attend');document.getElementById('mf-attend').checked=this.checked;" onclick="event.stopPropagation()">
+    <span class="mf-dot yellow"></span>
+    <span class="mf-label"><span data-i18n="checkin">Check-in</span></span>
+  </div>
+  <div class="mf-row" onclick="mfToggle('myroom')">
+    <input type="checkbox" id="mf-myroom-m" onchange="mfToggle('myroom');document.getElementById('mf-myroom').checked=this.checked;" onclick="event.stopPropagation()">
+    <span class="mf-dot blue"></span>
+    <span class="mf-label"><span data-i18n="my_room">My Room</span></span>
+  </div>
+  <div class="mf-row" style="align-items:flex-start;flex-direction:column;gap:6px;">
+    <div style="display:flex;align-items:center;gap:10px;width:100%;" onclick="mfToggle('userSearch')">
+      <input type="checkbox" id="mf-userSearch-m" onchange="mfToggle('userSearch');document.getElementById('mf-userSearch').checked=this.checked;" onclick="event.stopPropagation()">
+      <span class="mf-dot green"></span>
+      <span class="mf-label"><span data-i18n="user_search">User Search</span></span>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;padding-left:26px;width:100%;">
+      <input class="mf-input" placeholder="트위터 ID" oninput="mfUserInput(this.value);document.getElementById('mf-user-input').value=this.value;" onclick="event.stopPropagation()" style="flex:1;">
+    </div>
+  </div>
+  <div class="mf-row" style="align-items:flex-start;flex-direction:column;gap:6px;border-bottom:none;">
+    <div style="display:flex;align-items:center;gap:10px;width:100%;" onclick="mfToggle('commSearch')">
+      <input type="checkbox" id="mf-commSearch-m" onchange="mfToggle('commSearch');document.getElementById('mf-commSearch').checked=this.checked;" onclick="event.stopPropagation()">
+      <span class="mf-dot red"></span>
+      <span class="mf-label"><span data-i18n="comm_search">Community Search</span></span>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;padding-left:26px;width:100%;">
+      <input class="mf-input" placeholder="트위터 ID" oninput="mfCommInput(this.value);document.getElementById('mf-comm-input').value=this.value;" onclick="event.stopPropagation()" style="flex:1;">
+    </div>
   </div>
 </div>
 
@@ -1830,6 +1899,25 @@ function closeMobMenu(){
   document.getElementById('mob-menu-ov').classList.remove('open');
   document.getElementById('mob-hamburger').classList.remove('open');
 }
+// ── 모바일 타일검색 드롭다운 ──
+function openMobFilter(){
+  const dd = document.getElementById('mob-filter-dropdown');
+  const isOpen = dd.classList.contains('open');
+  if(isOpen){ closeMobFilter(); return; }
+  dd.classList.add('open');
+  // 외부 클릭 시 닫기
+  setTimeout(()=>{
+    document.addEventListener('click', _mobFilterOutside, {once:true});
+  }, 0);
+}
+function closeMobFilter(){
+  document.getElementById('mob-filter-dropdown').classList.remove('open');
+}
+function _mobFilterOutside(e){
+  const dd = document.getElementById('mob-filter-dropdown');
+  if(dd && !dd.contains(e.target)) closeMobFilter();
+}
+
 // ── 모바일 콘솔 탭 전환 ──
 function mobSwitchView(tab) {
   const conLeft  = document.getElementById('con-left');
@@ -5535,6 +5623,16 @@ mCV.addEventListener('touchend', e=>{
     dSt = {x:e.touches[0].clientX, y:e.touches[0].clientY};
     dOff = {x:mOX, y:mOY}; _dragMoved = false;
   } else if(e.touches.length === 0){
+    // 드래그하지 않은 탭 → click 이벤트 직접 발생
+    if(!_dragMoved && e.changedTouches.length > 0){
+      const t = e.changedTouches[0];
+      const ce = new MouseEvent('click', {
+        bubbles: true, cancelable: true,
+        clientX: t.clientX, clientY: t.clientY
+      });
+      // 약간 딜레이 후 dispatch (touchend 처리 완료 후)
+      setTimeout(() => mCV.dispatchEvent(ce), 10);
+    }
     _touchState.dragging = false; _touchState.pinching = false; _dragMoved = false;
   }
 },{passive:false});
