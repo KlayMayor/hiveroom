@@ -3228,9 +3228,31 @@ function subscribeRooms(){
           const num = (oldRow || row)?.room_number;
           if(num){
             delete ROOMS[num];
+            delete ROOM_BALANCES[num];
             drawMap();
             loadResidentCount();
+          } else {
+            // REPLICA IDENTITY FULL 미설정 시 old_record가 빈 객체
+            // → room_number 식별 불가이므로 무시 (INSERT 핸들러에서 처리)
           }
+        }
+
+        // ── INSERT 이벤트: 이사 감지 ──
+        // 이사하면 from_room DELETE + to_room INSERT 발생
+        // DELETE에서 room_number를 못 얻는 경우,
+        // INSERT에서 같은 email의 기존 방을 찾아 제거
+        if(pgEvent === 'INSERT' && row && row.occupied === 'Y' && row.email){
+          const newEmail = (row.email || '').toLowerCase().trim();
+          const newNum   = row.room_number;
+          // 같은 email로 등록된 다른 방이 있으면 이사 출발지 → 제거
+          Object.keys(ROOMS).forEach(k => {
+            const n = parseInt(k);
+            if(n !== newNum && (ROOMS[n]?.ownerEmail || '').toLowerCase().trim() === newEmail){
+              console.log(`📦 이사 감지: email ${newEmail} — room #${n} 제거 (→ #${newNum})`);
+              delete ROOMS[n];
+              delete ROOM_BALANCES[n];
+            }
+          });
         }
       } catch(err){ console.warn('Realtime parse error:', err); }
     };
