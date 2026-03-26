@@ -461,7 +461,7 @@ header{
 
 /* ── 맵 사이드 패널 (방 구매) ── */
 #room-panel{position:fixed;left:-340px;top:50px;width:320px;height:calc(100vh - 50px);background:#fff;box-shadow:4px 0 24px rgba(0,0,0,.12);z-index:500;display:flex;flex-direction:column;transition:left .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;}
-#room-panel .rp-img{aspect-ratio:1/1;flex-shrink:0;}
+#room-panel .rp-img{height:320px;flex-shrink:0;object-fit:cover;}
 #room-panel.open{left:0;}
 #empty-panel{display:flex;flex-direction:column;}
 #empty-panel.open{left:0;}
@@ -702,19 +702,20 @@ header{
   #empty-panel > *{
     padding-bottom:120px !important;
   }
-  /* rp-close 버튼 터치 영역 확대 */
+  /* rp-close 버튼: 모바일에서 fixed 포지션으로 완전 고정 */
   #room-panel .rp-close,
   #empty-panel .rp-close{
-    width:44px !important;
-    height:44px !important;
-    min-width:44px !important;
-    min-height:44px !important;
-    max-width:44px !important;
-    max-height:44px !important;
+    position:fixed !important;
+    top:56px !important;
+    right:12px !important;
+    width:40px !important;
+    height:40px !important;
     border-radius:50% !important;
-    flex-shrink:0 !important;
     box-sizing:border-box !important;
-    aspect-ratio:1 !important;
+    z-index:600 !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
   }
 
   /* 헤더 overflow 해제 (드롭다운 잘림 방지) */
@@ -1294,7 +1295,7 @@ header{
 <!-- 맵 사이드 패널 (방 구매) -->
 <div id="room-panel">
   <button class="rp-close" onclick="closeRoomPanel()">✕</button>
-  <img class="rp-img" id="rp-img" src="" alt="">
+  <img class="rp-img" id="rp-img" src="" alt="" style="height:auto;max-height:none;">
   <div class="rp-body">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
       <div>
