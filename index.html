@@ -236,6 +236,7 @@ header{
 
 /* 에셋 탭 */
 .asset-tabs{display:flex;background:#fff;border-bottom:2px solid var(--border);flex-shrink:0;}
+#mob-view-tabs{display:none;}
 .atab{flex:1;padding:9px 4px;font-size:11px;font-weight:600;border:none;background:transparent;cursor:pointer;color:var(--muted);font-family:'Noto Sans KR',sans-serif;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;}
 .atab.on{color:var(--hdk);border-bottom-color:var(--honey);background:var(--hlt);}
 .atab:hover:not(.on){color:var(--text);background:#FAFAFA;}
@@ -601,15 +602,125 @@ header{
   /* 맵 전체 화면 */
   .map-wrap{ height:calc(100vh - 46px - 22px); }
 
-  /* 패널/콘솔 모두 숨김 */
+  /* 패널/팝업 모두 숨김 */
   #room-panel{ display:none !important; }
   #empty-panel{ display:none !important; }
-  #console{ display:none !important; }
   #done-ov{ display:none !important; }
   #buy-confirm-ov{ display:none !important; }
   #tile-confirm-ov{ display:none !important; }
   #buy-success-ov{ display:none !important; }
   #ranking-ov .ranking-box{ width:96vw; }
+
+  /* ── 모바일 콘솔 전체화면 오버레이 ── */
+  #console{
+    display:none;
+    position:fixed !important;
+    inset:0 !important;
+    width:100% !important;
+    height:100% !important;
+    top:0 !important; right:0 !important;
+    transform:translateY(100%) !important;
+    transition:transform .32s cubic-bezier(.22,1,.36,1), opacity .25s ease !important;
+    opacity:0 !important;
+    border-radius:0 !important;
+    z-index:900 !important;
+    flex-direction:column !important;
+  }
+  #console.open{
+    display:flex !important;
+    transform:translateY(0) !important;
+    opacity:1 !important;
+  }
+
+  /* 콘솔 헤더 높이 확대 (터치 영역) */
+  .con-head{ height:52px !important; padding:0 16px !important; }
+
+  /* con-body-top: 가로→세로 전환 */
+  .con-body-top{
+    flex-direction:column !important;
+    overflow:hidden !important;
+  }
+
+  /* ── 모바일 탭 전환 버튼 ── */
+  #mob-view-tabs{
+    display:flex;
+    flex-shrink:0;
+    background:#fff;
+    border-bottom:2px solid var(--border);
+  }
+  .mob-vtab{
+    flex:1; padding:10px 4px;
+    font-size:12px; font-weight:700;
+    border:none; background:transparent;
+    cursor:pointer; color:var(--muted);
+    font-family:'Noto Sans KR',sans-serif;
+    border-bottom:2px solid transparent;
+    margin-bottom:-2px;
+    transition:all .15s;
+  }
+  .mob-vtab.on{
+    color:var(--hdk);
+    border-bottom-color:var(--honey);
+    background:var(--hlt);
+  }
+
+  /* con-left: 미리보기 패널 — 기본 숨김 */
+  .con-left{
+    width:100% !important;
+    flex-shrink:0 !important;
+    border-right:none !important;
+    border-bottom:1px solid var(--border) !important;
+    display:none !important;
+    flex-direction:column !important;
+    overflow:hidden !important;
+  }
+  .con-left.mob-active{ display:flex !important; flex:1; }
+
+  /* 캔버스 크기 모바일 최적화 */
+  #room-cv{
+    width:min(300px, 80vw) !important;
+    height:min(300px, 80vw) !important;
+  }
+  .preview-area{
+    flex:1;
+    overflow-y:auto !important;
+    justify-content:center !important;
+    padding:12px !important;
+  }
+
+  /* item-ctrl: 모바일에서 터치 친화적 */
+  #item-ctrl{
+    padding:10px 14px !important;
+    gap:10px !important;
+  }
+  .ctrl-btn{
+    width:36px !important;
+    height:36px !important;
+    font-size:16px !important;
+  }
+  .ctrl-size input[type=range]{ width:90px !important; }
+
+  /* con-right: 에셋 패널 — 기본 숨김 */
+  .con-right{
+    width:100% !important;
+    display:none !important;
+    flex-direction:column !important;
+    overflow:hidden !important;
+  }
+  .con-right.mob-active{ display:flex !important; flex:1; }
+
+  /* 에셋 탭 글자 크기 */
+  .atab{ font-size:10px !important; padding:10px 2px !important; }
+
+  /* 에셋 그리드: 3열 → 4열 (카드가 더 작아도 괜찮음) */
+  .agrid{
+    grid-template-columns:repeat(4,1fr) !important;
+    gap:6px !important;
+    padding:8px !important;
+  }
+
+  /* 광고 영역 모바일에서 숨김 (공간 확보) */
+  .preview-ad{ display:none !important; }
 
   /* 줌 버튼 크게 */
   .map-zoom{ bottom:16px;right:12px; }
@@ -899,11 +1010,17 @@ header{
     <!-- 바디 -->
     <div class="con-body">
 
+      <!-- 모바일 전용: 미리보기 ↔ 에셋 탭 전환 버튼 (PC에서는 #mob-view-tabs가 display:none) -->
+      <div id="mob-view-tabs">
+        <button class="mob-vtab on" id="mob-tab-preview" onclick="mobSwitchView('preview')">🖼 <span data-i18n="mob_tab_preview">Preview</span></button>
+        <button class="mob-vtab" id="mob-tab-assets" onclick="mobSwitchView('assets')">🛋 <span data-i18n="mob_tab_assets">Assets</span></button>
+      </div>
+
       <!-- 상단: 미리보기 + 아이템선택 -->
       <div class="con-body-top">
 
         <!-- 왼쪽: 미리보기 -->
-        <div class="con-left">
+        <div class="con-left mob-active" id="con-left">
           <div class="preview-area">
             <div style="display:flex;flex-direction:column;align-items:center;">
               <canvas id="room-cv" width="700" height="700" style="width:460px;height:460px;display:block;"></canvas>
@@ -928,7 +1045,7 @@ header{
         </div>
 
         <!-- 오른쪽: 에셋 선택 -->
-        <div class="con-right">
+        <div class="con-right" id="con-right">
 
           <!-- 에셋 탭 -->
           <div class="asset-tabs">
@@ -1639,6 +1756,8 @@ function openConsole() {
   document.getElementById('make-btn').classList.add('active');
   document.getElementById('make-btn').textContent = LANG==='ko'?'✕ 닫기':'✕ Close';
   document.getElementById('make-btn').onclick = closeConsole;
+  // 모바일: 열릴 때 항상 미리보기 탭으로 초기화
+  if(window.innerWidth <= 768) mobSwitchView('preview');
 }
 function closeConsole() {
   document.getElementById('console').classList.remove('open');
@@ -1649,6 +1768,26 @@ function closeConsole() {
     makeBtn.onclick = openConsole;
   }
 }
+// ── 모바일 콘솔 탭 전환 ──
+function mobSwitchView(tab) {
+  const conLeft  = document.getElementById('con-left');
+  const conRight = document.getElementById('con-right');
+  const tabPreview = document.getElementById('mob-tab-preview');
+  const tabAssets  = document.getElementById('mob-tab-assets');
+  if(!conLeft || !conRight) return;
+  if(tab === 'preview') {
+    conLeft.classList.add('mob-active');
+    conRight.classList.remove('mob-active');
+    tabPreview.classList.add('on');
+    tabAssets.classList.remove('on');
+  } else {
+    conLeft.classList.remove('mob-active');
+    conRight.classList.add('mob-active');
+    tabPreview.classList.remove('on');
+    tabAssets.classList.add('on');
+  }
+}
+
 
 // ══════════════════════════════════════
 // 에셋 탭
@@ -1658,6 +1797,8 @@ function switchTab(btn, cat) {
   document.querySelectorAll('.asset-pane').forEach(p=>p.classList.remove('on'));
   btn.classList.add('on');
   document.getElementById('pane-'+cat).classList.add('on');
+  // 모바일: 에셋 탭 클릭 시 자동으로 Assets 뷰로 전환
+  if(window.innerWidth <= 768) mobSwitchView('assets');
 }
 
 // ══════════════════════════════════════
@@ -4642,6 +4783,8 @@ const I18N = {
     invest_bal: 'Balance',
     insufficient: 'Insufficient balance',
     login_required: 'Login required',
+    mob_tab_preview: 'Preview',
+    mob_tab_assets: 'Assets',
     // 완성하기 팝업
     done_title: '🎉 Room Design Complete!',
     done_desc: 'Ready to register your room on the map?',
@@ -4793,6 +4936,8 @@ const I18N = {
     invest_bal: '잔액',
     insufficient: '잔액이 부족합니다',
     login_required: '로그인이 필요합니다',
+    mob_tab_preview: '미리보기',
+    mob_tab_assets: '에셋',
     // 완성하기 팝업
     done_title: '🎉 방 디자인 완성!',
     done_desc: '나만의 방을 맵에 등록할까요?',
