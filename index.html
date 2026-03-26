@@ -4072,14 +4072,39 @@ async function confirmMove(){
   }
 
   if(serverOk){
-    // 로컬 상태 업데이트
-    const oldRoom = { ...(ROOMS[fromNum] || {}) };
+    // from_room의 최신 데이터를 DB에서 직접 가져와서 to_room에 적용
+    // (ROOMS[fromNum]이 부분적으로만 채워져 있을 수 있으므로)
+    let movedRoom = { ...(ROOMS[fromNum] || {}) };
 
-    // toNum: 기본 메타데이터 먼저 세팅 (img는 새로 로드)
+    // ROOMS[fromNum]에 twitterId가 없거나 undefined면 DB에서 보완
+    if(!movedRoom.twitterId && CURRENT_USER){
+      try {
+        const tok = await getValidToken().catch(() => null) || SUPA_KEY;
+        const res = await fetch(
+          `${SUPA_URL}/rest/v1/rooms?room_number=eq.${toNum}&select=*`,
+          { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${tok}` } }
+        );
+        if(res.ok){
+          const rows = await res.json();
+          if(rows?.[0]){
+            const r = rows[0];
+            movedRoom = {
+              ...movedRoom,
+              twitterId:   r.twitter_id   || movedRoom.twitterId   || '',
+              avatarUrl:   r.avatar_url   || movedRoom.avatarUrl   || '',
+              interest:    r.interest     || movedRoom.interest    || '',
+              ownerEmail:  r.email        || movedRoom.ownerEmail  || '',
+            };
+          }
+        }
+      } catch(_){}
+    }
+
+    // toNum 세팅: img는 새로 로드
     ROOMS[toNum] = {
-      ...oldRoom,
+      ...movedRoom,
       room_number: toNum,
-      img: null,       // 일단 null → 아래서 새 URL로 로드
+      img: null,
       tileValue: serverData?.to_room_balance ?? toPrice,
     };
     ROOM_BALANCES[toNum] = serverData?.to_room_balance ?? toPrice;
@@ -4103,14 +4128,28 @@ async function confirmMove(){
     setTimeout(loadMovedImg, 3000);
 
     // 아바타 이미지도 캐시에 로드 (로드 완료 시 drawMap은 loadAvatarImg 내부에서 자동 호출)
-    if(oldRoom.avatarUrl) loadAvatarImg(oldRoom.avatarUrl);
+    if(movedRoom.avatarUrl) loadAvatarImg(movedRoom.avatarUrl);
     // 관심사 뱃지 이미지
-    if(oldRoom.interest){
-      const interestUrl = `https://unavatar.io/x/${oldRoom.interest}`;
+    if(movedRoom.interest){
+      const interestUrl = `https://unavatar.io/x/${movedRoom.interest}`;
       loadAvatarImg(interestUrl);
     }
-    // 캐시가 이미 있는 경우 loadAvatarImg가 drawMap을 호출하지 않으므로 명시적으로 재호출
+    // 캐시가 이미 있는 경우 명시적으로 재호출
     setTimeout(() => drawMap(), 100);
+    // 1초 후 to_room 데이터를 DB에서 새로 로드하여 twitterId/avatarUrl 완전 보장
+    setTimeout(async () => {
+      try {
+        const tok = await getValidToken().catch(() => null) || SUPA_KEY;
+        const res = await fetch(
+          `${SUPA_URL}/rest/v1/rooms?room_number=eq.${toNum}&select=*`,
+          { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${tok}` } }
+        );
+        if(res.ok){
+          const rows = await res.json();
+          if(rows?.[0]) await loadOneRoom(rows[0]);
+        }
+      } catch(_){}
+    }, 1200);
 
     // 잔액
     if(serverData?.new_balance !== undefined){
