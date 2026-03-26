@@ -4102,8 +4102,15 @@ async function confirmMove(){
     setTimeout(loadMovedImg, 1000);
     setTimeout(loadMovedImg, 3000);
 
-    // 아바타 이미지도 캐시에 로드
+    // 아바타 이미지도 캐시에 로드 (로드 완료 시 drawMap은 loadAvatarImg 내부에서 자동 호출)
     if(oldRoom.avatarUrl) loadAvatarImg(oldRoom.avatarUrl);
+    // 관심사 뱃지 이미지
+    if(oldRoom.interest){
+      const interestUrl = `https://unavatar.io/x/${oldRoom.interest}`;
+      loadAvatarImg(interestUrl);
+    }
+    // 캐시가 이미 있는 경우 loadAvatarImg가 drawMap을 호출하지 않으므로 명시적으로 재호출
+    setTimeout(() => drawMap(), 100);
 
     // 잔액
     if(serverData?.new_balance !== undefined){
