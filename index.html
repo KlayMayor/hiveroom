@@ -3954,6 +3954,7 @@ function openRoomPanel(num){
     }
   }
   document.getElementById('room-panel').classList.add('open');
+  applyMobPanelStyles();
 }
 function closeRoomPanel(){
   document.getElementById('room-panel').classList.remove('open');
@@ -4202,6 +4203,26 @@ function postToXAfterReg(){
 
 
 
+
+// ── 모바일 패널 스타일 강제 적용 ──
+function applyMobPanelStyles(){
+  if(window.innerWidth > 768) return;
+  // rp-img 고정 높이
+  const rpImg = document.getElementById('rp-img');
+  if(rpImg){
+    rpImg.style.cssText += ';height:180px!important;max-height:180px!important;min-height:180px!important;aspect-ratio:unset!important;object-fit:cover!important;flex-shrink:0!important;width:100%!important;display:block!important;';
+  }
+  // room-panel rp-close 원형
+  document.querySelectorAll('#room-panel .rp-close, #empty-panel .rp-close').forEach(btn=>{
+    btn.style.cssText += ';width:40px!important;height:40px!important;min-width:40px!important;min-height:40px!important;max-width:40px!important;max-height:40px!important;border-radius:50%!important;box-sizing:border-box!important;aspect-ratio:1/1!important;flex-shrink:0!important;';
+  });
+  // room-panel display block 강제
+  const rp = document.getElementById('room-panel');
+  if(rp) rp.style.setProperty('display','block','important');
+  // empty-panel display block 강제 (인라인 style override)
+  const ep = document.getElementById('empty-panel');
+  if(ep) ep.style.setProperty('display','block','important');
+}
 // ── 모바일: 방정보패널 닫고 팝업 열기 헬퍼 ──
 function mobPanelThen(fn){
   if(window.innerWidth <= 768){
@@ -4598,6 +4619,7 @@ function openEmptyPanel(num){
     document.getElementById('room-panel').classList.remove('open');
     PANEL_ROOM_NUM = null;
     document.getElementById('empty-panel').classList.add('open');
+    applyMobPanelStyles();
     return;
   }
   EMPTY_PANEL_NUM = num;
@@ -4628,6 +4650,7 @@ function openEmptyPanel(num){
   document.getElementById('room-panel').classList.remove('open');
   PANEL_ROOM_NUM = null;
   document.getElementById('empty-panel').classList.add('open');
+  applyMobPanelStyles();
 }
 function closeEmptyPanel(){
   const ep = document.getElementById('empty-panel');
@@ -5821,7 +5844,7 @@ mCV.addEventListener('click',e=>{
 });
 
 // 초기화
-window.addEventListener('resize',resizeMap);
+window.addEventListener('resize',()=>{ resizeMap(); applyMobPanelStyles(); });
 // ESC → 이사하기 맵 선택 모드 취소
 window.addEventListener('keydown', e=>{
   if(e.key === 'Escape' && MOVE_MAP_SELECT){
