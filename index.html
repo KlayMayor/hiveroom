@@ -462,6 +462,7 @@ header{
 /* ── 맵 사이드 패널 (방 구매) ── */
 #room-panel{position:fixed;left:-340px;top:50px;width:320px;height:calc(100vh - 50px);background:#fff;box-shadow:4px 0 24px rgba(0,0,0,.12);z-index:500;display:flex;flex-direction:column;transition:left .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;}
 #room-panel.open{left:0;}
+#empty-panel.open{left:0;}
 .rp-img{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:#F0EDE8;}
 .rp-body{padding:18px;}
 .rp-num{font-family:'Jua',sans-serif;font-size:20px;color:var(--hdk);margin-bottom:2px;}
@@ -676,13 +677,26 @@ header{
     height:calc(100vh - 46px) !important;
     overflow-y:auto !important;
     -webkit-overflow-scrolling:touch !important;
+    display:block !important;
+    overscroll-behavior:contain !important;
   }
+  #empty-panel.open{ left:0 !important; }
+  /* rp-img: 모바일에서 너무 크지 않게 */
+  #room-panel .rp-img,
+  .rp-img{ max-height:50vw !important; }
+
   /* rp-body: 충분한 하단 여백 */
   #room-panel .rp-body{
     padding-bottom:120px !important;
   }
+  /* empty-panel 내부도 스크롤 */
+  #empty-panel .rp-body,
+  #empty-panel > *{
+    padding-bottom:120px !important;
+  }
   /* rp-close 버튼 터치 영역 확대 */
-  #room-panel .rp-close{
+  #room-panel .rp-close,
+  #empty-panel .rp-close{
     width:44px !important;
     height:44px !important;
   }
@@ -2936,6 +2950,7 @@ mctx.imageSmoothingEnabled = true;
 mctx.imageSmoothingQuality = 'high';
 let mW=0,mH=0,HEX=58,mScale=1,mOX=0,mOY=0;
 let isDrag=false,_dragMoved=false,dSt={x:0,y:0},dOff={x:0,y:0};
+let _tapStartX=0,_tapStartY=0; // 터치 탭 판정용
 const DRAG_THRESHOLD=5; // 5px 이상 움직여야 드래그로 판정
 
 // ── 우주 배경 별 데이터 (1회 생성) ──
@@ -3936,10 +3951,10 @@ function closeRoomPanel(){
 // ── 방 가치 올리기 (패널에서 투자 팝업 열기) ──
 function openInvestFromPanel(){
   if(!PANEL_ROOM_NUM) return;
+  if(window.innerWidth <= 768){ const n=PANEL_ROOM_NUM; mobPanelThen(()=>{ const r=ROOMS[n]; if(r) openInvest({room_number:n,...r}); }); return; }
   const num = PANEL_ROOM_NUM;
   const room = ROOMS[num];
   if(!room) return;
-  // openInvest expects a room object with room_number
   openInvest({ room_number: num, ...room });
 }
 
@@ -3947,6 +3962,11 @@ function openInvestFromPanel(){
 function openEditRoomFromPanel(){
   if(!PANEL_ROOM_NUM) return;
   const num = PANEL_ROOM_NUM;
+  if(window.innerWidth <= 768){
+    closeRoomPanel();
+    setTimeout(() => openEditRoomByNum(num), 320);
+    return;
+  }
   closeRoomPanel();
   openEditRoomByNum(num);
 }
@@ -4093,6 +4113,7 @@ function _afterBuyRoom(roomNum){   /* no-op */ }
 // ── 출석체크 퀴즈 (방마다 별도, UTC 자정 기준) ──
 let _attendQuizAnswer = null;
 function openAttendanceQuiz(){
+  if(window.innerWidth <= 768){ mobPanelThen(openAttendanceQuiz); return; }
   if(!CURRENT_USER){ alert(LANG==='ko'?'로그인이 필요합니다.':'Login required.'); return; }
   if(!PANEL_ROOM_NUM){ alert('방을 선택해주세요.'); return; }
   // UI 중복 클릭 방지용 로컬 캐시 (실제 검증은 서버)
@@ -4163,8 +4184,20 @@ function postToXAfterReg(){
 }
 
 
+
+// ── 모바일: 방정보패널 닫고 팝업 열기 헬퍼 ──
+function mobPanelThen(fn){
+  if(window.innerWidth <= 768){
+    closeRoomPanel();
+    // 패널 슬라이드 아웃 후 팝업 실행 (transition 0.3s)
+    setTimeout(fn, 320);
+  } else {
+    fn();
+  }
+}
 function requestBuyRoom(){
   if(!PANEL_ROOM_NUM) return;
+  if(window.innerWidth <= 768){ mobPanelThen(requestBuyRoom); return; }
   const roomBal = ROOM_BALANCES[PANEL_ROOM_NUM];
   const quotedPrice = (roomBal != null && roomBal > 0)
     ? roomBal : getZoneConfig(PANEL_ROOM_NUM).price;
@@ -4251,6 +4284,11 @@ let MOVE_MAP_SELECT = false;
 
 function openMoveOv(){
   if(!PANEL_ROOM_NUM) return;
+  if(window.innerWidth <= 768){ const n=PANEL_ROOM_NUM; mobPanelThen(()=>{ PANEL_ROOM_NUM=n; _openMoveOvCore(); }); return; }
+  _openMoveOvCore();
+}
+function _openMoveOvCore(){
+  if(!PANEL_ROOM_NUM) return;
   MOVE_FROM_NUM = PANEL_ROOM_NUM;
   MOVE_TO_NUM   = null;
   MOVE_MAP_SELECT = false;
@@ -4280,7 +4318,14 @@ function toggleMoveMapSelect(){
   if(MOVE_MAP_SELECT){
     document.getElementById('move-ov').style.opacity = '0';
     document.getElementById('move-ov').style.pointerEvents = 'none';
+    // 모바일: move-ov 완전 숨김 + 안내 배너 표시
+    if(window.innerWidth <= 768){
+      document.getElementById('move-ov').style.display = 'none';
+    }
   } else {
+    if(window.innerWidth <= 768){
+      document.getElementById('move-ov').style.display = '';
+    }
     document.getElementById('move-ov').style.opacity = '1';
     document.getElementById('move-ov').style.pointerEvents = '';
   }
@@ -4510,7 +4555,7 @@ function openIncompleteTilePanel(num){
   }
   document.getElementById('room-panel').classList.remove('open');
   PANEL_ROOM_NUM = null;
-  document.getElementById('empty-panel').style.left = '0';
+  document.getElementById('empty-panel').classList.add('open');
 }
 function requestBuyIncomplete(num, price){
   // 미완성 방 구매 확인 팝업
@@ -4535,7 +4580,7 @@ function openEmptyPanel(num){
     document.getElementById('ep-login-msg').style.display = 'block';
     document.getElementById('room-panel').classList.remove('open');
     PANEL_ROOM_NUM = null;
-    document.getElementById('empty-panel').style.left = '0';
+    document.getElementById('empty-panel').classList.add('open');
     return;
   }
   EMPTY_PANEL_NUM = num;
@@ -4565,12 +4610,12 @@ function openEmptyPanel(num){
   // 빈 패널 열고, 방 패널 닫기
   document.getElementById('room-panel').classList.remove('open');
   PANEL_ROOM_NUM = null;
-  const epMob = window.innerWidth <= 768;
-  document.getElementById('empty-panel').style.left = '0';
+  document.getElementById('empty-panel').classList.add('open');
 }
 function closeEmptyPanel(){
-  const epMob = window.innerWidth <= 768;
-  document.getElementById('empty-panel').style.left = epMob ? '-100%' : '-340px';
+  const ep = document.getElementById('empty-panel');
+  ep.classList.remove('open');
+  ep.style.left = ''; // 인라인 스타일 제거 (혹시 남아있을 경우)
   EMPTY_PANEL_NUM = null;
 }
 
@@ -5595,6 +5640,8 @@ mCV.addEventListener('touchstart', e=>{
     _dragMoved = false;
     dSt = {x:e.touches[0].clientX, y:e.touches[0].clientY};
     dOff = {x:mOX, y:mOY};
+    _tapStartX = e.touches[0].clientX;
+    _tapStartY = e.touches[0].clientY;
   } else if(e.touches.length === 2){
     _touchState.dragging = false; _touchState.pinching = true;
     _touchState.lastDist = _tDist(e.touches);
@@ -5631,10 +5678,13 @@ mCV.addEventListener('touchend', e=>{
     dSt = {x:e.touches[0].clientX, y:e.touches[0].clientY};
     dOff = {x:mOX, y:mOY}; _dragMoved = false;
   } else if(e.touches.length === 0){
-    // 드래그하지 않은 탭 → 맵 탭 핸들러 직접 호출
-    if(!_dragMoved && e.changedTouches.length > 0){
+    // 탭 판정: touchstart~touchend 거리 15px 이내
+    if(e.changedTouches.length > 0){
       const t = e.changedTouches[0];
-      setTimeout(() => handleMapTap(t.clientX, t.clientY), 10);
+      const tapDist = Math.hypot(t.clientX - _tapStartX, t.clientY - _tapStartY);
+      if(tapDist < 15){
+        setTimeout(() => handleMapTap(t.clientX, t.clientY), 10);
+      }
     }
     _touchState.dragging = false; _touchState.pinching = false; _dragMoved = false;
   }
@@ -5707,6 +5757,7 @@ function handleMapTap(clientX, clientY){
         document.getElementById('move-map-btn').classList.remove('active');
         document.getElementById('move-map-hint').classList.remove('on');
         document.getElementById('move-map-banner').classList.remove('on');
+        if(window.innerWidth <= 768) document.getElementById('move-ov').style.display = '';
         document.getElementById('move-ov').style.opacity = '1';
         document.getElementById('move-ov').style.pointerEvents = '';
         return;
@@ -5761,6 +5812,7 @@ window.addEventListener('keydown', e=>{
     document.getElementById('move-map-btn').classList.remove('active');
     document.getElementById('move-map-hint').classList.remove('on');
     document.getElementById('move-map-banner').classList.remove('on');
+    if(window.innerWidth <= 768) document.getElementById('move-ov').style.display = '';
     document.getElementById('move-ov').style.opacity = '1';
     document.getElementById('move-ov').style.pointerEvents = '';
   }
