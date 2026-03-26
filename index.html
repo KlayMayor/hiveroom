@@ -472,7 +472,7 @@ header{
 /* ── Tips 팝업 ── */
 #tips-ov{position:fixed;inset:0;z-index:1100;background:rgba(10,8,20,.82);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;}
 #tips-ov.hidden{display:none;}
-.tips-box{background:#fff;border-radius:24px;width:360px;max-width:92vw;overflow:visible;box-shadow:0 24px 80px rgba(0,0,0,.45);display:flex;flex-direction:column;position:relative;}
+.tips-box{background:#fff;border-radius:24px;width:360px;max-width:92vw;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.45);display:flex;flex-direction:column;position:relative;}
 .tips-viewport{overflow:hidden;}
 .tips-slides{display:flex;transition:transform .4s cubic-bezier(.4,0,.2,1);}
 .tips-slide{min-width:360px;max-width:92vw;display:flex;flex-direction:column;}
@@ -492,7 +492,7 @@ header{
 .tips-next:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(224,120,32,.4);}
 .tips-skip{font-size:11px;color:#bbb;cursor:pointer;background:none;border:none;font-family:'Noto Sans KR',sans-serif;}
 .tips-skip:hover{color:#888;}
-.tips-wrap{position:relative;}.tips-lang-btn{position:absolute;top:-36px;right:0;font-size:11px;color:rgba(255,255,255,.8);cursor:pointer;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:10px;padding:3px 10px;font-family:'Noto Sans KR',sans-serif;transition:all .18s;}
+.tips-wrap{position:relative;display:flex;flex-direction:column;align-items:flex-end;}.tips-lang-btn{position:static;margin-bottom:8px;font-size:11px;color:rgba(255,255,255,.9);cursor:pointer;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);border-radius:10px;padding:4px 12px;font-family:'Noto Sans KR',sans-serif;transition:all .18s;}
 .tips-lang-btn:hover{background:rgba(255,255,255,.25);color:#fff;}
 .help-box{background:#fff;border-radius:20px;width:min(680px,94vw);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(0,0,0,.25);overflow:hidden;animation:popin .35s cubic-bezier(.34,1.56,.64,1);}
 .help-head{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--border);background:var(--hlt);}
