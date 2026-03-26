@@ -587,9 +587,7 @@ header{
   #mobile-pc-banner{ display:block; }
 
   /* 헤더 간소화 */
-  header{
-    padding:0 12px;gap:6px;height:46px;overflow:hidden;
-  }
+  header{ padding:0 12px;gap:6px;height:46px;overflow:hidden; }
   .logo{ font-size:16px; }
   .h-sep{ display:none; }
   .h-badge{ display:none; }
@@ -611,118 +609,68 @@ header{
   #buy-success-ov{ display:none !important; }
   #ranking-ov .ranking-box{ width:96vw; }
 
-  /* ── 모바일 콘솔 전체화면 오버레이 ── */
+  /* ── 모바일 콘솔: 전체화면 오버레이 ── */
+  /* 기존 PC 콘솔은 opacity/transform으로 숨김 — 모바일도 동일 방식 유지 */
+  /* PC: position:absolute, right:14px, width:920px */
+  /* 모바일: position:fixed, inset:0, 아래서 위로 슬라이드 */
   #console{
-    display:none;
     position:fixed !important;
-    inset:0 !important;
+    top:0 !important; left:0 !important;
+    right:0 !important; bottom:0 !important;
     width:100% !important;
-    height:100% !important;
-    top:0 !important; right:0 !important;
-    transform:translateY(100%) !important;
-    transition:transform .32s cubic-bezier(.22,1,.36,1), opacity .25s ease !important;
-    opacity:0 !important;
+    max-width:100% !important;
     border-radius:0 !important;
-    z-index:900 !important;
-    flex-direction:column !important;
+    transform:translateY(100%) !important;
   }
   #console.open{
-    display:flex !important;
     transform:translateY(0) !important;
     opacity:1 !important;
+    pointer-events:auto !important;
   }
 
-  /* 콘솔 헤더 높이 확대 (터치 영역) */
-  .con-head{ height:52px !important; padding:0 16px !important; }
+  /* 모바일 탭 전환 버튼 표시 */
+  #mob-view-tabs{ display:flex !important; }
 
-  /* con-body-top: 가로→세로 전환 */
-  .con-body-top{
-    flex-direction:column !important;
-    overflow:hidden !important;
-  }
+  /* con-body-top: 가로→세로 */
+  .con-body-top{ flex-direction:column !important; }
 
-  /* ── 모바일 탭 전환 버튼 ── */
-  #mob-view-tabs{
-    display:flex;
-    flex-shrink:0;
-    background:#fff;
-    border-bottom:2px solid var(--border);
-  }
-  .mob-vtab{
-    flex:1; padding:10px 4px;
-    font-size:12px; font-weight:700;
-    border:none; background:transparent;
-    cursor:pointer; color:var(--muted);
-    font-family:'Noto Sans KR',sans-serif;
-    border-bottom:2px solid transparent;
-    margin-bottom:-2px;
-    transition:all .15s;
-  }
-  .mob-vtab.on{
-    color:var(--hdk);
-    border-bottom-color:var(--honey);
-    background:var(--hlt);
-  }
-
-  /* con-left: 미리보기 패널 — 기본 숨김 */
+  /* con-left: 기본 숨김, mob-active 시 표시 */
   .con-left{
     width:100% !important;
-    flex-shrink:0 !important;
     border-right:none !important;
     border-bottom:1px solid var(--border) !important;
     display:none !important;
-    flex-direction:column !important;
-    overflow:hidden !important;
+    flex:1 !important;
   }
-  .con-left.mob-active{ display:flex !important; flex:1; }
+  .con-left.mob-active{ display:flex !important; }
 
-  /* 캔버스 크기 모바일 최적화 */
+  /* 캔버스 크기 */
   #room-cv{
-    width:min(300px, 80vw) !important;
-    height:min(300px, 80vw) !important;
+    width:min(300px,80vw) !important;
+    height:min(300px,80vw) !important;
   }
-  .preview-area{
-    flex:1;
-    overflow-y:auto !important;
-    justify-content:center !important;
-    padding:12px !important;
-  }
+  .preview-area{ padding:12px !important; justify-content:center !important; }
 
-  /* item-ctrl: 모바일에서 터치 친화적 */
-  #item-ctrl{
-    padding:10px 14px !important;
-    gap:10px !important;
-  }
-  .ctrl-btn{
-    width:36px !important;
-    height:36px !important;
-    font-size:16px !important;
-  }
+  /* 컨트롤 버튼 터치 크기 확대 */
+  .ctrl-btn{ width:36px !important; height:36px !important; font-size:16px !important; }
   .ctrl-size input[type=range]{ width:90px !important; }
 
-  /* con-right: 에셋 패널 — 기본 숨김 */
+  /* con-right: 기본 숨김, mob-active 시 표시 */
   .con-right{
     width:100% !important;
     display:none !important;
-    flex-direction:column !important;
-    overflow:hidden !important;
+    flex:1 !important;
   }
-  .con-right.mob-active{ display:flex !important; flex:1; }
+  .con-right.mob-active{ display:flex !important; }
 
-  /* 에셋 탭 글자 크기 */
+  /* 에셋 탭/그리드 */
   .atab{ font-size:10px !important; padding:10px 2px !important; }
+  .agrid{ grid-template-columns:repeat(4,1fr) !important; gap:6px !important; padding:8px !important; }
 
-  /* 에셋 그리드: 3열 → 4열 (카드가 더 작아도 괜찮음) */
-  .agrid{
-    grid-template-columns:repeat(4,1fr) !important;
-    gap:6px !important;
-    padding:8px !important;
-  }
-
-  /* 광고 영역 모바일에서 숨김 (공간 확보) */
+  /* 광고 영역 숨김 */
   .preview-ad{ display:none !important; }
 
-  /* 줌 버튼 크게 */
+  /* 줌 버튼 */
   .map-zoom{ bottom:16px;right:12px; }
   .zoom-btn{ width:36px;height:36px;font-size:16px; }
 }
