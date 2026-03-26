@@ -4074,11 +4074,38 @@ async function confirmMove(){
   if(serverOk){
     // 로컬 상태 업데이트
     const oldRoom = { ...(ROOMS[fromNum] || {}) };
-    ROOMS[toNum] = { ...oldRoom, room_number: toNum };
+
+    // toNum: 기본 메타데이터 먼저 세팅 (img는 새로 로드)
+    ROOMS[toNum] = {
+      ...oldRoom,
+      room_number: toNum,
+      img: null,       // 일단 null → 아래서 새 URL로 로드
+      tileValue: serverData?.to_room_balance ?? toPrice,
+    };
     ROOM_BALANCES[toNum] = serverData?.to_room_balance ?? toPrice;
     delete ROOMS[fromNum];
     delete ROOM_BALANCES[fromNum];
-    // 잔액: 서버 응답 있으면 사용, 없으면 클라이언트 계산
+
+    // Storage에 복사된 새 이미지 로드 (약간의 딜레이 후)
+    const loadMovedImg = () => {
+      const newImgUrl = `${SUPA_URL}/storage/v1/object/public/room-pic/${toNum}/room.jpg?t=${Date.now()}`;
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        if(ROOMS[toNum]) ROOMS[toNum].img = img;
+        drawMap();
+      };
+      img.onerror = () => drawMap();  // 이미지 없어도 맵 갱신
+      img.src = newImgUrl;
+    };
+    // 서버 Storage 복사 완료 대기 (1초 + 3초 재시도)
+    setTimeout(loadMovedImg, 1000);
+    setTimeout(loadMovedImg, 3000);
+
+    // 아바타 이미지도 캐시에 로드
+    if(oldRoom.avatarUrl) loadAvatarImg(oldRoom.avatarUrl);
+
+    // 잔액
     if(serverData?.new_balance !== undefined){
       MY_BALANCE = serverData.new_balance;
     } else {
