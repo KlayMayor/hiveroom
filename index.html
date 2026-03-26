@@ -681,9 +681,15 @@ header{
     overscroll-behavior:contain !important;
   }
   #empty-panel.open{ left:0 !important; }
-  /* rp-img: 모바일에서 너무 크지 않게 */
+  /* rp-img: 모바일에서 고정 높이 */
   #room-panel .rp-img,
-  .rp-img{ max-height:50vw !important; }
+  .rp-img{
+    height:44vw !important;
+    max-height:200px !important;
+    aspect-ratio:unset !important;
+    object-fit:cover !important;
+    width:100% !important;
+  }
 
   /* rp-body: 충분한 하단 여백 */
   #room-panel .rp-body{
@@ -699,6 +705,8 @@ header{
   #empty-panel .rp-close{
     width:44px !important;
     height:44px !important;
+    border-radius:50% !important;
+    flex-shrink:0 !important;
   }
 
   /* 헤더 overflow 해제 (드롭다운 잘림 방지) */
@@ -983,7 +991,7 @@ header{
       <span class="mf-label"><span data-i18n="user_search">User Search</span></span>
     </div>
     <div style="display:flex;align-items:center;gap:6px;padding-left:26px;width:100%;">
-      <input class="mf-input" placeholder="트위터 ID" oninput="mfUserInput(this.value);document.getElementById('mf-user-input').value=this.value;" onclick="event.stopPropagation()" style="flex:1;">
+      <input class="mf-input" placeholder="Twitter ID" oninput="mfUserInput(this.value);document.getElementById('mf-user-input').value=this.value;" onclick="event.stopPropagation()" style="flex:1;">
     </div>
   </div>
   <div class="mf-row" style="align-items:flex-start;flex-direction:column;gap:6px;border-bottom:none;">
@@ -993,7 +1001,7 @@ header{
       <span class="mf-label"><span data-i18n="comm_search">Community Search</span></span>
     </div>
     <div style="display:flex;align-items:center;gap:6px;padding-left:26px;width:100%;">
-      <input class="mf-input" placeholder="트위터 ID" oninput="mfCommInput(this.value);document.getElementById('mf-comm-input').value=this.value;" onclick="event.stopPropagation()" style="flex:1;">
+      <input class="mf-input" placeholder="Twitter ID" oninput="mfCommInput(this.value);document.getElementById('mf-comm-input').value=this.value;" onclick="event.stopPropagation()" style="flex:1;">
     </div>
   </div>
 </div>
