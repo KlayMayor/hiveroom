@@ -3150,6 +3150,18 @@ function subscribeRooms(){
         const oldRow = msg.payload?.data?.old_record || msg.payload?.old_record;
 
         if(pgEvent === 'INSERT' || pgEvent === 'UPDATE'){
+          // ── occupied='N'으로 변경 → 이사 출발지 또는 방 해제 → 타일 비우기 ──
+          if(pgEvent === 'UPDATE' && row && row.occupied === 'N'){
+            const num = row.room_number;
+            if(num && ROOMS[num]){
+              delete ROOMS[num];
+              delete ROOM_BALANCES[num];
+              drawMap();
+              loadResidentCount();
+              console.log(`📦 Realtime: UPDATE occupied=N → cleared room #${num}`);
+            }
+          }
+
           if(row && row.occupied === 'Y'){
             console.log(`📦 Realtime: ${pgEvent} room #${row.room_number}`);
 
