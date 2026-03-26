@@ -333,6 +333,56 @@ header{
   box-shadow:0 2px 8px rgba(0,0,0,.08);transition:all .2s;
 }
 .h-login-btn:hover{border-color:var(--honey);box-shadow:0 3px 12px rgba(0,0,0,.13);}
+/* ── 모바일 햄버거 메뉴 ── */
+#mob-hamburger{
+  display:none;
+  width:36px;height:36px;
+  border:none;background:none;cursor:pointer;
+  flex-direction:column;align-items:center;justify-content:center;
+  gap:5px;padding:4px;flex-shrink:0;border-radius:8px;
+  transition:background .15s;
+}
+#mob-hamburger:hover{background:var(--hlt);}
+#mob-hamburger span{
+  display:block;width:20px;height:2px;
+  background:var(--text);border-radius:2px;
+  transition:transform .25s, opacity .2s;
+}
+#mob-hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg);}
+#mob-hamburger.open span:nth-child(2){opacity:0;}
+#mob-hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
+
+#mob-menu-ov{
+  display:none;position:fixed;inset:0;z-index:850;
+}
+#mob-menu-ov.open{display:block;}
+#mob-menu-backdrop{
+  position:absolute;inset:0;background:rgba(0,0,0,.35);
+}
+#mob-menu-panel{
+  position:absolute;top:46px;left:0;
+  width:220px;
+  background:#fff;
+  border-radius:0 0 16px 0;
+  box-shadow:4px 4px 24px rgba(0,0,0,.18);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+.mob-menu-btn{
+  display:flex;align-items:center;gap:12px;
+  padding:15px 20px;
+  font-size:14px;font-weight:600;
+  color:var(--text);
+  background:none;border:none;
+  border-bottom:1px solid var(--border);
+  cursor:pointer;font-family:'Noto Sans KR',sans-serif;
+  text-align:left;width:100%;
+  transition:background .13s;
+}
+.mob-menu-btn:last-child{border-bottom:none;}
+.mob-menu-btn:hover{background:var(--hlt);}
+.mob-menu-icon{font-size:18px;width:24px;text-align:center;}
+
 .h-tg-btn{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;border:none;background:none;cursor:pointer;padding:0;transition:transform .15s,opacity .15s;flex-shrink:0;text-decoration:none;}
 .h-tg-btn:hover{transform:scale(1.12);opacity:.85;}
 .h-tg-btn svg{width:28px;height:28px;display:block;}
@@ -600,13 +650,38 @@ header{
   /* 맵 전체 화면 */
   .map-wrap{ height:calc(100vh - 46px - 22px); }
 
-  /* 패널/팝업 모두 숨김 */
-  #room-panel{ display:none !important; }
-  #empty-panel{ display:none !important; }
+  /* 팝업 숨김 (패널은 허용) */
   #done-ov{ display:none !important; }
   #buy-confirm-ov{ display:none !important; }
   #tile-confirm-ov{ display:none !important; }
   #buy-success-ov{ display:none !important; }
+
+  /* 모바일 패널: 전체 너비 */
+  #room-panel{
+    width:100% !important;
+    left:-100% !important;
+    top:46px !important;
+    height:calc(100vh - 46px) !important;
+  }
+  #room-panel.open{ left:0 !important; }
+  #empty-panel{
+    width:100% !important;
+    left:-100% !important;
+    top:46px !important;
+    height:calc(100vh - 46px) !important;
+  }
+
+  /* 헤더 overflow 해제 (드롭다운 잘림 방지) */
+  header{ overflow:visible !important; }
+
+  /* 햄버거 버튼 표시 */
+  #mob-hamburger{ display:flex !important; }
+
+  /* 헤더 로고 숨김 (햄버거+로고가 겹치지 않게) */
+  .logo{ display:none !important; }
+
+  /* 프로필 드롭다운: 모바일에서 잘림 방지 */
+  .h-dropdown{ right:0 !important; top:46px !important; position:fixed !important; }
   #ranking-ov .ranking-box{ width:96vw; }
 
   /* ── 모바일 콘솔: 전체화면 오버레이 ── */
@@ -698,6 +773,10 @@ header{
 
 <!-- HEADER -->
 <header>
+  <!-- 모바일 햄버거 버튼 -->
+  <button id="mob-hamburger" onclick="toggleMobMenu()" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
   <div class="logo">🍯 HiveRoom</div>
   <div class="h-sep"></div>
   <button class="h-badge" onclick="openHelp()" style="cursor:pointer;border:1px solid var(--honey);background:var(--hlt);color:var(--hdk);font-family:'Noto Sans KR',sans-serif;" data-i18n="help">❓ Help</button>
@@ -810,6 +889,25 @@ header{
     </div>
   </div>
 </header>
+
+<!-- 모바일 햄버거 메뉴 오버레이 -->
+<div id="mob-menu-ov">
+  <div id="mob-menu-backdrop" onclick="closeMobMenu()"></div>
+  <div id="mob-menu-panel">
+    <button class="mob-menu-btn" onclick="openHelp();closeMobMenu()">
+      <span class="mob-menu-icon">❓</span>
+      <span data-i18n="help">Help</span>
+    </button>
+    <button class="mob-menu-btn" onclick="openRanking();closeMobMenu()">
+      <span class="mob-menu-icon">🏆</span>
+      <span data-i18n="ranking">Ranking</span>
+    </button>
+    <button class="mob-menu-btn" onclick="toggleMapFilter();closeMobMenu()">
+      <span class="mob-menu-icon">🔎</span>
+      <span data-i18n="tile_search">Tile Search</span>
+    </button>
+  </div>
+</div>
 
 <!-- Tips 팝업 (페이지 로드 시 표시) -->
 <div id="tips-ov">
@@ -1715,6 +1813,22 @@ function closeConsole() {
     makeBtn.textContent = LANG==='ko'?'🏠 방 만들기':'🏠 Make Room';
     makeBtn.onclick = openConsole;
   }
+}
+
+// ── 모바일 햄버거 메뉴 ──
+function toggleMobMenu(){
+  const ov  = document.getElementById('mob-menu-ov');
+  const btn = document.getElementById('mob-hamburger');
+  const isOpen = ov.classList.contains('open');
+  if(isOpen){ closeMobMenu(); }
+  else {
+    ov.classList.add('open');
+    btn.classList.add('open');
+  }
+}
+function closeMobMenu(){
+  document.getElementById('mob-menu-ov').classList.remove('open');
+  document.getElementById('mob-hamburger').classList.remove('open');
 }
 // ── 모바일 콘솔 탭 전환 ──
 function mobSwitchView(tab) {
