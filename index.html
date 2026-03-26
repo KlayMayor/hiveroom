@@ -461,7 +461,7 @@ header{
 
 /* ── 맵 사이드 패널 (방 구매) ── */
 #room-panel{position:fixed;left:-340px;top:50px;width:320px;height:calc(100vh - 50px);background:#fff;box-shadow:4px 0 24px rgba(0,0,0,.12);z-index:500;display:flex;flex-direction:column;transition:left .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;}
-#room-panel .rp-img{height:320px;flex-shrink:0;object-fit:cover;}
+#room-panel .rp-img{aspect-ratio:1/1;flex-shrink:0;}
 #room-panel.open{left:0;}
 #empty-panel{display:flex;flex-direction:column;}
 #empty-panel.open{left:0;}
@@ -481,7 +481,7 @@ header{
 .rp-buy-btn:disabled{background:#D0CECA;cursor:not-allowed;}
 .rp-insufficient{text-align:center;font-size:11px;color:#C44;margin-top:6px;font-weight:600;}
 .rp-own-badge{text-align:center;font-size:11px;color:var(--muted);margin-top:6px;}
-.rp-close{position:absolute;top:12px;right:12px;width:28px;height:28px;min-width:28px;min-height:28px;border-radius:50%;border:none;background:rgba(0,0,0,.15);color:#fff;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:1;box-sizing:border-box;}
+.rp-close{position:absolute;top:12px;right:12px;width:28px;height:28px;border-radius:50%;border:none;background:rgba(0,0,0,.15);color:#fff;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:1;}
 
 /* ── 구매 성공 팝업 ── */
 #buy-success-ov{display:none;position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:center;justify-content:center;}
@@ -684,11 +684,8 @@ header{
   }
   #empty-panel.open{ left:0 !important; }
   /* rp-img: 모바일에서 고정 높이 */
-  #room-panel #rp-img,
   #room-panel .rp-img{
-    height:180px !important;
-    max-height:180px !important;
-    min-height:180px !important;
+    height:160px !important;
     aspect-ratio:unset !important;
     flex-shrink:0 !important;
   }
@@ -702,20 +699,13 @@ header{
   #empty-panel > *{
     padding-bottom:120px !important;
   }
-  /* rp-close 버튼: 모바일에서 fixed 포지션으로 완전 고정 */
+  /* rp-close 버튼 터치 영역 */
   #room-panel .rp-close,
   #empty-panel .rp-close{
-    position:fixed !important;
-    top:56px !important;
-    right:12px !important;
     width:40px !important;
     height:40px !important;
     border-radius:50% !important;
     box-sizing:border-box !important;
-    z-index:600 !important;
-    display:flex !important;
-    align-items:center !important;
-    justify-content:center !important;
   }
 
   /* 헤더 overflow 해제 (드롭다운 잘림 방지) */
@@ -1295,7 +1285,7 @@ header{
 <!-- 맵 사이드 패널 (방 구매) -->
 <div id="room-panel">
   <button class="rp-close" onclick="closeRoomPanel()">✕</button>
-  <img class="rp-img" id="rp-img" src="" alt="" style="height:auto;max-height:none;">
+  <img class="rp-img" id="rp-img" src="" alt="">
   <div class="rp-body">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
       <div>
@@ -1327,7 +1317,7 @@ header{
 </div>
 
 <!-- 빈 타일 사이드 패널 -->
-<div id="empty-panel" style="position:fixed;left:-340px;top:50px;width:320px;height:calc(100vh - 50px);background:#fff;box-shadow:4px 0 24px rgba(0,0,0,.12);z-index:490;transition:left .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;">
+<div id="empty-panel" style="position:fixed;left:-340px;top:50px;width:320px;height:calc(100vh - 50px);background:#fff;box-shadow:4px 0 24px rgba(0,0,0,.12);z-index:490;display:flex;flex-direction:column;transition:left .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;">
   <button class="rp-close" onclick="closeEmptyPanel()">✕</button>
   <div style="padding:24px 20px 16px;text-align:center;background:var(--hlt);border-bottom:1px solid var(--border);">
     <div style="font-size:40px;margin-bottom:8px;">🏕️</div>
@@ -3954,7 +3944,6 @@ function openRoomPanel(num){
     }
   }
   document.getElementById('room-panel').classList.add('open');
-  applyMobPanelStyles();
 }
 function closeRoomPanel(){
   document.getElementById('room-panel').classList.remove('open');
@@ -4203,31 +4192,6 @@ function postToXAfterReg(){
 
 
 
-
-// ── 모바일 패널 스타일 강제 적용 ──
-function applyMobPanelStyles(){
-  if(window.innerWidth > 768) return;
-  // rp-img 고정 높이
-  const rpImg = document.getElementById('rp-img');
-  if(rpImg){
-    rpImg.style.setProperty('height','180px','important');
-    rpImg.style.setProperty('max-height','180px','important');
-    rpImg.style.setProperty('min-height','180px','important');
-    rpImg.style.setProperty('aspect-ratio','unset','important');
-    rpImg.style.setProperty('flex-shrink','0','important');
-  }
-  // rp-close 원형 강제
-  document.querySelectorAll('#room-panel .rp-close, #empty-panel .rp-close').forEach(btn=>{
-    btn.style.setProperty('width','40px','important');
-    btn.style.setProperty('height','40px','important');
-    btn.style.setProperty('min-width','40px','important');
-    btn.style.setProperty('min-height','40px','important');
-    btn.style.setProperty('max-width','40px','important');
-    btn.style.setProperty('max-height','40px','important');
-    btn.style.setProperty('border-radius','50%','important');
-    btn.style.setProperty('box-sizing','border-box','important');
-  });
-}
 // ── 모바일: 방정보패널 닫고 팝업 열기 헬퍼 ──
 function mobPanelThen(fn){
   if(window.innerWidth <= 768){
@@ -4624,8 +4588,7 @@ function openEmptyPanel(num){
     document.getElementById('room-panel').classList.remove('open');
     PANEL_ROOM_NUM = null;
     document.getElementById('empty-panel').classList.add('open');
-    applyMobPanelStyles();
-    return;
+      return;
   }
   EMPTY_PANEL_NUM = num;
   const zCfg = getZoneConfig(num);
@@ -4655,7 +4618,6 @@ function openEmptyPanel(num){
   document.getElementById('room-panel').classList.remove('open');
   PANEL_ROOM_NUM = null;
   document.getElementById('empty-panel').classList.add('open');
-  applyMobPanelStyles();
 }
 function closeEmptyPanel(){
   const ep = document.getElementById('empty-panel');
@@ -5849,7 +5811,7 @@ mCV.addEventListener('click',e=>{
 });
 
 // 초기화
-window.addEventListener('resize',()=>{ resizeMap(); applyMobPanelStyles(); });
+window.addEventListener('resize',resizeMap);
 // ESC → 이사하기 맵 선택 모드 취소
 window.addEventListener('keydown', e=>{
   if(e.key === 'Escape' && MOVE_MAP_SELECT){
