@@ -461,9 +461,11 @@ header{
 
 /* ── 맵 사이드 패널 (방 구매) ── */
 #room-panel{position:fixed;left:-340px;top:50px;width:320px;height:calc(100vh - 50px);background:#fff;box-shadow:4px 0 24px rgba(0,0,0,.12);z-index:500;display:flex;flex-direction:column;transition:left .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;}
+#room-panel .rp-img{aspect-ratio:1/1;flex-shrink:0;}
 #room-panel.open{left:0;}
+#empty-panel{display:flex;flex-direction:column;}
 #empty-panel.open{left:0;}
-.rp-img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block;background:#F0EDE8;flex-shrink:0;}
+.rp-img{width:100%;object-fit:cover;display:block;background:#F0EDE8;}
 .rp-body{padding:18px;}
 .rp-num{font-family:'Jua',sans-serif;font-size:20px;color:var(--hdk);margin-bottom:2px;}
 .rp-zone{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;margin-bottom:10px;}
@@ -682,16 +684,13 @@ header{
   }
   #empty-panel.open{ left:0 !important; }
   /* rp-img: 모바일에서 고정 높이 */
-  #room-panel .rp-img,
-  #room-panel #rp-img{
+  #room-panel #rp-img,
+  #room-panel .rp-img{
     height:180px !important;
     max-height:180px !important;
     min-height:180px !important;
-    width:100% !important;
     aspect-ratio:unset !important;
-    object-fit:cover !important;
     flex-shrink:0 !important;
-    display:block !important;
   }
 
   /* rp-body: 충분한 하단 여백 */
@@ -1327,7 +1326,7 @@ header{
 </div>
 
 <!-- 빈 타일 사이드 패널 -->
-<div id="empty-panel" style="position:fixed;left:-340px;top:50px;width:320px;height:calc(100vh - 50px);background:#fff;box-shadow:4px 0 24px rgba(0,0,0,.12);z-index:490;display:flex;flex-direction:column;transition:left .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;">
+<div id="empty-panel" style="position:fixed;left:-340px;top:50px;width:320px;height:calc(100vh - 50px);background:#fff;box-shadow:4px 0 24px rgba(0,0,0,.12);z-index:490;transition:left .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;">
   <button class="rp-close" onclick="closeEmptyPanel()">✕</button>
   <div style="padding:24px 20px 16px;text-align:center;background:var(--hlt);border-bottom:1px solid var(--border);">
     <div style="font-size:40px;margin-bottom:8px;">🏕️</div>
@@ -4210,18 +4209,23 @@ function applyMobPanelStyles(){
   // rp-img 고정 높이
   const rpImg = document.getElementById('rp-img');
   if(rpImg){
-    rpImg.style.cssText += ';height:180px!important;max-height:180px!important;min-height:180px!important;aspect-ratio:unset!important;object-fit:cover!important;flex-shrink:0!important;width:100%!important;display:block!important;';
+    rpImg.style.setProperty('height','180px','important');
+    rpImg.style.setProperty('max-height','180px','important');
+    rpImg.style.setProperty('min-height','180px','important');
+    rpImg.style.setProperty('aspect-ratio','unset','important');
+    rpImg.style.setProperty('flex-shrink','0','important');
   }
-  // room-panel rp-close 원형
+  // rp-close 원형 강제
   document.querySelectorAll('#room-panel .rp-close, #empty-panel .rp-close').forEach(btn=>{
-    btn.style.cssText += ';width:40px!important;height:40px!important;min-width:40px!important;min-height:40px!important;max-width:40px!important;max-height:40px!important;border-radius:50%!important;box-sizing:border-box!important;aspect-ratio:1/1!important;flex-shrink:0!important;';
+    btn.style.setProperty('width','40px','important');
+    btn.style.setProperty('height','40px','important');
+    btn.style.setProperty('min-width','40px','important');
+    btn.style.setProperty('min-height','40px','important');
+    btn.style.setProperty('max-width','40px','important');
+    btn.style.setProperty('max-height','40px','important');
+    btn.style.setProperty('border-radius','50%','important');
+    btn.style.setProperty('box-sizing','border-box','important');
   });
-  // room-panel display block 강제
-  const rp = document.getElementById('room-panel');
-  if(rp) rp.style.setProperty('display','block','important');
-  // empty-panel display block 강제 (인라인 style override)
-  const ep = document.getElementById('empty-panel');
-  if(ep) ep.style.setProperty('display','block','important');
 }
 // ── 모바일: 방정보패널 닫고 팝업 열기 헬퍼 ──
 function mobPanelThen(fn){
