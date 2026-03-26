@@ -472,7 +472,7 @@ header{
 /* ── Tips 팝업 ── */
 #tips-ov{position:fixed;inset:0;z-index:1100;background:rgba(10,8,20,.82);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;}
 #tips-ov.hidden{display:none;}
-.tips-box{background:#fff;border-radius:24px;width:360px;max-width:92vw;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.45);display:flex;flex-direction:column;position:relative;}
+.tips-box{background:#fff;border-radius:24px;width:360px;max-width:92vw;overflow:visible;box-shadow:0 24px 80px rgba(0,0,0,.45);display:flex;flex-direction:column;position:relative;}
 .tips-viewport{overflow:hidden;}
 .tips-slides{display:flex;transition:transform .4s cubic-bezier(.4,0,.2,1);}
 .tips-slide{min-width:360px;max-width:92vw;display:flex;flex-direction:column;}
@@ -744,8 +744,9 @@ header{
 
 <!-- Tips 팝업 (페이지 로드 시 표시) -->
 <div id="tips-ov">
-  <button class="tips-lang-btn" id="tips-lang-btn" onclick="tipToggleLang()">🌐 EN</button>
-  <div class="tips-box">
+  <div class="tips-wrap">
+    <button class="tips-lang-btn" id="tips-lang-btn" onclick="tipToggleLang()">🌐 EN</button>
+    <div class="tips-box">
     <div class="tips-viewport">
       <div class="tips-slides" id="tips-slides">
 
@@ -861,7 +862,7 @@ header{
     <button class="mz" style="font-size:12px" onclick="resetView()">⌂</button>
   </div>
   <div class="map-hint">🖱 휠: 줌 &nbsp;·&nbsp; 드래그: 이동</div>
-  <div id="toast">✅ 방이 맵에 등록됐어요!</div>
+  <div id="toast"></div>
 
   <!-- ════ 방 만들기 콘솔 (맵 위 플로팅) ════ -->
   <div id="console">
@@ -1070,8 +1071,8 @@ header{
 <div id="buy-confirm-ov" style="display:none;position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:20px;padding:28px 32px;max-width:320px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.25);animation:popin .3s cubic-bezier(.34,1.56,.64,1);">
     <div style="font-size:36px;margin-bottom:12px;">🏠</div>
-    <div style="font-family:'Jua',sans-serif;font-size:17px;color:#A87800;margin-bottom:8px;">구매 확인</div>
-    <div style="font-size:13px;color:#555;line-height:1.7;margin-bottom:6px;">방 구매 후 되돌릴 수 없습니다.<br>구매 하시겠습니까?</div>
+    <div style="font-family:'Jua',sans-serif;font-size:17px;color:#A87800;margin-bottom:8px;" data-i18n="buy_confirm_title">Confirm Purchase</div>
+    <div style="font-size:13px;color:#555;line-height:1.7;margin-bottom:6px;" data-i18n="buy_confirm_desc">This cannot be undone.<br>Purchase this room?</div>
     <div id="buy-confirm-price" style="font-size:15px;font-weight:700;color:#A87800;margin-bottom:16px;background:#FFF8E8;border-radius:10px;padding:8px 0;">— HIVE 차감</div>
     <div style="display:flex;gap:10px;justify-content:center;">
       <button onclick="confirmBuyRoom()" style="flex:1;padding:10px;background:#F2B830;border:none;border-radius:12px;font-family:'Jua',sans-serif;font-size:14px;color:#fff;cursor:pointer;">Yes</button>
@@ -1084,8 +1085,8 @@ header{
 <div id="tile-confirm-ov" style="display:none;position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:20px;padding:28px 32px;max-width:320px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.25);animation:popin .3s cubic-bezier(.34,1.56,.64,1);">
     <div style="font-size:36px;margin-bottom:12px;">🍯</div>
-    <div style="font-family:'Jua',sans-serif;font-size:17px;color:#A87800;margin-bottom:8px;">타일 구매 확인</div>
-    <div style="font-size:13px;color:#555;line-height:1.7;margin-bottom:6px;">타일 구매 후 되돌릴 수 없습니다.<br>구매 하시겠습니까?</div>
+    <div style="font-family:'Jua',sans-serif;font-size:17px;color:#A87800;margin-bottom:8px;" data-i18n="create_confirm_title">Confirm Tile Purchase</div>
+    <div style="font-size:13px;color:#555;line-height:1.7;margin-bottom:6px;" data-i18n="create_confirm_desc">This cannot be undone.<br>Purchase this tile?</div>
     <div id="tile-confirm-price" style="font-size:12px;color:#A87800;font-weight:700;margin-bottom:16px;"></div>
     <div style="display:flex;gap:10px;justify-content:center;">
       <button onclick="confirmTileBuy()" style="flex:1;padding:10px;background:#F2B830;border:none;border-radius:12px;font-family:'Jua',sans-serif;font-size:14px;color:#fff;cursor:pointer;">Yes</button>
@@ -1198,7 +1199,7 @@ header{
     <!-- STEP 3: 등록 -->
     <div id="done-step3" style="display:none;">
     <div class="png-prog" id="png-prog">
-      <span id="png-status">📦 PNG 생성 중...</span>
+      <span id="png-status">📦 Generating PNG...</span>
       <div class="png-bar-track"><div class="png-bar" id="png-bar"></div></div>
     </div>
     <div class="png-result" id="png-result">
@@ -1206,7 +1207,7 @@ header{
       <div class="png-meta">
         <div class="png-fname">room.jpg</div>
         <div class="png-fsize">700 × 700 px · JPEG</div>
-        <span class="png-dl" onclick="dlPng()">⬇ PNG 다운로드</span>
+        <span class="png-dl" onclick="dlPng()" data-i18n="png_dl">⬇ Download PNG</span>
       </div>
     </div>
     <div id="post-x-wrap" style="display:none;margin:6px 0;">
@@ -2267,11 +2268,11 @@ function showDone(){
   dc.getContext('2d').drawImage(RCV,0,0,700,700,0,0,160,160);
   const wa=SEL.wall?ASSETS.wall.find(a=>a.id===SEL.wall)?.name:null;
   const fl=SEL.floor?ASSETS.floor.find(a=>a.id===SEL.floor)?.name:null;
-  document.getElementById('done-desc').innerHTML = `이대로 맵에 등록할까요?`;
+  document.getElementById('done-desc').innerHTML = LANG==='ko'?'이대로 맵에 등록할까요?':'Ready to register on the map?';
   pngUrl=null;
   document.getElementById('png-prog').classList.remove('show');
   document.getElementById('png-result').classList.remove('show');
-  const rb=document.getElementById('reg-btn');rb.textContent='✅ 맵에 등록하기';rb.onclick=registerRoom;rb.disabled=false;
+  const rb=document.getElementById('reg-btn');rb.textContent=t('reg_btn');rb.onclick=registerRoom;rb.disabled=false;
   // 스텝 초기화
   document.getElementById('done-step1').style.display='block';
   document.getElementById('done-step2').style.display='none';
@@ -2290,9 +2291,9 @@ function closeDone(){
   document.getElementById('post-x-wrap').style.display = 'none';
   // 처리 중 stuck 방지: 버튼 상태 리셋
   const rb = document.getElementById('reg-btn');
-  if(rb && rb.textContent.includes('처리 중')){
+  if(rb && (rb.textContent.includes('처리 중') || rb.textContent.includes('Processing'))){
     rb.disabled = false;
-    rb.textContent = '✅ 맵에 등록하기';
+    rb.textContent = t('reg_btn');
     rb.onclick = registerRoom;
   }
   document.getElementById('png-prog').classList.remove('show');
@@ -2320,13 +2321,13 @@ async function registerRoom(){
       if(msg){ msg.className='tw-check-err'; msg.textContent='❌ 이미 다른 유저가 사용 중인 Twitter ID예요'; }
       alert(`이미 다른 유저가 사용 중인 Twitter ID입니다: @${twitterId}
 다른 ID를 사용해주세요.`);
-      rb.disabled=false; rb.textContent='✅ 맵에 등록하기';
+      rb.disabled=false; rb.textContent=t('reg_btn');
       return;
     }
   }
 
   const isEdit = !!EDIT_ROOM_NUM;
-  const rb=document.getElementById('reg-btn'); rb.disabled=true; rb.textContent='⏳ 처리 중...';
+  const rb=document.getElementById('reg-btn'); rb.disabled=true; rb.textContent=LANG==='ko'?'⏳ 처리 중...':'⏳ Processing...';
   const pg=document.getElementById('png-prog'), bar=document.getElementById('png-bar'), st=document.getElementById('png-status');
   pg.classList.add('show'); st.textContent='📦 JPEG 생성 중...'; bar.style.width='0%';
   await sleep(100);
@@ -2358,7 +2359,7 @@ async function registerRoom(){
     // 빈 타일 클릭으로 이미 타일 구매 완료 → _pendingTileNum 사용
     if(!_pendingTileNum){
       alert('타일을 먼저 선택해주세요. 맵에서 빈 타일을 클릭하세요!');
-      rb.disabled=false; rb.textContent='✅ 맵에 등록하기'; return;
+      rb.disabled=false; rb.textContent=t('reg_btn'); return;
     }
     targetNum = _pendingTileNum;
   }
@@ -2380,7 +2381,7 @@ async function registerRoom(){
       body: blob,
     }
   );
-  if(!upRes.ok){ alert('업로드 오류: ' + await upRes.text()); rb.disabled=false; rb.textContent='✅ 맵에 등록하기'; return; }
+  if(!upRes.ok){ alert('업로드 오류: ' + await upRes.text()); rb.disabled=false; rb.textContent=t('reg_btn'); return; }
   bar.style.width='75%';
 
   // 4. DB 저장 (신규: INSERT / 수정: PATCH)
@@ -2434,7 +2435,7 @@ async function registerRoom(){
         body: JSON.stringify({ room_number: targetNum, ...dbPayload }),
       }
     );
-    if(!insRes2.ok){ alert('DB 오류: ' + await insRes2.text()); rb.disabled=false; rb.textContent='✅ 맵에 등록하기'; return; }
+    if(!insRes2.ok){ alert('DB 오류: ' + await insRes2.text()); rb.disabled=false; rb.textContent=t('reg_btn'); return; }
   }
 
   // 신규: 이미 confirmTileBuy에서 create-room EF 호출 완료 (잔액 차감, room_balances 세팅)
@@ -2443,14 +2444,14 @@ async function registerRoom(){
     bar.style.width='90%';
   }
 
-  bar.style.width='100%'; st.textContent=isEdit?'✅ 수정 완료!':'✅ 등록 완료!'; await sleep(300);
+  bar.style.width='100%'; st.textContent=isEdit?(LANG==='ko'?'✅ 수정 완료!':'✅ Updated!'):(LANG==='ko'?'✅ 등록 완료!':'✅ Registered!'); await sleep(300);
   document.getElementById('png-thumb').src = pngUrl;
   document.getElementById('png-result').classList.add('show');
   document.querySelector('.png-fname').textContent = `room_${targetNum}.jpg`;
   // POST to X 버튼 표시
   _lastRegisteredNum = targetNum;
   document.getElementById('post-x-wrap').style.display = 'block';
-  rb.textContent='🗺 맵에서 확인하기'; rb.disabled=false; rb.onclick=()=>goToMap(targetNum);
+  rb.textContent=LANG==='ko'?'🗺 맵에서 확인하기':'🗺 View on Map'; rb.disabled=false; rb.onclick=()=>goToMap(targetNum);
   // 완료 토스트
   showToast(isEdit ? t('toast_edit_done') : t('toast_create_done'));
 }
@@ -2488,7 +2489,7 @@ function showToast(msg, duration=3000){
   const t=document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(()=>{ t.classList.remove('show'); t.textContent='✅ 방이 맵에 등록됐어요!'; }, duration);
+  setTimeout(()=>{ t.classList.remove('show'); }, duration);
 }
 function dlPng(){if(!pngUrl)return;const a=document.createElement('a');a.href=pngUrl;a.download='room_slot4.jpg';a.click();}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
@@ -3433,7 +3434,7 @@ async function confirmInvest(){
   const amt = parseInt(document.getElementById('invest-amount').value)||0;
   if(amt <= 0 || amt > MY_BALANCE) return;
   const btn = document.getElementById('invest-confirm-btn');
-  btn.disabled = true; btn.textContent = '처리 중...';
+  btn.disabled = true; btn.textContent = LANG==='ko'?'처리 중...':'Processing...';
   // Edge Function으로 서버 검증 처리
   const _investToken = await getValidToken();
   const efRes = await fetch(`${EDGE_URL}/invest-room`, {
@@ -3471,9 +3472,11 @@ async function confirmInvest(){
     if(el.closest('.estate-item')?.querySelector('.estate-item-num')?.textContent === t('room_num_fmt', INVEST_ROOM.room_number))
       el.textContent = `🍯 ${newRoomBal.toLocaleString()} HIVE`;
   });
-  btn.disabled = false; btn.textContent = '투자하기';
-  alert(`✅ ${amt} HIVE 투자 완료!
-타일 가치: ${newVal} HIVE`);
+  btn.disabled = false; btn.textContent = t('invest_btn');
+  const investMsg = LANG==='ko'
+    ? `✅ ${amt} HIVE 투자 완료! 🍯 타일 가치: ${newVal} HIVE`
+    : `✅ Invested ${amt} HIVE! 🍯 Tile value: ${newVal} HIVE`;
+  showToast(investMsg, 4000);
 }
 
 // ══════════════════════════════════════
@@ -3842,7 +3845,7 @@ async function confirmBuyRoom(){
   if(!quotedPrice){ alert('가격 정보 오류. 다시 시도해주세요.'); return; }
   if(MY_BALANCE < quotedPrice){ alert('잔액이 부족합니다'); return; }
   const btn = document.getElementById('rp-buy-btn');
-  btn.disabled = true; btn.textContent = '처리 중...';
+  btn.disabled = true; btn.textContent = LANG==='ko'?'처리 중...':'Processing...';
   const _buyToken = await getValidToken();
   const efRes = await fetch(`${EDGE_URL}/buy-room`, {
     method: 'POST',
@@ -3969,9 +3972,9 @@ function moveStep2Next(){
   const refund      = diff > 0 ? diff : 0;
 
   const rows = [
-    { lbl: `내 방 (${MOVE_FROM_NUM}번) 현재 가치`, val: `${fromBal.toLocaleString()} HIVE` },
-    { lbl: `이사할 방 (${MOVE_TO_NUM}번) ZONE 가격`, val: `${toPrice.toLocaleString()} HIVE` },
-    { lbl: '내 HIVE 잔액', val: `${myBal.toLocaleString()} HIVE` },
+    { lbl: LANG==='ko'?`내 방 (${MOVE_FROM_NUM}번) 현재 가치`:`Current Room (${MOVE_FROM_NUM}) Value`, val: `${fromBal.toLocaleString()} HIVE` },
+    { lbl: LANG==='ko'?`이사할 방 (${MOVE_TO_NUM}번) ZONE 가격`:`Target Room (${MOVE_TO_NUM}) Zone Price`, val: `${toPrice.toLocaleString()} HIVE` },
+    { lbl: LANG==='ko'?'내 HIVE 잔액':'My HIVE Balance', val: `${myBal.toLocaleString()} HIVE` },
   ];
   document.getElementById('move-sim-rows').innerHTML =
     rows.map(r=>`<div class="move-sim-row"><span class="move-sim-lbl">${r.lbl}</span><span class="move-sim-val">${r.val}</span></div>`).join('');
@@ -3980,16 +3983,18 @@ function moveStep2Next(){
   const warnEl  = document.getElementById('move-warn');
   if(diff >= 0){
     totalEl.style.display = 'flex';
-    totalEl.innerHTML = `<span class="move-sim-total-lbl">차액 환급</span><span class="move-sim-total-val">+${refund.toLocaleString()} HIVE</span>`;
+    totalEl.innerHTML = `<span class="move-sim-total-lbl">${LANG==='ko'?'차액 환급':'Refund'}</span><span class="move-sim-total-val">+${refund.toLocaleString()} HIVE</span>`;
     warnEl.style.display = 'none';
   } else if(canMove){
     totalEl.style.display = 'flex';
-    totalEl.innerHTML = `<span class="move-sim-total-lbl">추가 차감 (잔액에서)</span><span class="move-sim-total-val" style="color:#C44">-${extraNeeded.toLocaleString()} HIVE</span>`;
+    totalEl.innerHTML = `<span class="move-sim-total-lbl">${LANG==='ko'?'추가 차감 (잔액에서)':'Extra Charge'}</span><span class="move-sim-total-val" style="color:#C44">-${extraNeeded.toLocaleString()} HIVE</span>`;
     warnEl.style.display = 'none';
   } else {
     totalEl.style.display = 'none';
     warnEl.style.display = 'block';
-    warnEl.textContent = `잔액 부족으로 이사할 수 없습니다. 필요 추가 금액: ${(toPrice - fromBal - myBal).toLocaleString()} HIVE`;
+    warnEl.textContent = LANG==='ko'
+      ? `잔액 부족으로 이사할 수 없습니다. 필요 추가 금액: ${(toPrice - fromBal - myBal).toLocaleString()} HIVE`
+      : `Insufficient balance. Need ${(toPrice - fromBal - myBal).toLocaleString()} more HIVE`;
   }
   document.getElementById('move-final-btn').disabled = !canMove;
   document.getElementById('move-step2').classList.remove('on');
@@ -4001,7 +4006,7 @@ function moveStep3Back(){
 }
 async function confirmMove(){
   const btn = document.getElementById('move-final-btn');
-  btn.disabled = true; btn.textContent = '처리 중...';
+  btn.disabled = true; btn.textContent = LANG==='ko'?'처리 중...':'Processing...';
   const fromNum = MOVE_FROM_NUM;
   const toNum   = MOVE_TO_NUM;
   const fromBal = ROOM_BALANCES[fromNum] ?? getZoneConfig(fromNum).price;
@@ -4048,7 +4053,7 @@ async function confirmMove(){
     drawMap();
     closeMoveOv();
     closeRoomPanel();
-    showToast(`🚚 ${fromNum}번 → ${toNum}번 이사 완료!`);
+    showToast(LANG==='ko'?`🚚 ${fromNum}번 → ${toNum}번 이사 완료!`:`🚚 Moved from Room ${fromNum} to Room ${toNum}!`);
   }
   btn.disabled=false; btn.textContent=LANG==='ko'?'이사하기 🚚':'Move 🚚';
 }
@@ -4131,7 +4136,7 @@ function openEmptyPanel(num){
   const canBuy = CURRENT_USER && myBal >= price;
   const btn = document.getElementById('ep-buy-btn');
   // 버그픽스: 이전 처리중 상태 초기화 + onclick 초기화
-  btn.disabled = false; btn.textContent = '방 만들기';
+  btn.disabled = false; btn.textContent = t('create_room');
   btn.onclick = requestTileBuy;
   const insuf = document.getElementById('ep-insufficient');
   const loginMsg = document.getElementById('ep-login-msg');
@@ -4170,7 +4175,7 @@ async function confirmTileBuy(){
   if(MY_BALANCE < zonePrice){ alert('잔액이 부족합니다'); return; }
 
   const btn = document.getElementById('ep-buy-btn');
-  btn.disabled = true; btn.textContent = '처리 중...';
+  btn.disabled = true; btn.textContent = LANG==='ko'?'처리 중...':'Processing...';
 
   // ── 중복 구매 방지: DB에서 현재 상태 재확인 ──
   const chkRes = await fetch(
@@ -4180,7 +4185,7 @@ async function confirmTileBuy(){
   const chkData = await chkRes.json();
   if(chkData && chkData.length > 0 && chkData[0].occupied === 'Y'){
     alert('이미 다른 사용자가 구매한 타일입니다. 맵을 새로고침합니다.');
-    btn.disabled = false; btn.textContent = '방 만들기';
+    btn.disabled = false; btn.textContent = t('create_room');
     closeEmptyPanel();
     loadRooms();
     return;
@@ -4196,7 +4201,7 @@ async function confirmTileBuy(){
   const efData = await efRes.json();
   if(!efRes.ok){
     alert(`타일 구매 실패: ${efData.error}`);
-    btn.disabled = false; btn.textContent = '방 만들기'; return;
+    btn.disabled = false; btn.textContent = t('create_room'); return;
   }
   MY_BALANCE = efData.new_balance;
   ROOM_BALANCES[num] = efData.room_balance;
@@ -4491,6 +4496,7 @@ const I18N = {
     // 투자
     invest_btn: 'Invest',
     cancel: 'Cancel',
+    png_dl: '⬇ Download PNG',
     tab_wall: 'Wallpaper',
     tab_floor: 'Floor',
     tab_furniture: 'Furniture',
@@ -4640,6 +4646,7 @@ const I18N = {
     // 투자
     invest_btn: '투자하기',
     cancel: '취소',
+    png_dl: '⬇ PNG 다운로드',
     tab_wall: '벽지',
     tab_floor: '바닥',
     tab_furniture: '가구',
