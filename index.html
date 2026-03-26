@@ -662,9 +662,11 @@ header{
     left:-100% !important;
     top:46px !important;
     height:calc(100vh - 46px) !important;
-    overflow-y:auto !important;
+    max-height:calc(100vh - 46px) !important;
+    overflow-y:scroll !important;
     -webkit-overflow-scrolling:touch !important;
     display:block !important;
+    overscroll-behavior:contain !important;
   }
   #room-panel.open{ left:0 !important; }
   #empty-panel{
@@ -675,9 +677,14 @@ header{
     overflow-y:auto !important;
     -webkit-overflow-scrolling:touch !important;
   }
-  /* rp-body 하단 여백 (마지막 버튼 안 잘리게) */
+  /* rp-body: 충분한 하단 여백 */
   #room-panel .rp-body{
-    padding-bottom:60px !important;
+    padding-bottom:120px !important;
+  }
+  /* rp-close 버튼 터치 영역 확대 */
+  #room-panel .rp-close{
+    width:44px !important;
+    height:44px !important;
   }
 
   /* 헤더 overflow 해제 (드롭다운 잘림 방지) */
@@ -5624,15 +5631,10 @@ mCV.addEventListener('touchend', e=>{
     dSt = {x:e.touches[0].clientX, y:e.touches[0].clientY};
     dOff = {x:mOX, y:mOY}; _dragMoved = false;
   } else if(e.touches.length === 0){
-    // 드래그하지 않은 탭 → click 이벤트 직접 발생
+    // 드래그하지 않은 탭 → 맵 탭 핸들러 직접 호출
     if(!_dragMoved && e.changedTouches.length > 0){
       const t = e.changedTouches[0];
-      const ce = new MouseEvent('click', {
-        bubbles: true, cancelable: true,
-        clientX: t.clientX, clientY: t.clientY
-      });
-      // 약간 딜레이 후 dispatch (touchend 처리 완료 후)
-      setTimeout(() => mCV.dispatchEvent(ce), 10);
+      setTimeout(() => handleMapTap(t.clientX, t.clientY), 10);
     }
     _touchState.dragging = false; _touchState.pinching = false; _dragMoved = false;
   }
@@ -5675,10 +5677,10 @@ window.addEventListener('mousemove',e=>{
   if((found?.num||null)!==prevNum){ startBadgeAnim(); drawMap(); }
 });
 window.addEventListener('mouseup',()=>{isDrag=false;mCV.classList.remove('drag');});
-mCV.addEventListener('click',e=>{
-  if(_dragMoved){ _dragMoved=false; return; } // 드래그 후 클릭 무시
+// 맵 탭/클릭 공통 처리 함수
+function handleMapTap(clientX, clientY){
   const rect=mCV.getBoundingClientRect();
-  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  const mx=clientX-rect.left, my=clientY-rect.top;
   const s=HEX*mScale;
   // 트위터 뱃지 클릭 우선
   for(let num=1;num<=1027;num++){
@@ -5743,6 +5745,11 @@ mCV.addEventListener('click',e=>{
   // 빈 곳 클릭 → 패널 모두 닫기
   closeRoomPanel();
   closeEmptyPanel();
+}
+
+mCV.addEventListener('click',e=>{
+  if(_dragMoved){ _dragMoved=false; return; }
+  handleMapTap(e.clientX, e.clientY);
 });
 
 // 초기화
