@@ -226,20 +226,88 @@
       이 페이지는 로컬에서만 사용하며 키가 전송되지 않아요.
     </div>
 
-    <label style="margin-top:14px;">모델 선택</label>
-    <select id="model-select">
-      <option value="gemini-3.1-flash-image-preview">gemini-3.1-flash-image-preview</option>
-      <option value="imagen-4.0-fast-generate-001">imagen-4.0-fast-generate-001</option>
-    </select>
+    <label style="margin-top:14px;">AI 모델</label>
+    <div style="padding:10px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:13px;background:var(--bg);color:var(--muted);">gemini-3.1-flash-image-preview</div>
   </div>
 
   <!-- 프롬프트 -->
   <div class="card">
     <div class="card-title">✏️ 프롬프트</div>
-    <label>이미지 규격 (고정)</label>
-    <textarea id="base-prompt" readonly style="background:#F5F5F5;color:#888;cursor:default;min-height:100px;">Cute isometric illustration, fit inside a pointy-top regular hexagon, The hexagon proportions are width:height = √3:2 (approximately 0.87:1), meaning it is taller than it is wide. Design the isometric interior so it fills this vertically-oriented hexagonal boundary — wider in the middle, narrowing toward the top and bottom points. The overall canvas is square (1:1), with the hexagon centered and occupying about 87% of the canvas width. diamond shaped floor area, wall are divided 1:1 left and right side, vivid colors highlighted, kawaii cute Japanese inspired style, interior image without people, isometric 3/4 front view, white background,</textarea>
-    <label style="margin-top:12px;">이미지 설명</label>
-    <textarea id="prompt" placeholder="예: cozy bedroom with pastel pink walls, small desk, bookshelf"></textarea>
+
+    <!-- 이미지 규격 — 숨김 -->
+    <textarea id="base-prompt" style="display:none;">Cute isometric illustration, fit inside a pointy-top regular hexagon, The hexagon proportions are width:height = √3:2 (approximately 0.87:1), meaning it is taller than it is wide. Design the isometric interior so it fills this vertically-oriented hexagonal boundary — wider in the middle, narrowing toward the top and bottom points. The overall canvas is square (1:1), with the hexagon centered and occupying about 87% of the canvas width. diamond shaped floor area, wall are divided 1:1 left and right side, vivid colors highlighted, kawaii cute Japanese inspired style, interior image without people, isometric 3/4 front view, white background,</textarea>
+
+    <!-- 빠른 선택 드롭다운 -->
+    <label>이미지 설명</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+      <div>
+        <label style="margin-bottom:4px;">🏠 Room</label>
+        <select id="sel-room" onchange="buildPrompt()">
+          <option value="">선택</option>
+          <option value="bedroom">🛏️ Bedroom</option>
+          <option value="living room">🛋️ Living room</option>
+          <option value="game room">🎮 Game room</option>
+          <option value="library room">📚 Library room</option>
+          <option value="study room">💻 Study room</option>
+          <option value="kitchen">🍳 Kitchen</option>
+          <option value="dining room">🍽️ Dining room</option>
+          <option value="music room">🎵 Music room</option>
+          <option value="art studio">🎨 Art studio</option>
+          <option value="kids room">🧸 Kids room</option>
+          <option value="walk-in closet">👗 Walk-in closet</option>
+        </select>
+      </div>
+      <div>
+        <label style="margin-bottom:4px;">🌈 Mood</label>
+        <select id="sel-mood" onchange="buildPrompt()">
+          <option value="">선택</option>
+          <option value="cozy">🏡 Cozy</option>
+          <option value="delighted">😊 Delighted</option>
+          <option value="light and airy">☀️ Light &amp; Airy</option>
+          <option value="dark and moody">🌑 Dark &amp; Moody</option>
+          <option value="colorful and vivid">🌈 Colorful &amp; Vivid</option>
+          <option value="clean and minimal">✨ Clean &amp; Minimal</option>
+          <option value="romantic">💕 Romantic</option>
+          <option value="retro">📺 Retro</option>
+          <option value="futuristic">🚀 Futuristic</option>
+          <option value="nature-inspired">🌿 Nature-inspired</option>
+        </select>
+      </div>
+      <div>
+        <label style="margin-bottom:4px;">🖼️ Wall decorated with</label>
+        <select id="sel-wall" onchange="buildPrompt()">
+          <option value="">선택</option>
+          <option value="bright lights">💡 Bright lights</option>
+          <option value="paintings">🖼️ Paintings</option>
+          <option value="neon signs">🪩 Neon signs</option>
+          <option value="large windows">🪟 Large windows</option>
+          <option value="glass panels">🔲 Glass panels</option>
+          <option value="bookshelves">📚 Bookshelves</option>
+          <option value="hanging plants">🌿 Hanging plants</option>
+          <option value="fairy lights">✨ Fairy lights</option>
+          <option value="photo frames">🖼️ Photo frames</option>
+          <option value="mirrors">🪞 Mirrors</option>
+          <option value="tapestry">🎨 Tapestry</option>
+        </select>
+      </div>
+      <div>
+        <label style="margin-bottom:4px;">🪑 Furnitures</label>
+        <select id="sel-furniture" onchange="buildPrompt()">
+          <option value="">선택</option>
+          <option value="sofa and coffee table">🛋️ Sofa &amp; Coffee table</option>
+          <option value="bed and nightstand">🛏️ Bed &amp; Nightstand</option>
+          <option value="computer desk and chair">💻 Computer desk &amp; Chair</option>
+          <option value="dining table and chairs">🪑 Dining table &amp; Chairs</option>
+          <option value="bookshelf and armchair">📚 Bookshelf &amp; Armchair</option>
+          <option value="gaming setup with RGB lighting">🎮 Gaming setup</option>
+          <option value="kitchen counter and bar stools">🍳 Kitchen counter &amp; Stools</option>
+          <option value="wardrobe and dresser">👗 Wardrobe &amp; Dresser</option>
+          <option value="study desk and lamp">📖 Study desk &amp; Lamp</option>
+          <option value="piano and music stand">🎹 Piano &amp; Music stand</option>
+        </select>
+      </div>
+    </div>
+    <textarea id="prompt" placeholder="또는 직접 입력하세요..."></textarea>
   </div>
 
   <!-- 생성 버튼 -->
@@ -264,8 +332,21 @@
 </div>
 
 <script>
-function setPrompt(text){
-  document.getElementById('prompt').value = text;
+const MODEL = 'gemini-3.1-flash-image-preview';
+
+function buildPrompt() {
+  const room      = document.getElementById('sel-room').value;
+  const mood      = document.getElementById('sel-mood').value;
+  const wall      = document.getElementById('sel-wall').value;
+  const furniture = document.getElementById('sel-furniture').value;
+  const parts = [];
+  if (room)      parts.push(room);
+  if (mood)      parts.push(mood + ' mood');
+  if (wall)      parts.push('wall decorated with ' + wall);
+  if (furniture) parts.push(furniture);
+  if (parts.length > 0) {
+    document.getElementById('prompt').value = parts.join(', ');
+  }
 }
 
 function showStatus(type, msg){
@@ -281,7 +362,7 @@ function hideStatus(){
 
 async function generateImage(){
   const key         = document.getElementById('api-key').value.trim();
-  const model       = document.getElementById('model-select').value;
+  const model       = MODEL;
   const basePrompt  = document.getElementById('base-prompt').value.trim();
   const userPrompt  = document.getElementById('prompt').value.trim();
   const prompt      = userPrompt ? basePrompt + ' ' + userPrompt : basePrompt;
