@@ -235,7 +235,10 @@
   <!-- 프롬프트 -->
   <div class="card">
     <div class="card-title">✏️ 프롬프트</div>
-    <textarea id="prompt" readonly style="background:#F5F5F5;color:#888;cursor:default;">Cute isometric illustration, fit inside a pointy-top regular hexagon, The hexagon proportions are width:height = √3:2 (approximately 0.87:1), meaning it is taller than it is wide. Design the isometric interior so it fills this vertically-oriented hexagonal boundary — wider in the middle, narrowing toward the top and bottom points. The overall canvas is square (1:1), with the hexagon centered and occupying about 87% of the canvas width. diamond shaped floor area, wall are divided 1:1 left and right side, vivid colors highlighted, kawaii cute Japanese inspired style, interior image without people, isometric 3/4 front view, white background,</textarea>
+    <label>이미지 규격 (고정)</label>
+    <textarea id="base-prompt" readonly style="background:#F5F5F5;color:#888;cursor:default;min-height:100px;">Cute isometric illustration, fit inside a pointy-top regular hexagon, The hexagon proportions are width:height = √3:2 (approximately 0.87:1), meaning it is taller than it is wide. Design the isometric interior so it fills this vertically-oriented hexagonal boundary — wider in the middle, narrowing toward the top and bottom points. The overall canvas is square (1:1), with the hexagon centered and occupying about 87% of the canvas width. diamond shaped floor area, wall are divided 1:1 left and right side, vivid colors highlighted, kawaii cute Japanese inspired style, interior image without people, isometric 3/4 front view, white background,</textarea>
+    <label style="margin-top:12px;">이미지 설명</label>
+    <textarea id="prompt" placeholder="예: cozy bedroom with pastel pink walls, small desk, bookshelf"></textarea>
   </div>
 
   <!-- 생성 버튼 -->
@@ -276,12 +279,14 @@ function hideStatus(){
 }
 
 async function generateImage(){
-  const key    = document.getElementById('api-key').value.trim();
-  const model  = document.getElementById('model-select').value;
-  const prompt = document.getElementById('prompt').value.trim();
+  const key         = document.getElementById('api-key').value.trim();
+  const model       = document.getElementById('model-select').value;
+  const basePrompt  = document.getElementById('base-prompt').value.trim();
+  const userPrompt  = document.getElementById('prompt').value.trim();
+  const prompt      = userPrompt ? basePrompt + ' ' + userPrompt : basePrompt;
 
-  if(!key)    { showStatus('error', '❌ API 키를 입력해주세요.'); return; }
-  if(!prompt) { showStatus('error', '❌ 프롬프트를 입력해주세요.'); return; }
+  if(!key)       { showStatus('error', '❌ API 키를 입력해주세요.'); return; }
+  if(!userPrompt){ showStatus('error', '❌ 이미지 설명을 입력해주세요.'); return; }
 
   const btn = document.getElementById('gen-btn');
   btn.disabled = true;
