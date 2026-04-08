@@ -339,14 +339,11 @@ function buildPrompt() {
   const mood      = document.getElementById('sel-mood').value;
   const wall      = document.getElementById('sel-wall').value;
   const furniture = document.getElementById('sel-furniture').value;
-  const parts = [];
-  if (room)      parts.push(room);
-  if (mood)      parts.push(mood + ' mood');
-  if (wall)      parts.push('wall decorated with ' + wall);
-  if (furniture) parts.push(furniture);
-  if (parts.length > 0) {
-    document.getElementById('prompt').value = parts.join(', ');
-  }
+  if (!room && !mood && !wall && !furniture) return;
+  let sentence = (mood ? mood + ' ' : '') + (room || '');
+  if (wall)      sentence += ' with ' + wall + ' on wall';
+  if (furniture) sentence += ', ' + furniture + ' placed';
+  document.getElementById('prompt').value = sentence.trim();
 }
 
 function showStatus(type, msg){
