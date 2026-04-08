@@ -228,32 +228,14 @@
 
     <label style="margin-top:14px;">모델 선택</label>
     <select id="model-select">
-      <option value="gemini-3.1-flash-image-preview">gemini-3.1-flash-image-preview <span>— 무료 한도 내 이미지 생성</span></option>
-      <option value="imagen-3.0-generate-002">imagen-3.0-generate-002 — 유료 고품질</option>
+      <option value="gemini-3.1-flash-image-preview">gemini-3.1-flash-image-preview</option>
     </select>
-    <div class="hint" style="margin-top:6px;">
-      ✅ <b>Flash</b><span class="model-tag tag-free">FREE</span> — 무료 한도 내 사용 가능, 텍스트+이미지 혼합 출력<br>
-      💰 <b>Imagen 3</b><span class="model-tag tag-paid">PAID</span> — 고품질 이미지 전용, $0.03~0.04/장 (결제 수단 등록 필요)
-    </div>
   </div>
 
   <!-- 프롬프트 -->
   <div class="card">
     <div class="card-title">✏️ 프롬프트</div>
-    <label>이미지 설명 (영어 권장)</label>
-    <textarea id="prompt">isometric kawaii room interior, cozy bedroom, pastel colors, small furniture, cute decorations, soft lighting, top-down view, flat design, white background, 1024x1024</textarea>
-
-    <label style="margin-top:12px;">빠른 선택</label>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">
-      <button class="btn btn-secondary" style="width:auto;padding:5px 12px;margin:0;font-size:11px;"
-        onclick="setPrompt('isometric kawaii bedroom interior, pastel pink walls, cute furniture, soft lighting, top-down angle, white background')">🛏️ 침실</button>
-      <button class="btn btn-secondary" style="width:auto;padding:5px 12px;margin:0;font-size:11px;"
-        onclick="setPrompt('isometric kawaii living room, cozy sofa, bookshelf, plants, warm lighting, pastel colors, top-down view, white background')">🛋️ 거실</button>
-      <button class="btn btn-secondary" style="width:auto;padding:5px 12px;margin:0;font-size:11px;"
-        onclick="setPrompt('isometric kawaii study room, desk with computer, bookshelf, stationery, soft pastel colors, top-down view, white background')">💻 서재</button>
-      <button class="btn btn-secondary" style="width:auto;padding:5px 12px;margin:0;font-size:11px;"
-        onclick="setPrompt('isometric kawaii cafe interior, coffee bar, small tables, plants, warm lighting, pastel colors, top-down view, white background')">☕ 카페</button>
-    </div>
+    <textarea id="prompt" readonly style="background:#F5F5F5;color:#888;cursor:default;">Cute isometric illustration, fit inside a pointy-top regular hexagon, The hexagon proportions are width:height = √3:2 (approximately 0.87:1), meaning it is taller than it is wide. Design the isometric interior so it fills this vertically-oriented hexagonal boundary — wider in the middle, narrowing toward the top and bottom points. The overall canvas is square (1:1), with the hexagon centered and occupying about 87% of the canvas width. diamond shaped floor area, wall are divided 1:1 left and right side, vivid colors highlighted, kawaii cute Japanese inspired style, interior image without people, isometric 3/4 front view, white background,</textarea>
   </div>
 
   <!-- 생성 버튼 -->
