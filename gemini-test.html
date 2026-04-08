@@ -228,7 +228,7 @@
 
     <label style="margin-top:14px;">모델 선택</label>
     <select id="model-select">
-      <option value="gemini-3-flash-image-001">gemini-3-flash-image-001 <span>— 무료 한도 내 이미지 생성</span></option>
+      <option value="gemini-2.5-flash-image">gemini-2.5-flash-image <span>— 무료 한도 내 이미지 생성</span></option>
       <option value="imagen-3.0-generate-002">imagen-3.0-generate-002 — 유료 고품질</option>
     </select>
     <div class="hint" style="margin-top:6px;">
@@ -341,7 +341,7 @@ async function generateImage(){
       mimeType = imgObj?.mimeType ?? imgObj?.image?.mimeType ?? 'image/jpeg';
 
     } else {
-      // ── Gemini 3 Flash Image (무료) ──
+      // ── Gemini 2.5 Flash Image (무료) ──
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
         {
