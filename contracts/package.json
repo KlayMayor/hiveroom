@@ -1,0 +1,28 @@
+{
+  "name": "hiveroom-contracts",
+  "version": "1.0.0",
+  "description": "HiveRoom smart contracts for Abstract chain",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:testnet": "hardhat deploy-zksync --network abstractTestnet",
+    "deploy:mainnet": "hardhat deploy-zksync --network abstractMainnet",
+    "verify:testnet": "hardhat verify --network abstractTestnet",
+    "verify:mainnet": "hardhat verify --network abstractMainnet"
+  },
+  "devDependencies": {
+    "@matterlabs/hardhat-zksync": "^1.2.0",
+    "@matterlabs/hardhat-zksync-deploy": "^1.4.0",
+    "@matterlabs/hardhat-zksync-solc": "^1.2.0",
+    "@matterlabs/hardhat-zksync-verify": "^1.5.0",
+    "@matterlabs/hardhat-zksync-upgradable": "^1.4.0",
+    "@matterlabs/zksync-contracts": "^0.6.1",
+    "@openzeppelin/contracts-upgradeable": "^5.0.2",
+    "@openzeppelin/hardhat-upgrades": "^3.2.1",
+    "hardhat": "^2.22.4",
+    "typescript": "^5.4.5",
+    "ts-node": "^10.9.2",
+    "@types/node": "^20.12.12",
+    "dotenv": "^16.4.5"
+  }
+}
