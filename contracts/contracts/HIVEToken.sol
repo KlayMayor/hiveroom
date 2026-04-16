@@ -63,7 +63,6 @@ contract HIVEToken is
         __ERC20_init("HIVE Token", "HIVE");
         __AccessControl_init();
         __EIP712_init("HIVEToken", "1");
-        __UUPSUpgradeable_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(UPGRADER_ROLE, msg.sender);
