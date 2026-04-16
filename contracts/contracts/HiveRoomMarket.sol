@@ -5,7 +5,6 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol"
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./HIVEToken.sol";
 import "./HiveRoomTile.sol";
@@ -23,9 +22,17 @@ contract HiveRoomMarket is
     Initializable,
     AccessControlUpgradeable,
     EIP712Upgradeable,
-    ReentrancyGuardUpgradeable,
     UUPSUpgradeable
 {
+    // ─── 재진입 방지 (inline) ─────────────────────────────────────────────
+    uint256 private _reentrancyStatus; // 1 = 미진입, 2 = 진입중
+
+    modifier nonReentrant() {
+        require(_reentrancyStatus != 2, "HiveRoomMarket: reentrant call");
+        _reentrancyStatus = 2;
+        _;
+        _reentrancyStatus = 1;
+    }
     using ECDSA for bytes32;
 
     // ─── Roles ───────────────────────────────────────────────────────────
@@ -66,8 +73,7 @@ contract HiveRoomMarket is
     ) external initializer {
         __AccessControl_init();
         __EIP712_init("HiveRoomMarket", "1");
-        __ReentrancyGuard_init();
-        __UUPSUpgradeable_init();
+        _reentrancyStatus = 1;
 
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(UPGRADER_ROLE, msg.sender);
