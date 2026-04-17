@@ -1,5 +1,6 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { Wallet, Provider } from "zksync-ethers";
+import { Wallet, Provider, ContractFactory } from "zksync-ethers";
+import { ethers } from "ethers";
 import * as dotenv from "dotenv";
 
 dotenv.config();
@@ -13,25 +14,29 @@ export default async function (hre: HardhatRuntimeEnvironment) {
     throw new Error("SERVER_SIGNER_ADDRESS not set in .env");
   }
 
-  console.log("Deploying HIVEToken...");
+  console.log("Deploying HIVEToken (manual UUPS)...");
   console.log("  Deployer    :", wallet.address);
   console.log("  ServerSigner:", serverSigner);
-  console.log("  Network     :", hre.network.name);
 
-  const artifact = await hre.deployer.loadArtifact("HIVEToken");
+  // 1. Deploy implementation
+  const implArtifact = await hre.deployer.loadArtifact("HIVEToken");
+  const implContract = await hre.deployer.deploy(implArtifact, []);
+  await implContract.waitForDeployment();
+  const implAddress = await implContract.getAddress();
+  console.log("  Implementation:", implAddress);
 
-  const proxy = await hre.zkUpgrades.deployProxy(
-    wallet,
-    artifact,
-    [serverSigner],
-    { kind: "uups" }
-  );
+  // 2. Encode initialize calldata
+  const iface = new ethers.Interface(implArtifact.abi);
+  const initData = iface.encodeFunctionData("initialize", [serverSigner]);
 
-  await proxy.waitForDeployment();
-  const address = await proxy.getAddress();
+  // 3. Deploy ERC1967Proxy
+  const proxyArtifact = await hre.deployer.loadArtifact("ERC1967Proxy");
+  const proxyContract = await hre.deployer.deploy(proxyArtifact, [implAddress, initData]);
+  await proxyContract.waitForDeployment();
+  const proxyAddress = await proxyContract.getAddress();
 
-  console.log("✅ HIVEToken deployed to:", address);
-  console.log("   → Add to .env: HIVE_TOKEN_ADDRESS=" + address);
+  console.log("✅ HIVEToken proxy deployed to:", proxyAddress);
+  console.log("   → Add to .env: HIVE_TOKEN_ADDRESS=" + proxyAddress);
 
-  return address;
+  return proxyAddress;
 }
