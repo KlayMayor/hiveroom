@@ -5843,7 +5843,7 @@ async function executeClaim() {
     // Server must provide EIP-712 signature
     // Endpoint: POST /api/sign-claim  { wallet, amount }  → { signature }
     const token = await getValidToken();
-    const resp = await fetch('/api/sign-claim', {
+    const resp = await fetch(`${SUPA_URL}/functions/v1/sign-claim`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ wallet: WALLET_ADDRESS, amount: amt })
@@ -5914,8 +5914,7 @@ async function mintNft() {
   btn.disabled = true; btn.textContent = 'Getting signature…';
   try {
     const token = await getValidToken();
-    // Server endpoint: POST /api/sign-mint  { wallet, tileNumber }  → { signature }
-    const resp = await fetch('/api/sign-mint', {
+    const resp = await fetch(`${SUPA_URL}/functions/v1/sign-mint`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ wallet: WALLET_ADDRESS, tileNumber: tileNum })
