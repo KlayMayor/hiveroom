@@ -927,7 +927,7 @@ header{
       🍯 <span id="hive-bal">—</span> HIVE
     </div>
     <!-- 지갑 연결 버튼 -->
-    <button id="wallet-btn" onclick="connectWallet()" style="padding:5px 10px;border-radius:20px;border:1.5px solid #F2B830;background:#FFF8E8;color:#A87800;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">🔗 Wallet</button>
+    <button id="wallet-btn" onclick="showWalletSelector()" style="padding:5px 10px;border-radius:20px;border:1.5px solid #F2B830;background:#FFF8E8;color:#A87800;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">🔗 Wallet</button>
   </div>
   <div class="h-profile-wrap" id="profile-wrap" style="display:none;">
     <div class="h-profile-btn" id="profile-btn" onclick="toggleMenu()">
@@ -5761,8 +5761,28 @@ const TILE_ABI = [
 let WALLET_SIGNER   = null;
 let WALLET_ADDRESS  = null;
 
-async function connectWallet() {
-  if (!window.ethereum) { alert('MetaMask or an EIP-1193 wallet is required.'); return false; }
+let _walletResolve = null;
+
+function showWalletSelector() {
+  if (WALLET_ADDRESS) return Promise.resolve(true);
+  return new Promise(resolve => {
+    _walletResolve = resolve;
+    document.getElementById('wallet-selector-ov').style.display = 'flex';
+  });
+}
+
+function _closeWalletSelector() {
+  document.getElementById('wallet-selector-ov').style.display = 'none';
+}
+
+function _resolveWallet(ok) {
+  _closeWalletSelector();
+  if (_walletResolve) { _walletResolve(ok); _walletResolve = null; }
+}
+
+async function connectMetaMask() {
+  _closeWalletSelector();
+  if (!window.ethereum) { alert('MetaMask or an EIP-1193 wallet is required.'); _resolveWallet(false); return false; }
   try {
     await window.ethereum.request({ method: 'eth_requestAccounts' });
     try {
@@ -5774,8 +5794,57 @@ async function connectWallet() {
     WALLET_SIGNER  = provider.getSigner();
     WALLET_ADDRESS = await WALLET_SIGNER.getAddress();
     _updateWalletBtn();
+    _resolveWallet(true);
     return true;
-  } catch(e) { console.error('connectWallet', e); return false; }
+  } catch(e) { console.error('connectMetaMask', e); _resolveWallet(false); return false; }
+}
+
+async function connectAbstractWallet() {
+  _closeWalletSelector();
+  if (!window.ethereum) { alert('A browser wallet is required as the underlying signer for AGW.'); _resolveWallet(false); return false; }
+  try {
+    const [{ createWalletClient, custom }, { abstractTestnet }, { createAbstractClient }] = await Promise.all([
+      import('https://esm.sh/viem@2'),
+      import('https://esm.sh/viem@2/chains'),
+      import('https://esm.sh/@abstract-foundation/agw-client'),
+    ]);
+    await window.ethereum.request({ method: 'eth_requestAccounts' });
+    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+    const signerClient = createWalletClient({
+      account: accounts[0],
+      chain: abstractTestnet,
+      transport: custom(window.ethereum),
+    });
+    const agwClient = await createAbstractClient({ signer: signerClient, chain: abstractTestnet });
+    const agwAddress = agwClient.account.address;
+    const eip1193 = {
+      request: async ({ method, params }) => {
+        if (method === 'eth_requestAccounts' || method === 'eth_accounts') return [agwAddress];
+        if (method === 'eth_sendTransaction') {
+          const tx = params[0];
+          return agwClient.sendTransaction({ to: tx.to, value: tx.value ? BigInt(tx.value) : 0n, data: tx.data });
+        }
+        if (method === 'eth_signTypedData_v4') {
+          const td = JSON.parse(params[1]);
+          return agwClient.signTypedData({ account: agwClient.account, domain: td.domain, types: td.types, primaryType: td.primaryType, message: td.message });
+        }
+        return window.ethereum.request({ method, params });
+      },
+      on: () => {},
+      removeListener: () => {},
+    };
+    const provider = new ethers.providers.Web3Provider(eip1193);
+    WALLET_SIGNER  = provider.getSigner();
+    WALLET_ADDRESS = agwAddress;
+    _updateWalletBtn();
+    _resolveWallet(true);
+    return true;
+  } catch(e) {
+    console.error('connectAbstractWallet', e);
+    alert('Abstract Global Wallet connection failed: ' + e.message);
+    _resolveWallet(false);
+    return false;
+  }
 }
 
 function _updateWalletBtn() {
@@ -5835,7 +5904,7 @@ async function executeClaim() {
   const amt = parseInt(document.getElementById('cm-amount').value) || 0;
   if (amt < 5000) { alert('Minimum claim is 5,000 HIVE.'); return; }
   if (amt > MY_BALANCE) { alert('Amount exceeds in-app balance.'); return; }
-  if (!WALLET_ADDRESS) { if(!(await connectWallet())) return; }
+  if (!WALLET_ADDRESS) { if(!(await showWalletSelector())) return; }
 
   const btn = document.getElementById('cm-claim-btn');
   btn.disabled = true; btn.textContent = 'Getting signature…';
@@ -5873,7 +5942,7 @@ async function executeClaim() {
 async function executeBurn() {
   const amt = parseInt(document.getElementById('cm-burn-amount').value) || 0;
   if (amt <= 0) { alert('Enter amount to burn.'); return; }
-  if (!WALLET_ADDRESS) { if(!(await connectWallet())) return; }
+  if (!WALLET_ADDRESS) { if(!(await showWalletSelector())) return; }
 
   const btn = document.getElementById('cm-burn-btn');
   btn.disabled = true; btn.textContent = 'Confirm in wallet…';
@@ -5909,7 +5978,7 @@ async function mintNft() {
   const btn = document.getElementById('rp-nft-btn');
   const tileNum = parseInt(btn.dataset.tile);
   if (!tileNum) return;
-  if (!WALLET_ADDRESS) { if(!(await connectWallet())) return; }
+  if (!WALLET_ADDRESS) { if(!(await showWalletSelector())) return; }
 
   btn.disabled = true; btn.textContent = 'Getting signature…';
   try {
@@ -5958,7 +6027,7 @@ async function mintNft() {
     <!-- 지갑 미연결 -->
     <div id="cm-wallet-section" style="text-align:center;">
       <div style="font-size:12px;color:#888;margin-bottom:12px;">Connect wallet to claim or burn HIVE.</div>
-      <button onclick="connectWallet().then(updateClaimModal)" style="width:100%;padding:12px;background:#F2B830;border:none;border-radius:14px;font-family:'Jua',sans-serif;font-size:14px;color:#fff;cursor:pointer;">🔗 Connect Wallet</button>
+      <button onclick="showWalletSelector().then(r => r && updateClaimModal())" style="width:100%;padding:12px;background:#F2B830;border:none;border-radius:14px;font-family:'Jua',sans-serif;font-size:14px;color:#fff;cursor:pointer;">🔗 Connect Wallet</button>
     </div>
     <!-- 클레임 섹션 -->
     <div id="cm-claim-section" style="display:none;">
@@ -5974,6 +6043,23 @@ async function mintNft() {
         <button id="cm-burn-btn" onclick="executeBurn()" style="width:100%;padding:12px;background:#5B6CF2;border:none;border-radius:14px;font-family:'Jua',sans-serif;font-size:14px;color:#fff;cursor:pointer;">🔥 Burn → In-App</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Wallet Selector Modal -->
+<div id="wallet-selector-ov" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:20px;padding:28px 24px;width:320px;max-width:92vw;font-family:'Jua',sans-serif;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <span style="font-size:16px;font-weight:700;color:#1a1a1a;">Connect Wallet</span>
+      <button onclick="_resolveWallet(false)" style="background:none;border:none;font-size:22px;line-height:1;cursor:pointer;color:#888;">×</button>
+    </div>
+    <button onclick="connectAbstractWallet()" style="width:100%;padding:14px;margin-bottom:12px;background:linear-gradient(135deg,#3A4BD4,#6C5CE7);border:none;border-radius:14px;font-family:'Jua',sans-serif;font-size:14px;color:#fff;cursor:pointer;display:flex;align-items:center;gap:10px;justify-content:center;">
+      <span style="font-size:20px;">⬡</span> Abstract Global Wallet
+    </button>
+    <button onclick="connectMetaMask()" style="width:100%;padding:14px;background:#fff;border:2px solid #e0e0e0;border-radius:14px;font-family:'Jua',sans-serif;font-size:14px;color:#333;cursor:pointer;display:flex;align-items:center;gap:10px;justify-content:center;">
+      <span style="font-size:20px;">🦊</span> MetaMask / Browser Wallet
+    </button>
+    <div style="margin-top:14px;font-size:11px;color:#aaa;text-align:center;">AGW requires a browser wallet (e.g. MetaMask) as underlying signer</div>
   </div>
 </div>
 </body>
