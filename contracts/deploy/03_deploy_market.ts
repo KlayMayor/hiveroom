@@ -16,27 +16,28 @@ export default async function (hre: HardhatRuntimeEnvironment) {
     throw new Error("HIVE_TOKEN_ADDRESS or HIVE_ROOM_TILE_ADDRESS not set in .env");
   }
 
-  console.log("Deploying HiveRoomMarket...");
+  console.log("Deploying HiveRoomMarket (manual UUPS)...");
   console.log("  HIVEToken    :", hiveAddress);
   console.log("  HiveRoomTile :", tileAddress);
   console.log("  ServerSigner :", serverSigner);
 
-  const artifact = await hre.deployer.loadArtifact("HiveRoomMarket");
+  const implArtifact = await hre.deployer.loadArtifact("HiveRoomMarket");
+  const implContract = await hre.deployer.deploy(implArtifact, []);
+  await implContract.waitForDeployment();
+  const implAddress = await implContract.getAddress();
+  console.log("  Implementation:", implAddress);
 
-  const proxy = await hre.zkUpgrades.deployProxy(
-    wallet,
-    artifact,
-    [hiveAddress, tileAddress, serverSigner],
-    { kind: "uups" }
-  );
+  const iface = new ethers.Interface(implArtifact.abi);
+  const initData = iface.encodeFunctionData("initialize", [hiveAddress, tileAddress, serverSigner]);
 
-  await proxy.waitForDeployment();
-  const marketAddress = await proxy.getAddress();
-  console.log("✅ HiveRoomMarket deployed to:", marketAddress);
+  const proxyArtifact = await hre.deployer.loadArtifact("ERC1967Proxy");
+  const proxyContract = await hre.deployer.deploy(proxyArtifact, [implAddress, initData]);
+  await proxyContract.waitForDeployment();
+  const marketAddress = await proxyContract.getAddress();
+  console.log("✅ HiveRoomMarket proxy deployed to:", marketAddress);
 
-  // ─── HiveRoomTile에 MARKET_ROLE 부여 ─────────────────────────────────
+  // Grant MARKET_ROLE on HiveRoomTile
   console.log("\nGranting MARKET_ROLE to HiveRoomMarket on HiveRoomTile...");
-
   const tileABI = [
     "function grantRole(bytes32 role, address account) external",
     "function MARKET_ROLE() external view returns (bytes32)",
@@ -45,9 +46,8 @@ export default async function (hre: HardhatRuntimeEnvironment) {
   const MARKET_ROLE = await tileContract.MARKET_ROLE();
   const grantTx = await tileContract.grantRole(MARKET_ROLE, marketAddress);
   await grantTx.wait();
-  console.log("✅ MARKET_ROLE granted to Market on Tile contract");
+  console.log("✅ MARKET_ROLE granted");
 
   console.log("\n   → Add to .env: HIVE_ROOM_MARKET_ADDRESS=" + marketAddress);
-
   return marketAddress;
 }
