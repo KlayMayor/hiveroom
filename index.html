@@ -5799,9 +5799,57 @@ async function connectMetaMask() {
   } catch(e) { console.error('connectMetaMask', e); _resolveWallet(false); return false; }
 }
 
+function _detectAbstractProvider() {
+  return new Promise(resolve => {
+    const found = [];
+    const handler = (e) => found.push(e.detail);
+    window.addEventListener('eip6963:announceProvider', handler);
+    window.dispatchEvent(new Event('eip6963:requestProvider'));
+    setTimeout(() => {
+      window.removeEventListener('eip6963:announceProvider', handler);
+      const agw = found.find(p =>
+        p.info?.rdns?.toLowerCase().includes('abstract') ||
+        p.info?.name?.toLowerCase().includes('abstract global')
+      );
+      resolve(agw?.provider || (window.ethereum?.isAbstractGlobalWallet ? window.ethereum : null));
+    }, 150);
+  });
+}
+
 async function connectAbstractWallet() {
+  const agwProvider = await _detectAbstractProvider();
+  if (!agwProvider) {
+    // Abstract 지갑 확장 없음 → 안내 패널 전환
+    document.getElementById('wsp-main').style.display = 'none';
+    document.getElementById('wsp-agw').style.display = 'block';
+    return;
+  }
   _closeWalletSelector();
-  if (!window.ethereum) { alert('A browser wallet is required as the underlying signer for AGW.'); _resolveWallet(false); return false; }
+  try {
+    await agwProvider.request({ method: 'eth_requestAccounts' });
+    const provider = new ethers.providers.Web3Provider(agwProvider);
+    WALLET_SIGNER  = provider.getSigner();
+    WALLET_ADDRESS = await WALLET_SIGNER.getAddress();
+    _updateWalletBtn();
+    _resolveWallet(true);
+    return true;
+  } catch(e) {
+    console.error('connectAbstractWallet', e);
+    alert('Abstract Global Wallet connection failed: ' + e.message);
+    _resolveWallet(false);
+    return false;
+  }
+}
+
+function _showWspMain() {
+  document.getElementById('wsp-main').style.display = 'block';
+  document.getElementById('wsp-agw').style.display = 'none';
+}
+
+async function _connectAgwViaSigner() {
+  document.getElementById('wsp-agw').style.display = 'none';
+  _closeWalletSelector();
+  if (!window.ethereum) { alert('No browser wallet found.'); _resolveWallet(false); return; }
   try {
     const [{ createWalletClient, custom }, { abstractTestnet }, { createAbstractClient }] = await Promise.all([
       import('https://esm.sh/viem@2'),
@@ -5838,12 +5886,10 @@ async function connectAbstractWallet() {
     WALLET_ADDRESS = agwAddress;
     _updateWalletBtn();
     _resolveWallet(true);
-    return true;
   } catch(e) {
-    console.error('connectAbstractWallet', e);
-    alert('Abstract Global Wallet connection failed: ' + e.message);
+    console.error('_connectAgwViaSigner', e);
+    alert('AGW via MetaMask failed: ' + e.message);
     _resolveWallet(false);
-    return false;
   }
 }
 
@@ -6049,17 +6095,40 @@ async function mintNft() {
 <!-- Wallet Selector Modal -->
 <div id="wallet-selector-ov" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:20px;padding:28px 24px;width:320px;max-width:92vw;font-family:'Jua',sans-serif;box-shadow:0 8px 32px rgba(0,0,0,.2);">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-      <span style="font-size:16px;font-weight:700;color:#1a1a1a;">Connect Wallet</span>
-      <button onclick="_resolveWallet(false)" style="background:none;border:none;font-size:22px;line-height:1;cursor:pointer;color:#888;">×</button>
+
+    <!-- 패널 1: 지갑 선택 -->
+    <div id="wsp-main">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <span style="font-size:16px;font-weight:700;color:#1a1a1a;">Connect Wallet</span>
+        <button onclick="_resolveWallet(false)" style="background:none;border:none;font-size:22px;line-height:1;cursor:pointer;color:#888;">×</button>
+      </div>
+      <button onclick="connectAbstractWallet()" style="width:100%;padding:14px;margin-bottom:12px;background:linear-gradient(135deg,#3A4BD4,#6C5CE7);border:none;border-radius:14px;font-family:'Jua',sans-serif;font-size:14px;color:#fff;cursor:pointer;display:flex;align-items:center;gap:10px;justify-content:center;">
+        <span style="font-size:20px;">⬡</span> Abstract Global Wallet
+      </button>
+      <button onclick="connectMetaMask()" style="width:100%;padding:14px;background:#fff;border:2px solid #e0e0e0;border-radius:14px;font-family:'Jua',sans-serif;font-size:14px;color:#333;cursor:pointer;display:flex;align-items:center;gap:10px;justify-content:center;">
+        <span style="font-size:20px;">🦊</span> MetaMask / Browser Wallet
+      </button>
     </div>
-    <button onclick="connectAbstractWallet()" style="width:100%;padding:14px;margin-bottom:12px;background:linear-gradient(135deg,#3A4BD4,#6C5CE7);border:none;border-radius:14px;font-family:'Jua',sans-serif;font-size:14px;color:#fff;cursor:pointer;display:flex;align-items:center;gap:10px;justify-content:center;">
-      <span style="font-size:20px;">⬡</span> Abstract Global Wallet
-    </button>
-    <button onclick="connectMetaMask()" style="width:100%;padding:14px;background:#fff;border:2px solid #e0e0e0;border-radius:14px;font-family:'Jua',sans-serif;font-size:14px;color:#333;cursor:pointer;display:flex;align-items:center;gap:10px;justify-content:center;">
-      <span style="font-size:20px;">🦊</span> MetaMask / Browser Wallet
-    </button>
-    <div style="margin-top:14px;font-size:11px;color:#aaa;text-align:center;">AGW requires a browser wallet (e.g. MetaMask) as underlying signer</div>
+
+    <!-- 패널 2: AGW 확장 미설치 안내 -->
+    <div id="wsp-agw" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <span style="font-size:15px;font-weight:700;color:#3A4BD4;">⬡ Abstract Global Wallet</span>
+        <button onclick="_resolveWallet(false)" style="background:none;border:none;font-size:22px;line-height:1;cursor:pointer;color:#888;">×</button>
+      </div>
+      <div style="background:#F5F7FF;border-radius:12px;padding:14px;margin-bottom:16px;font-size:12px;color:#555;line-height:1.7;">
+        Abstract Wallet 확장 프로그램이 감지되지 않았습니다.<br>
+        확장 프로그램을 설치하거나, MetaMask를 서명자로 사용해 AGW 스마트 지갑을 생성할 수 있습니다.
+      </div>
+      <a href="https://abs.xyz" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;margin-bottom:10px;background:linear-gradient(135deg,#3A4BD4,#6C5CE7);border:none;border-radius:14px;font-family:'Jua',sans-serif;font-size:14px;color:#fff;cursor:pointer;text-align:center;text-decoration:none;box-sizing:border-box;">
+        <span style="font-size:18px;">⬡</span> Abstract Wallet 설치
+      </a>
+      <button onclick="_connectAgwViaSigner()" style="width:100%;padding:13px;margin-bottom:8px;background:#fff;border:2px solid #3A4BD4;border-radius:14px;font-family:'Jua',sans-serif;font-size:13px;color:#3A4BD4;cursor:pointer;">
+        🦊 MetaMask로 AGW 스마트 지갑 생성
+      </button>
+      <button onclick="_showWspMain()" style="width:100%;padding:8px;background:none;border:none;font-size:12px;color:#aaa;cursor:pointer;">← 뒤로</button>
+    </div>
+
   </div>
 </div>
 </body>
