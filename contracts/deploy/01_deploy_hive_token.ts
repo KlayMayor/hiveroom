@@ -1,11 +1,12 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { Wallet } from "zksync-ethers";
+import { Wallet, Provider } from "zksync-ethers";
 import * as dotenv from "dotenv";
 
 dotenv.config();
 
 export default async function (hre: HardhatRuntimeEnvironment) {
-  const wallet = new Wallet(process.env.PRIVATE_KEY!);
+  const provider = new Provider(hre.network.config.url);
+  const wallet = new Wallet(process.env.PRIVATE_KEY!, provider);
   const serverSigner = process.env.SERVER_SIGNER_ADDRESS!;
 
   if (!serverSigner) {
