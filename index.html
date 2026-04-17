@@ -804,6 +804,7 @@ header{
   #mob-filter-dropdown.open{ display:block; }
 }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
 <!-- 모바일: PC 접속 안내 배너 -->
@@ -921,10 +922,12 @@ header{
       <div class="h-timer-tooltip" data-i18n="tax_tooltip">Your room value drops by 3, 2 or 1 HIVE<br>each month depending on the ZONE.</div>
     </div>
     <div class="h-sep"></div>
-    <!-- HIVE 잔액 -->
-    <div class="h-hive-badge" id="hive-badge">
+    <!-- HIVE 잔액 (클릭 → claim modal) -->
+    <div class="h-hive-badge" id="hive-badge" onclick="openClaimModal()" style="cursor:pointer;" title="Claim / Burn HIVE">
       🍯 <span id="hive-bal">—</span> HIVE
     </div>
+    <!-- 지갑 연결 버튼 -->
+    <button id="wallet-btn" onclick="connectWallet()" style="padding:5px 10px;border-radius:20px;border:1.5px solid #F2B830;background:#FFF8E8;color:#A87800;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">🔗 Wallet</button>
   </div>
   <div class="h-profile-wrap" id="profile-wrap" style="display:none;">
     <div class="h-profile-btn" id="profile-btn" onclick="toggleMenu()">
@@ -1312,6 +1315,7 @@ header{
     <button class="rp-move-btn" id="rp-invest-btn" onclick="openInvestFromPanel()" style="display:none;margin-top:6px;background:#FFF0E8;border-color:#E07820;color:#C05010;">📈 <span data-i18n="invest">Invest</span></button>
     <button class="rp-move-btn" id="rp-move-btn" onclick="openMoveOv()" style="display:none">🚚 <span data-i18n="move">Move</span></button>
     <button class="rp-buy-btn" id="rp-attend-btn" onclick="openAttendanceQuiz()" style="display:none;background:linear-gradient(135deg,#4A8A50,#2E6B35);margin-top:8px;">📅 <span data-i18n="checkin_btn">Check-in (+5 HIVE)</span></button>
+    <button class="rp-move-btn" id="rp-nft-btn" onclick="mintNft()" style="display:none;margin-top:8px;background:#EEF0FF;border-color:#5B6CF2;color:#3A4BD4;">⬡ Mint NFT</button>
   </div>
 </div>
 
@@ -3908,6 +3912,8 @@ function openRoomPanel(num){
     document.getElementById('rp-invest-btn').style.display = 'block';
     document.getElementById('rp-move-btn').style.display = 'block';
     document.getElementById('rp-attend-btn').style.display = 'none';
+    document.getElementById('rp-nft-btn').style.display = 'none';
+    checkAndShowNftBtn(num);
   } else if(room.reserved){
     buyBtn.style.display = 'none';
     insuf.style.display = 'none';
@@ -5719,6 +5725,257 @@ async function postToX(num){
     showToast('𝕏 X 작성창이 열렸어요!');
   }
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ON-CHAIN: Abstract Testnet Integration
+// ══════════════════════════════════════════════════════════════════════════════
+
+const ABSTRACT_CHAIN = {
+  chainId: '0x2B74', // 11124
+  chainName: 'Abstract Testnet',
+  rpcUrls: ['https://api.testnet.abs.xyz'],
+  nativeCurrency: { name: 'Ethereum', symbol: 'ETH', decimals: 18 },
+  blockExplorerUrls: ['https://explorer.testnet.abs.xyz']
+};
+
+const ONCHAIN = {
+  HIVE:   '0xE46AfBa60F86D34F110d5ADC5Ea763dB883096dE',
+  TILE:   '0x175D30A5027BFb3C28F6ACA47FA5B95f912ad162',
+  MARKET: '0x49386B0d73Ac64BfD302ADd525712E2c5C0801A4',
+};
+
+const HIVE_ABI = [
+  'function claim(uint256 amount, bytes calldata signature) external',
+  'function burnForInApp(uint256 amount) external',
+  'function getClaimNonce(address user) external view returns (uint256)',
+  'function nextClaimTime(address user) external view returns (uint256)',
+  'function balanceOf(address account) external view returns (uint256)',
+];
+
+const TILE_ABI = [
+  'function mint(uint256 tileNumber, bytes calldata signature) external',
+  'function minted(uint256 tokenId) external view returns (bool)',
+  'function getMintNonce(address user) external view returns (uint256)',
+];
+
+let WALLET_SIGNER   = null;
+let WALLET_ADDRESS  = null;
+
+async function connectWallet() {
+  if (!window.ethereum) { alert('MetaMask or an EIP-1193 wallet is required.'); return false; }
+  try {
+    await window.ethereum.request({ method: 'eth_requestAccounts' });
+    try {
+      await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: ABSTRACT_CHAIN.chainId }] });
+    } catch(sw) {
+      if (sw.code === 4902) await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [ABSTRACT_CHAIN] });
+    }
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    WALLET_SIGNER  = provider.getSigner();
+    WALLET_ADDRESS = await WALLET_SIGNER.getAddress();
+    _updateWalletBtn();
+    return true;
+  } catch(e) { console.error('connectWallet', e); return false; }
+}
+
+function _updateWalletBtn() {
+  const btn = document.getElementById('wallet-btn');
+  if (!btn) return;
+  if (WALLET_ADDRESS) {
+    btn.textContent = WALLET_ADDRESS.slice(0,6) + '…' + WALLET_ADDRESS.slice(-4);
+    btn.style.background = '#E8F5E9'; btn.style.borderColor = '#4CAF50'; btn.style.color = '#2E7D32';
+  } else {
+    btn.textContent = '🔗 Wallet'; btn.style.background = '#FFF8E8'; btn.style.borderColor = '#F2B830'; btn.style.color = '#A87800';
+  }
+}
+
+// ── Claim Modal ──────────────────────────────────────────────────────────────
+
+function openClaimModal() {
+  if (!CURRENT_USER) { alert('Login required.'); return; }
+  document.getElementById('claim-modal-ov').style.display = 'flex';
+  _refreshClaimModal();
+}
+function closeClaimModal() { document.getElementById('claim-modal-ov').style.display = 'none'; }
+
+async function _refreshClaimModal() {
+  document.getElementById('cm-inapp').textContent = MY_BALANCE !== null ? MY_BALANCE.toLocaleString() : '—';
+  const amtInput = document.getElementById('cm-amount');
+  if (amtInput && !amtInput.value) amtInput.value = MY_BALANCE || 5000;
+
+  if (!WALLET_ADDRESS) {
+    document.getElementById('cm-wallet-section').style.display = 'block';
+    document.getElementById('cm-claim-section').style.display = 'none';
+    return;
+  }
+  document.getElementById('cm-wallet-section').style.display = 'none';
+  document.getElementById('cm-claim-section').style.display = 'block';
+
+  try {
+    const provider = new ethers.providers.JsonRpcProvider(ABSTRACT_CHAIN.rpcUrls[0]);
+    const hive = new ethers.Contract(ONCHAIN.HIVE, HIVE_ABI, provider);
+    const [bal, nextClaim] = await Promise.all([hive.balanceOf(WALLET_ADDRESS), hive.nextClaimTime(WALLET_ADDRESS)]);
+    const onChainAmt = parseFloat(ethers.utils.formatEther(bal));
+    document.getElementById('cm-onchain').textContent = onChainAmt.toLocaleString(undefined, {maximumFractionDigits:2});
+    const now = Math.floor(Date.now() / 1000);
+    document.getElementById('cm-cooldown').textContent = nextClaim.toNumber() <= now
+      ? '✅ Ready to claim'
+      : '⏳ Next: ' + new Date(nextClaim.toNumber() * 1000).toLocaleString();
+    if (onChainAmt > 0) {
+      document.getElementById('cm-burn-section').style.display = 'block';
+      document.getElementById('cm-burn-amount').value = Math.floor(onChainAmt);
+    }
+  } catch(e) { console.error('_refreshClaimModal', e); }
+}
+
+// Called by updateClaimModal reference in HTML button
+function updateClaimModal() { _refreshClaimModal(); }
+
+async function executeClaim() {
+  const amt = parseInt(document.getElementById('cm-amount').value) || 0;
+  if (amt < 5000) { alert('Minimum claim is 5,000 HIVE.'); return; }
+  if (amt > MY_BALANCE) { alert('Amount exceeds in-app balance.'); return; }
+  if (!WALLET_ADDRESS) { if(!(await connectWallet())) return; }
+
+  const btn = document.getElementById('cm-claim-btn');
+  btn.disabled = true; btn.textContent = 'Getting signature…';
+  try {
+    // Server must provide EIP-712 signature
+    // Endpoint: POST /api/sign-claim  { wallet, amount }  → { signature }
+    const token = await getValidToken();
+    const resp = await fetch('/api/sign-claim', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ wallet: WALLET_ADDRESS, amount: amt })
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+    const { signature } = await resp.json();
+
+    btn.textContent = 'Confirm in wallet…';
+    const hive = new ethers.Contract(ONCHAIN.HIVE, HIVE_ABI, WALLET_SIGNER);
+    const tx = await hive.claim(ethers.utils.parseEther(String(amt)), signature);
+    btn.textContent = 'Confirming…';
+    await tx.wait();
+    showToast('✅ Claimed ' + amt.toLocaleString() + ' HIVE on-chain!');
+    closeClaimModal();
+
+    // Refresh in-app balance from Supabase
+    const bres = await fetch(`${SUPA_URL}/rest/v1/user_balances?email=eq.${encodeURIComponent(CURRENT_USER.email)}&select=balance`,
+      { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${token || SUPA_KEY}` } });
+    const bd = await bres.json();
+    if (bd && bd[0]) { MY_BALANCE = bd[0].balance; updateBalanceUI(); }
+  } catch(e) {
+    console.error('executeClaim', e);
+    alert('Claim failed: ' + (e.reason || e.message || String(e)));
+  } finally { btn.disabled = false; btn.textContent = 'Claim On-Chain'; }
+}
+
+async function executeBurn() {
+  const amt = parseInt(document.getElementById('cm-burn-amount').value) || 0;
+  if (amt <= 0) { alert('Enter amount to burn.'); return; }
+  if (!WALLET_ADDRESS) { if(!(await connectWallet())) return; }
+
+  const btn = document.getElementById('cm-burn-btn');
+  btn.disabled = true; btn.textContent = 'Confirm in wallet…';
+  try {
+    const hive = new ethers.Contract(ONCHAIN.HIVE, HIVE_ABI, WALLET_SIGNER);
+    const tx = await hive.burnForInApp(ethers.utils.parseEther(String(amt)));
+    btn.textContent = 'Confirming…';
+    await tx.wait();
+    showToast('🔥 Burned ' + amt.toLocaleString() + ' HIVE → in-app balance will update shortly.');
+    _refreshClaimModal();
+  } catch(e) {
+    console.error('executeBurn', e);
+    alert('Burn failed: ' + (e.reason || e.message || String(e)));
+  } finally { btn.disabled = false; btn.textContent = '🔥 Burn → In-App'; }
+}
+
+// ── NFT Mint ─────────────────────────────────────────────────────────────────
+
+async function checkAndShowNftBtn(tileNum) {
+  const btn = document.getElementById('rp-nft-btn');
+  if (!btn) return;
+  btn.style.display = 'none';
+  if (!WALLET_ADDRESS) return;
+  try {
+    const provider = new ethers.providers.JsonRpcProvider(ABSTRACT_CHAIN.rpcUrls[0]);
+    const tile = new ethers.Contract(ONCHAIN.TILE, TILE_ABI, provider);
+    const isMinted = await tile.minted(tileNum);
+    if (!isMinted) { btn.style.display = 'block'; btn.dataset.tile = tileNum; }
+  } catch(e) { console.error('checkAndShowNftBtn', e); }
+}
+
+async function mintNft() {
+  const btn = document.getElementById('rp-nft-btn');
+  const tileNum = parseInt(btn.dataset.tile);
+  if (!tileNum) return;
+  if (!WALLET_ADDRESS) { if(!(await connectWallet())) return; }
+
+  btn.disabled = true; btn.textContent = 'Getting signature…';
+  try {
+    const token = await getValidToken();
+    // Server endpoint: POST /api/sign-mint  { wallet, tileNumber }  → { signature }
+    const resp = await fetch('/api/sign-mint', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ wallet: WALLET_ADDRESS, tileNumber: tileNum })
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+    const { signature } = await resp.json();
+
+    btn.textContent = 'Confirm in wallet…';
+    const tile = new ethers.Contract(ONCHAIN.TILE, TILE_ABI, WALLET_SIGNER);
+    const tx = await tile.mint(tileNum, signature);
+    btn.textContent = 'Minting…';
+    await tx.wait();
+    showToast('🎉 NFT for tile #' + tileNum + ' minted!');
+    btn.style.display = 'none';
+  } catch(e) {
+    console.error('mintNft', e);
+    alert('Mint failed: ' + (e.reason || e.message || String(e)));
+    btn.disabled = false; btn.textContent = '⬡ Mint NFT';
+  }
+}
 </script>
+
+<!-- HIVE Claim / Burn 모달 -->
+<div id="claim-modal-ov" style="display:none;position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:20px;padding:28px 28px 24px;max-width:340px;width:92%;box-shadow:0 24px 64px rgba(0,0,0,.3);animation:popin .3s cubic-bezier(.34,1.56,.64,1);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="font-family:'Jua',sans-serif;font-size:18px;color:#A87800;">🍯 HIVE On-Chain</div>
+      <button onclick="closeClaimModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#999;">✕</button>
+    </div>
+    <!-- 잔액 요약 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+      <div style="background:#FFF8E8;border-radius:12px;padding:10px;text-align:center;">
+        <div style="font-size:10px;color:#A87800;font-weight:700;margin-bottom:2px;">IN-APP</div>
+        <div style="font-size:15px;font-weight:700;color:#7A5500;"><span id="cm-inapp">—</span></div>
+      </div>
+      <div style="background:#EEF0FF;border-radius:12px;padding:10px;text-align:center;">
+        <div style="font-size:10px;color:#3A4BD4;font-weight:700;margin-bottom:2px;">ON-CHAIN</div>
+        <div style="font-size:15px;font-weight:700;color:#3A4BD4;"><span id="cm-onchain">—</span></div>
+      </div>
+    </div>
+    <!-- 지갑 미연결 -->
+    <div id="cm-wallet-section" style="text-align:center;">
+      <div style="font-size:12px;color:#888;margin-bottom:12px;">Connect wallet to claim or burn HIVE.</div>
+      <button onclick="connectWallet().then(updateClaimModal)" style="width:100%;padding:12px;background:#F2B830;border:none;border-radius:14px;font-family:'Jua',sans-serif;font-size:14px;color:#fff;cursor:pointer;">🔗 Connect Wallet</button>
+    </div>
+    <!-- 클레임 섹션 -->
+    <div id="cm-claim-section" style="display:none;">
+      <div id="cm-cooldown" style="font-size:11px;color:#888;text-align:center;margin-bottom:12px;"></div>
+      <div style="font-size:12px;color:#666;margin-bottom:6px;">Claim amount (min 5,000):</div>
+      <input id="cm-amount" type="number" min="5000" step="1000" style="width:100%;padding:10px 12px;border:1.5px solid #F2B830;border-radius:12px;font-size:14px;box-sizing:border-box;margin-bottom:10px;">
+      <button id="cm-claim-btn" onclick="executeClaim()" style="width:100%;padding:12px;background:#F2B830;border:none;border-radius:14px;font-family:'Jua',sans-serif;font-size:14px;color:#fff;cursor:pointer;margin-bottom:4px;">Claim On-Chain</button>
+      <div style="font-size:10px;color:#aaa;text-align:center;margin-bottom:14px;">In-app balance will decrease by the claimed amount.</div>
+      <!-- 번 섹션 -->
+      <div id="cm-burn-section" style="display:none;border-top:1px solid #eee;padding-top:14px;">
+        <div style="font-size:12px;color:#666;margin-bottom:6px;">Burn on-chain HIVE → in-app:</div>
+        <input id="cm-burn-amount" type="number" min="1" style="width:100%;padding:10px 12px;border:1.5px solid #5B6CF2;border-radius:12px;font-size:14px;box-sizing:border-box;margin-bottom:10px;">
+        <button id="cm-burn-btn" onclick="executeBurn()" style="width:100%;padding:12px;background:#5B6CF2;border:none;border-radius:14px;font-family:'Jua',sans-serif;font-size:14px;color:#fff;cursor:pointer;">🔥 Burn → In-App</button>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
