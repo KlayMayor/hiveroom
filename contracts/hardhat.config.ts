@@ -14,10 +14,10 @@ const config: HardhatUserConfig = {
     },
   },
   zksolc: {
-    version: "latest",
+    version: "1.5.7",
     settings: {
-      isSystem: false,
-      forceEvmla: false,
+      enableEraVMExtensions: false,
+      forceEVMLA: false,
     },
   },
   networks: {
