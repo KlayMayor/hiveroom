@@ -647,6 +647,7 @@ header{
   .h-badge{ display:none; }
   .h-filter-wrap{ display:none; }
   .h-timers{ display:none !important; }
+  #wallet-btn{ font-size:10px !important; padding:4px 8px !important; }
   #profile-wrap{ margin-left:auto; }
   #login-btn{ margin-left:auto;font-size:11px;padding:5px 10px; }
   #h-notice{ display:none; }
@@ -804,6 +805,7 @@ header{
   #mob-filter-dropdown.open{ display:block; }
 }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
 <!-- 모바일: PC 접속 안내 배너 -->
@@ -921,11 +923,13 @@ header{
       <div class="h-timer-tooltip" data-i18n="tax_tooltip">Your room value drops by 3, 2 or 1 HIVE<br>each month depending on the ZONE.</div>
     </div>
     <div class="h-sep"></div>
-    <!-- HIVE 잔액 -->
-    <div class="h-hive-badge" id="hive-badge">
+    <!-- HIVE 잔액 (클릭 → claim modal) -->
+    <div class="h-hive-badge" id="hive-badge" onclick="openClaimModal()" style="cursor:pointer;" title="Claim / Burn HIVE">
       🍯 <span id="hive-bal">—</span> HIVE
     </div>
   </div>
+  <!-- 지갑 연결 버튼 (로그인 후 표시, 모바일 포함) -->
+  <button id="wallet-btn" onclick="showWalletSelector()" style="display:none;padding:5px 10px;border-radius:20px;border:1.5px solid #F2B830;background:#FFF8E8;color:#A87800;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">🔗 Wallet</button>
   <div class="h-profile-wrap" id="profile-wrap" style="display:none;">
     <div class="h-profile-btn" id="profile-btn" onclick="toggleMenu()">
       <img id="profile-img" src="" alt="">
@@ -1312,6 +1316,7 @@ header{
     <button class="rp-move-btn" id="rp-invest-btn" onclick="openInvestFromPanel()" style="display:none;margin-top:6px;background:#FFF0E8;border-color:#E07820;color:#C05010;">📈 <span data-i18n="invest">Invest</span></button>
     <button class="rp-move-btn" id="rp-move-btn" onclick="openMoveOv()" style="display:none">🚚 <span data-i18n="move">Move</span></button>
     <button class="rp-buy-btn" id="rp-attend-btn" onclick="openAttendanceQuiz()" style="display:none;background:linear-gradient(135deg,#4A8A50,#2E6B35);margin-top:8px;">📅 <span data-i18n="checkin_btn">Check-in (+5 HIVE)</span></button>
+    <button class="rp-move-btn" id="rp-nft-btn" onclick="mintNft()" style="display:none;margin-top:8px;background:#EEF0FF;border-color:#5B6CF2;color:#3A4BD4;">⬡ Mint NFT</button>
   </div>
 </div>
 
@@ -1650,6 +1655,7 @@ function setLoggedIn(user){
   document.getElementById('dd-name').textContent = user.name;
   document.getElementById('dd-email').textContent = user.email;
   document.getElementById('h-timers').classList.add('show');
+  document.getElementById('wallet-btn').style.display='block';
   loadMyBalance();
   startTimers();
 }
@@ -1657,6 +1663,7 @@ function setLoggedOut(){
   document.getElementById('login-btn').style.display='flex';
   document.getElementById('profile-wrap').style.display='none';
   document.getElementById('h-timers').classList.remove('show');
+  document.getElementById('wallet-btn').style.display='none';
   MY_BALANCE = null;
   stopTimers();
   closeMenu();
@@ -3908,6 +3915,8 @@ function openRoomPanel(num){
     document.getElementById('rp-invest-btn').style.display = 'block';
     document.getElementById('rp-move-btn').style.display = 'block';
     document.getElementById('rp-attend-btn').style.display = 'none';
+    document.getElementById('rp-nft-btn').style.display = 'none';
+    checkAndShowNftBtn(num);
   } else if(room.reserved){
     buyBtn.style.display = 'none';
     insuf.style.display = 'none';
@@ -5719,6 +5728,453 @@ async function postToX(num){
     showToast('𝕏 X 작성창이 열렸어요!');
   }
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ON-CHAIN: Abstract Testnet Integration
+// ══════════════════════════════════════════════════════════════════════════════
+
+const ABSTRACT_CHAIN = {
+  chainId: '0x2B74', // 11124
+  chainName: 'Abstract Testnet',
+  rpcUrls: ['https://api.testnet.abs.xyz'],
+  nativeCurrency: { name: 'Ethereum', symbol: 'ETH', decimals: 18 },
+  blockExplorerUrls: ['https://explorer.testnet.abs.xyz']
+};
+
+const ONCHAIN = {
+  HIVE:   '0xE46AfBa60F86D34F110d5ADC5Ea763dB883096dE',
+  TILE:   '0x175D30A5027BFb3C28F6ACA47FA5B95f912ad162',
+  MARKET: '0x49386B0d73Ac64BfD302ADd525712E2c5C0801A4',
+};
+
+const HIVE_ABI = [
+  'function claim(uint256 amount, bytes calldata signature) external',
+  'function burnForInApp(uint256 amount) external',
+  'function getClaimNonce(address user) external view returns (uint256)',
+  'function nextClaimTime(address user) external view returns (uint256)',
+  'function balanceOf(address account) external view returns (uint256)',
+];
+
+const TILE_ABI = [
+  'function mint(uint256 tileNumber, bytes calldata signature) external',
+  'function minted(uint256 tokenId) external view returns (bool)',
+  'function getMintNonce(address user) external view returns (uint256)',
+];
+
+let WALLET_SIGNER   = null;
+let WALLET_ADDRESS  = null;
+
+let _walletResolve = null;
+
+function showWalletSelector() {
+  if (WALLET_ADDRESS) return Promise.resolve(true);
+  return new Promise(resolve => {
+    _walletResolve = resolve;
+    document.getElementById('wallet-selector-ov').style.display = 'flex';
+  });
+}
+
+function _closeWalletSelector() {
+  document.getElementById('wallet-selector-ov').style.display = 'none';
+}
+
+function _resolveWallet(ok) {
+  _closeWalletSelector();
+  if (_walletResolve) { _walletResolve(ok); _walletResolve = null; }
+}
+
+async function connectMetaMask() {
+  _closeWalletSelector();
+  if (!window.ethereum) { alert('MetaMask or an EIP-1193 wallet is required.'); _resolveWallet(false); return false; }
+  try {
+    await window.ethereum.request({ method: 'eth_requestAccounts' });
+    try {
+      await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: ABSTRACT_CHAIN.chainId }] });
+    } catch(sw) {
+      if (sw.code === 4902) await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [ABSTRACT_CHAIN] });
+    }
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    WALLET_SIGNER  = provider.getSigner();
+    WALLET_ADDRESS = await WALLET_SIGNER.getAddress();
+    _updateWalletBtn();
+    _resolveWallet(true);
+    return true;
+  } catch(e) { console.error('connectMetaMask', e); _resolveWallet(false); return false; }
+}
+
+// ── Abstract Global Wallet ────────────────────────────────────────────────────
+// 앱 등록 없이 SDK가 팝업을 처리해주면 아래 두 값은 불필요합니다.
+// 등록이 필요한 경우: portal.abs.xyz 에서 앱 등록 후 값을 채워넣으세요.
+const AGW_APP_ID    = 'cm04asygd041fmry9zmcyn5o5'; // Abstract 공통 ID
+const AGW_CLIENT_ID = 'cmo3w6jww00450djrdr7kzrx3'; // HiveRoom Privy App ID
+
+function _b64url(arr) {
+  return btoa(String.fromCharCode(...arr)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+async function _generatePKCE() {
+  const verifier  = _b64url(crypto.getRandomValues(new Uint8Array(32)));
+  const hashBytes = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
+  return { verifier, challenge: _b64url(hashBytes) };
+}
+
+async function connectAbstractWallet() {
+  _closeWalletSelector();
+  try {
+    // ① SDK에서 브라우저 로그인 함수 탐색
+    const agwMod = await import('https://esm.sh/@abstract-foundation/agw-client');
+    console.log('[AGW] available exports:', Object.keys(agwMod));
+
+    // 알려진 로그인 함수 이름들 시도
+    const loginFn = agwMod.loginWithAbstract
+                 || agwMod.login
+                 || agwMod.connectAbstract
+                 || agwMod.useAbstractClient?.login;
+
+    if (loginFn) {
+      console.log('[AGW] SDK login function found, calling...');
+      const result = await loginFn();
+      console.log('[AGW] login result:', result);
+
+      WALLET_ADDRESS = result?.address || result?.account?.address;
+      if (!WALLET_ADDRESS) throw new Error('SDK 로그인 결과에서 주소를 찾지 못했습니다: ' + JSON.stringify(result));
+
+      // SDK가 EIP-1193 provider를 제공하는 경우
+      if (result?.request || result?.provider?.request) {
+        const p = result.provider || result;
+        const provider = new ethers.providers.Web3Provider(p);
+        WALLET_SIGNER = provider.getSigner();
+      }
+      _updateWalletBtn();
+      _resolveWallet(true);
+      return;
+    }
+
+    console.log('[AGW] SDK에 로그인 함수 없음 → OAuth PKCE 팝업 방식으로 전환');
+
+    // ② SDK 로그인 함수 없음 → app_id/client_id 필요한 OAuth 팝업
+    if (!AGW_APP_ID || !AGW_CLIENT_ID) {
+      document.getElementById('wallet-selector-ov').style.display = 'flex';
+      document.getElementById('wsp-main').style.display = 'none';
+      document.getElementById('wsp-agw').style.display = 'block';
+      return;
+    }
+
+    const { verifier, challenge } = await _generatePKCE();
+    const state = _b64url(crypto.getRandomValues(new Uint8Array(16)));
+    sessionStorage.setItem('abs_v', verifier);
+    sessionStorage.setItem('abs_s', state);
+
+    const oauthQ = new URLSearchParams({
+      app_id: AGW_APP_ID, client_id: AGW_CLIENT_ID,
+      scope: 'accounts', response_type: 'code',
+      state, code_challenge: challenge, code_challenge_method: 'S256',
+    }).toString();
+
+    const popup = window.open(
+      `https://portal.abs.xyz/login?redirect=${encodeURIComponent('/oauth/authorize?' + oauthQ)}`,
+      'agw-login',
+      `width=460,height=640,popup=yes,left=${(screen.width-460)/2|0},top=${(screen.height-640)/2|0}`
+    );
+    if (!popup) { alert('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.'); _resolveWallet(false); return; }
+
+    const code = await new Promise((resolve, reject) => {
+      const tid = setTimeout(() => { window.removeEventListener('message', h); reject(new Error('Login timeout (5min)')); }, 5*60*1000);
+      function h(e) {
+        if (!e.origin.endsWith('abs.xyz')) return;
+        console.log('[AGW] postMessage received:', e.data);
+        const d = e.data || {};
+        if (d.code && d.state === sessionStorage.getItem('abs_s')) {
+          clearTimeout(tid); window.removeEventListener('message', h); resolve(d.code);
+        }
+      }
+      window.addEventListener('message', h);
+    });
+
+    const tok = await fetch('https://portal.abs.xyz/oauth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ grant_type: 'authorization_code', code, code_verifier: verifier, client_id: AGW_CLIENT_ID }),
+    }).then(r => r.json());
+    if (!tok.access_token) throw new Error('Token exchange failed: ' + JSON.stringify(tok));
+
+    const me = await fetch('https://portal.abs.xyz/api/accounts', {
+      headers: { Authorization: `Bearer ${tok.access_token}` },
+    }).then(r => r.json());
+    console.log('[AGW] account info:', me);
+    WALLET_ADDRESS = (Array.isArray(me) ? me[0] : me)?.address || me?.wallet_address;
+    if (!WALLET_ADDRESS) throw new Error('지갑 주소를 받아오지 못했습니다: ' + JSON.stringify(me));
+
+    sessionStorage.setItem('abs_token', tok.access_token);
+
+    const eip1193 = {
+      request: async ({ method, params }) => {
+        if (method === 'eth_requestAccounts' || method === 'eth_accounts') return [WALLET_ADDRESS];
+        if (method === 'eth_chainId') return '0x2B74';
+        if (method === 'eth_sendTransaction') {
+          const tx = params[0];
+          const res = await fetch('https://portal.abs.xyz/api/transactions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionStorage.getItem('abs_token')}` },
+            body: JSON.stringify(tx),
+          }).then(r => r.json());
+          return res.hash || res.transaction_hash;
+        }
+        return new ethers.providers.JsonRpcProvider('https://api.testnet.abs.xyz').send(method, params || []);
+      },
+      on: () => {}, removeListener: () => {},
+    };
+
+    const provider = new ethers.providers.Web3Provider(eip1193);
+    WALLET_SIGNER  = provider.getSigner();
+    _updateWalletBtn();
+    _resolveWallet(true);
+  } catch(e) {
+    console.error('connectAbstractWallet', e);
+    alert('Abstract 지갑 연결 실패: ' + e.message);
+    _resolveWallet(false);
+  }
+}
+
+function _showWspMain() {
+  document.getElementById('wsp-main').style.display = 'block';
+  document.getElementById('wsp-agw').style.display = 'none';
+}
+
+function _updateWalletBtn() {
+  const btn = document.getElementById('wallet-btn');
+  if (!btn) return;
+  if (WALLET_ADDRESS) {
+    btn.textContent = WALLET_ADDRESS.slice(0,6) + '…' + WALLET_ADDRESS.slice(-4);
+    btn.style.background = '#E8F5E9'; btn.style.borderColor = '#4CAF50'; btn.style.color = '#2E7D32';
+  } else {
+    btn.textContent = '🔗 Wallet'; btn.style.background = '#FFF8E8'; btn.style.borderColor = '#F2B830'; btn.style.color = '#A87800';
+  }
+}
+
+// ── Claim Modal ──────────────────────────────────────────────────────────────
+
+function openClaimModal() {
+  if (!CURRENT_USER) { alert('Login required.'); return; }
+  document.getElementById('claim-modal-ov').style.display = 'flex';
+  _refreshClaimModal();
+}
+function closeClaimModal() { document.getElementById('claim-modal-ov').style.display = 'none'; }
+
+async function _refreshClaimModal() {
+  document.getElementById('cm-inapp').textContent = MY_BALANCE !== null ? MY_BALANCE.toLocaleString() : '—';
+  const amtInput = document.getElementById('cm-amount');
+  if (amtInput && !amtInput.value) amtInput.value = MY_BALANCE || 5000;
+
+  if (!WALLET_ADDRESS) {
+    document.getElementById('cm-wallet-section').style.display = 'block';
+    document.getElementById('cm-claim-section').style.display = 'none';
+    return;
+  }
+  document.getElementById('cm-wallet-section').style.display = 'none';
+  document.getElementById('cm-claim-section').style.display = 'block';
+
+  try {
+    const provider = new ethers.providers.JsonRpcProvider(ABSTRACT_CHAIN.rpcUrls[0]);
+    const hive = new ethers.Contract(ONCHAIN.HIVE, HIVE_ABI, provider);
+    const [bal, nextClaim] = await Promise.all([hive.balanceOf(WALLET_ADDRESS), hive.nextClaimTime(WALLET_ADDRESS)]);
+    const onChainAmt = parseFloat(ethers.utils.formatEther(bal));
+    document.getElementById('cm-onchain').textContent = onChainAmt.toLocaleString(undefined, {maximumFractionDigits:2});
+    const now = Math.floor(Date.now() / 1000);
+    document.getElementById('cm-cooldown').textContent = nextClaim.toNumber() <= now
+      ? '✅ Ready to claim'
+      : '⏳ Next: ' + new Date(nextClaim.toNumber() * 1000).toLocaleString();
+    if (onChainAmt > 0) {
+      document.getElementById('cm-burn-section').style.display = 'block';
+      document.getElementById('cm-burn-amount').value = Math.floor(onChainAmt);
+    }
+  } catch(e) { console.error('_refreshClaimModal', e); }
+}
+
+// Called by updateClaimModal reference in HTML button
+function updateClaimModal() { _refreshClaimModal(); }
+
+async function executeClaim() {
+  const amt = parseInt(document.getElementById('cm-amount').value) || 0;
+  if (amt < 5000) { alert('Minimum claim is 5,000 HIVE.'); return; }
+  if (amt > MY_BALANCE) { alert('Amount exceeds in-app balance.'); return; }
+  if (!WALLET_ADDRESS) { if(!(await showWalletSelector())) return; }
+
+  const btn = document.getElementById('cm-claim-btn');
+  btn.disabled = true; btn.textContent = 'Getting signature…';
+  try {
+    // Server must provide EIP-712 signature
+    // Endpoint: POST /api/sign-claim  { wallet, amount }  → { signature }
+    const token = await getValidToken();
+    const resp = await fetch(`${SUPA_URL}/functions/v1/sign-claim`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ wallet: WALLET_ADDRESS, amount: amt })
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+    const { signature } = await resp.json();
+
+    btn.textContent = 'Confirm in wallet…';
+    const hive = new ethers.Contract(ONCHAIN.HIVE, HIVE_ABI, WALLET_SIGNER);
+    const tx = await hive.claim(ethers.utils.parseEther(String(amt)), signature);
+    btn.textContent = 'Confirming…';
+    await tx.wait();
+    showToast('✅ Claimed ' + amt.toLocaleString() + ' HIVE on-chain!');
+    closeClaimModal();
+
+    // Refresh in-app balance from Supabase
+    const bres = await fetch(`${SUPA_URL}/rest/v1/user_balances?email=eq.${encodeURIComponent(CURRENT_USER.email)}&select=balance`,
+      { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${token || SUPA_KEY}` } });
+    const bd = await bres.json();
+    if (bd && bd[0]) { MY_BALANCE = bd[0].balance; updateBalanceUI(); }
+  } catch(e) {
+    console.error('executeClaim', e);
+    alert('Claim failed: ' + (e.reason || e.message || String(e)));
+  } finally { btn.disabled = false; btn.textContent = 'Claim On-Chain'; }
+}
+
+async function executeBurn() {
+  const amt = parseInt(document.getElementById('cm-burn-amount').value) || 0;
+  if (amt <= 0) { alert('Enter amount to burn.'); return; }
+  if (!WALLET_ADDRESS) { if(!(await showWalletSelector())) return; }
+
+  const btn = document.getElementById('cm-burn-btn');
+  btn.disabled = true; btn.textContent = 'Confirm in wallet…';
+  try {
+    const hive = new ethers.Contract(ONCHAIN.HIVE, HIVE_ABI, WALLET_SIGNER);
+    const tx = await hive.burnForInApp(ethers.utils.parseEther(String(amt)));
+    btn.textContent = 'Confirming…';
+    await tx.wait();
+    showToast('🔥 Burned ' + amt.toLocaleString() + ' HIVE → in-app balance will update shortly.');
+    _refreshClaimModal();
+  } catch(e) {
+    console.error('executeBurn', e);
+    alert('Burn failed: ' + (e.reason || e.message || String(e)));
+  } finally { btn.disabled = false; btn.textContent = '🔥 Burn → In-App'; }
+}
+
+// ── NFT Mint ─────────────────────────────────────────────────────────────────
+
+async function checkAndShowNftBtn(tileNum) {
+  const btn = document.getElementById('rp-nft-btn');
+  if (!btn) return;
+  btn.style.display = 'none';
+  if (!WALLET_ADDRESS) return;
+  try {
+    const provider = new ethers.providers.JsonRpcProvider(ABSTRACT_CHAIN.rpcUrls[0]);
+    const tile = new ethers.Contract(ONCHAIN.TILE, TILE_ABI, provider);
+    const isMinted = await tile.minted(tileNum);
+    if (!isMinted) { btn.style.display = 'block'; btn.dataset.tile = tileNum; }
+  } catch(e) { console.error('checkAndShowNftBtn', e); }
+}
+
+async function mintNft() {
+  const btn = document.getElementById('rp-nft-btn');
+  const tileNum = parseInt(btn.dataset.tile);
+  if (!tileNum) return;
+  if (!WALLET_ADDRESS) { if(!(await showWalletSelector())) return; }
+
+  btn.disabled = true; btn.textContent = 'Getting signature…';
+  try {
+    const token = await getValidToken();
+    const resp = await fetch(`${SUPA_URL}/functions/v1/sign-mint`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ wallet: WALLET_ADDRESS, tileNumber: tileNum })
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+    const { signature } = await resp.json();
+
+    btn.textContent = 'Confirm in wallet…';
+    const tile = new ethers.Contract(ONCHAIN.TILE, TILE_ABI, WALLET_SIGNER);
+    const tx = await tile.mint(tileNum, signature);
+    btn.textContent = 'Minting…';
+    await tx.wait();
+    showToast('🎉 NFT for tile #' + tileNum + ' minted!');
+    btn.style.display = 'none';
+  } catch(e) {
+    console.error('mintNft', e);
+    alert('Mint failed: ' + (e.reason || e.message || String(e)));
+    btn.disabled = false; btn.textContent = '⬡ Mint NFT';
+  }
+}
 </script>
+
+<!-- HIVE Claim / Burn 모달 -->
+<div id="claim-modal-ov" style="display:none;position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:20px;padding:28px 28px 24px;max-width:340px;width:92%;box-shadow:0 24px 64px rgba(0,0,0,.3);animation:popin .3s cubic-bezier(.34,1.56,.64,1);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="font-family:'Jua',sans-serif;font-size:18px;color:#A87800;">🍯 HIVE On-Chain</div>
+      <button onclick="closeClaimModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#999;">✕</button>
+    </div>
+    <!-- 잔액 요약 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+      <div style="background:#FFF8E8;border-radius:12px;padding:10px;text-align:center;">
+        <div style="font-size:10px;color:#A87800;font-weight:700;margin-bottom:2px;">IN-APP</div>
+        <div style="font-size:15px;font-weight:700;color:#7A5500;"><span id="cm-inapp">—</span></div>
+      </div>
+      <div style="background:#EEF0FF;border-radius:12px;padding:10px;text-align:center;">
+        <div style="font-size:10px;color:#3A4BD4;font-weight:700;margin-bottom:2px;">ON-CHAIN</div>
+        <div style="font-size:15px;font-weight:700;color:#3A4BD4;"><span id="cm-onchain">—</span></div>
+      </div>
+    </div>
+    <!-- 지갑 미연결 -->
+    <div id="cm-wallet-section" style="text-align:center;">
+      <div style="font-size:12px;color:#888;margin-bottom:12px;">Connect wallet to claim or burn HIVE.</div>
+      <button onclick="showWalletSelector().then(r => r && updateClaimModal())" style="width:100%;padding:12px;background:#F2B830;border:none;border-radius:14px;font-family:'Jua',sans-serif;font-size:14px;color:#fff;cursor:pointer;">🔗 Connect Wallet</button>
+    </div>
+    <!-- 클레임 섹션 -->
+    <div id="cm-claim-section" style="display:none;">
+      <div id="cm-cooldown" style="font-size:11px;color:#888;text-align:center;margin-bottom:12px;"></div>
+      <div style="font-size:12px;color:#666;margin-bottom:6px;">Claim amount (min 5,000):</div>
+      <input id="cm-amount" type="number" min="5000" step="1000" style="width:100%;padding:10px 12px;border:1.5px solid #F2B830;border-radius:12px;font-size:14px;box-sizing:border-box;margin-bottom:10px;">
+      <button id="cm-claim-btn" onclick="executeClaim()" style="width:100%;padding:12px;background:#F2B830;border:none;border-radius:14px;font-family:'Jua',sans-serif;font-size:14px;color:#fff;cursor:pointer;margin-bottom:4px;">Claim On-Chain</button>
+      <div style="font-size:10px;color:#aaa;text-align:center;margin-bottom:14px;">In-app balance will decrease by the claimed amount.</div>
+      <!-- 번 섹션 -->
+      <div id="cm-burn-section" style="display:none;border-top:1px solid #eee;padding-top:14px;">
+        <div style="font-size:12px;color:#666;margin-bottom:6px;">Burn on-chain HIVE → in-app:</div>
+        <input id="cm-burn-amount" type="number" min="1" style="width:100%;padding:10px 12px;border:1.5px solid #5B6CF2;border-radius:12px;font-size:14px;box-sizing:border-box;margin-bottom:10px;">
+        <button id="cm-burn-btn" onclick="executeBurn()" style="width:100%;padding:12px;background:#5B6CF2;border:none;border-radius:14px;font-family:'Jua',sans-serif;font-size:14px;color:#fff;cursor:pointer;">🔥 Burn → In-App</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Wallet Selector Modal -->
+<div id="wallet-selector-ov" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:20px;padding:28px 24px;width:320px;max-width:92vw;font-family:'Jua',sans-serif;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+
+    <!-- 패널 1: 지갑 선택 -->
+    <div id="wsp-main">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <span style="font-size:16px;font-weight:700;color:#1a1a1a;">Connect Wallet</span>
+        <button onclick="_resolveWallet(false)" style="background:none;border:none;font-size:22px;line-height:1;cursor:pointer;color:#888;">×</button>
+      </div>
+      <button onclick="connectAbstractWallet()" style="width:100%;padding:14px;margin-bottom:12px;background:linear-gradient(135deg,#3A4BD4,#6C5CE7);border:none;border-radius:14px;font-family:'Jua',sans-serif;font-size:14px;color:#fff;cursor:pointer;display:flex;align-items:center;gap:10px;justify-content:center;">
+        <span style="font-size:20px;">⬡</span> Abstract Global Wallet
+      </button>
+      <button onclick="connectMetaMask()" style="width:100%;padding:14px;background:#fff;border:2px solid #e0e0e0;border-radius:14px;font-family:'Jua',sans-serif;font-size:14px;color:#333;cursor:pointer;display:flex;align-items:center;gap:10px;justify-content:center;">
+        <span style="font-size:20px;">🦊</span> MetaMask / Browser Wallet
+      </button>
+    </div>
+
+    <!-- 패널 2: AGW 앱 등록 안내 -->
+    <div id="wsp-agw" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <span style="font-size:15px;font-weight:700;color:#3A4BD4;">⬡ Abstract Global Wallet</span>
+        <button onclick="_resolveWallet(false)" style="background:none;border:none;font-size:22px;line-height:1;cursor:pointer;color:#888;">×</button>
+      </div>
+      <div style="background:#F5F7FF;border-radius:12px;padding:14px;margin-bottom:16px;font-size:12px;color:#555;line-height:1.8;">
+        AGW는 <b>portal.abs.xyz</b> 웹 팝업으로 로그인하는 방식입니다.<br>
+        사용하려면 아래에서 앱을 등록하고<br>
+        <code style="background:#e8ecff;padding:1px 4px;border-radius:4px;">app_id</code>와 <code style="background:#e8ecff;padding:1px 4px;border-radius:4px;">client_id</code>를 개발자에게 전달해 주세요.
+      </div>
+      <a href="https://portal.abs.xyz" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;margin-bottom:10px;background:linear-gradient(135deg,#3A4BD4,#6C5CE7);border:none;border-radius:14px;font-family:'Jua',sans-serif;font-size:14px;color:#fff;cursor:pointer;text-align:center;text-decoration:none;box-sizing:border-box;">
+        <span style="font-size:18px;">⬡</span> portal.abs.xyz 앱 등록
+      </a>
+      <button onclick="_showWspMain()" style="width:100%;padding:8px;background:none;border:none;font-size:12px;color:#aaa;cursor:pointer;">← 뒤로</button>
+    </div>
+
+  </div>
+</div>
 </body>
 </html>
