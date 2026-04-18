@@ -647,6 +647,7 @@ header{
   .h-badge{ display:none; }
   .h-filter-wrap{ display:none; }
   .h-timers{ display:none !important; }
+  #wallet-btn{ font-size:10px !important; padding:4px 8px !important; }
   #profile-wrap{ margin-left:auto; }
   #login-btn{ margin-left:auto;font-size:11px;padding:5px 10px; }
   #h-notice{ display:none; }
@@ -926,9 +927,9 @@ header{
     <div class="h-hive-badge" id="hive-badge" onclick="openClaimModal()" style="cursor:pointer;" title="Claim / Burn HIVE">
       🍯 <span id="hive-bal">—</span> HIVE
     </div>
-    <!-- 지갑 연결 버튼 -->
-    <button id="wallet-btn" onclick="showWalletSelector()" style="padding:5px 10px;border-radius:20px;border:1.5px solid #F2B830;background:#FFF8E8;color:#A87800;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">🔗 Wallet</button>
   </div>
+  <!-- 지갑 연결 버튼 (로그인 후 표시, 모바일 포함) -->
+  <button id="wallet-btn" onclick="showWalletSelector()" style="display:none;padding:5px 10px;border-radius:20px;border:1.5px solid #F2B830;background:#FFF8E8;color:#A87800;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">🔗 Wallet</button>
   <div class="h-profile-wrap" id="profile-wrap" style="display:none;">
     <div class="h-profile-btn" id="profile-btn" onclick="toggleMenu()">
       <img id="profile-img" src="" alt="">
@@ -1654,6 +1655,7 @@ function setLoggedIn(user){
   document.getElementById('dd-name').textContent = user.name;
   document.getElementById('dd-email').textContent = user.email;
   document.getElementById('h-timers').classList.add('show');
+  document.getElementById('wallet-btn').style.display='block';
   loadMyBalance();
   startTimers();
 }
@@ -1661,6 +1663,7 @@ function setLoggedOut(){
   document.getElementById('login-btn').style.display='flex';
   document.getElementById('profile-wrap').style.display='none';
   document.getElementById('h-timers').classList.remove('show');
+  document.getElementById('wallet-btn').style.display='none';
   MY_BALANCE = null;
   stopTimers();
   closeMenu();
