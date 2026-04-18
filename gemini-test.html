@@ -124,12 +124,28 @@
     box-shadow: 0 8px 32px rgba(0,0,0,.12);
     margin-bottom: 14px;
   }
-  .result-img-wrap img {
+  .result-img-wrap img,
+  .result-img-wrap canvas {
     display: block;
     width: 100%;
     max-width: 400px;
     height: auto;
     border-radius: var(--radius);
+  }
+  .hex-mask-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 14px;
+    color: var(--text);
+  }
+  .hex-mask-row input[type=checkbox] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--hdk);
+    cursor: pointer;
   }
   .hex-overlay {
     position: absolute;
@@ -219,15 +235,28 @@
   <!-- API 키 -->
   <div class="card">
     <div class="card-title">🔑 API 설정</div>
-    <label>Gemini API Key</label>
-    <input type="password" id="api-key" placeholder="AIza...">
-    <div class="hint" style="margin-top:8px;">
-      🔗 <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--hdk);">Google AI Studio</a>에서 무료 발급 가능해요.<br>
-      이 페이지는 로컬에서만 사용하며 키가 전송되지 않아요.
+
+    <label>모델 선택</label>
+    <select id="model-select" onchange="onModelChange(this.value)">
+      <option value="gemini-3.1-flash-image-preview">gemini-3.1-flash-image-preview</option>
+      <option value="ernie-image-turbo">ERNIE-Image-Turbo (무료 · HuggingFace)</option>
+    </select>
+
+    <div id="gemini-key-section">
+      <label style="margin-top:14px;">Gemini API Key</label>
+      <input type="password" id="api-key" placeholder="AIza...">
+      <div class="hint" style="margin-top:8px;">
+        🔗 <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--hdk);">Google AI Studio</a>에서 무료 발급 가능해요.<br>
+        이 페이지는 로컬에서만 사용하며 키가 전송되지 않아요.
+      </div>
     </div>
 
-    <label style="margin-top:14px;">AI 모델</label>
-    <div style="padding:10px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:13px;background:var(--bg);color:var(--muted);">gemini-3.1-flash-image-preview</div>
+    <div id="ernie-hint-section" style="display:none;">
+      <div class="hint" style="margin-top:12px;">
+        🤗 HuggingFace Space를 이용합니다. <strong>API 키 없이 무료</strong>로 사용 가능해요.<br>
+        Space가 유휴 상태이면 처음 요청 시 30~60초 소요될 수 있어요.
+      </div>
+    </div>
   </div>
 
   <!-- 프롬프트 -->
@@ -319,8 +348,13 @@
   <!-- 결과 -->
   <div class="card result-area" id="result-area" style="margin-top:16px;">
     <div class="card-title">🎨 생성 결과</div>
+    <div class="hex-mask-row">
+      <input type="checkbox" id="hex-mask" checked
+        onchange="if(window._lastImgSrc) applyCanvas(window._lastImgSrc)">
+      <label for="hex-mask" style="cursor:pointer;">🔷 육각형 마스킹 적용</label>
+    </div>
     <div class="result-img-wrap">
-      <img id="result-img" src="" alt="생성된 이미지">
+      <canvas id="result-canvas" width="1024" height="1024"></canvas>
     </div>
     <div class="meta-row" id="meta-row"></div>
     <div style="display:flex;gap:8px;">
@@ -332,7 +366,11 @@
 </div>
 
 <script>
-const MODEL = 'gemini-3.1-flash-image-preview';
+function onModelChange(model) {
+  const isERNIE = model === 'ernie-image-turbo';
+  document.getElementById('gemini-key-section').style.display = isERNIE ? 'none' : '';
+  document.getElementById('ernie-hint-section').style.display  = isERNIE ? 'block' : 'none';
+}
 
 function buildPrompt() {
   const room      = document.getElementById('sel-room').value;
@@ -344,6 +382,10 @@ function buildPrompt() {
   if (wall)      sentence += ' with ' + wall + ' on wall';
   if (furniture) sentence += ', ' + furniture + ' placed';
   document.getElementById('prompt').value = sentence.trim();
+}
+
+function setPrompt(text){
+  document.getElementById('prompt').value = text;
 }
 
 function showStatus(type, msg){
@@ -359,12 +401,12 @@ function hideStatus(){
 
 async function generateImage(){
   const key         = document.getElementById('api-key').value.trim();
-  const model       = MODEL;
+  const model       = document.getElementById('model-select').value;
   const basePrompt  = document.getElementById('base-prompt').value.trim();
   const userPrompt  = document.getElementById('prompt').value.trim();
   const prompt      = userPrompt ? basePrompt + ' ' + userPrompt : basePrompt;
 
-  if(!key)       { showStatus('error', '❌ API 키를 입력해주세요.'); return; }
+  if(model !== 'ernie-image-turbo' && !key) { showStatus('error', '❌ API 키를 입력해주세요.'); return; }
   if(!userPrompt){ showStatus('error', '❌ 이미지 설명을 입력해주세요.'); return; }
 
   const btn = document.getElementById('gen-btn');
@@ -377,37 +419,62 @@ async function generateImage(){
     let mimeType = 'image/png';
     let usedModel = model;
 
-    if(model.startsWith('imagen-')){
-      // ── Imagen (predict 엔드포인트) ──
+    if(model === 'ernie-image-turbo'){
+      // ── ERNIE-Image-Turbo (HuggingFace Space, 무료) ──
+      showStatus('loading', '🤗 HuggingFace Space 연결 중...');
+      const { Client } = await import('https://esm.sh/@gradio/client');
+      const client = await Client.connect('baidu/ERNIE-Image-Turbo');
+      showStatus('loading', '🎨 이미지 생성 중... (15~60초 소요)');
+      const result = await client.predict('/predict', [prompt]);
+
+      const imgData = result.data?.[0];
+      let imgUrl = typeof imgData === 'string' ? imgData
+        : (imgData?.url || (imgData?.path ? `https://baidu-ernie-image-turbo.hf.space/file=${imgData.path}` : null));
+
+      if(!imgUrl) throw new Error('이미지 URL을 가져오지 못했어요. 응답: ' + JSON.stringify(result.data).slice(0,200));
+
+      showStatus('loading', '⬇️ 이미지 다운로드 중...');
+      const imgRes = await fetch(imgUrl);
+      if(!imgRes.ok) throw new Error(`이미지 다운로드 실패 (HTTP ${imgRes.status})`);
+      const blob = await imgRes.blob();
+      imageBase64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload  = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      mimeType = blob.type || 'image/png';
+
+    } else if(model.startsWith('imagen-')){
+      // ── Imagen 3 (유료) — generateImages 엔드포인트 ──
       const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${key}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateImages?key=${key}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            instances: [{ prompt }],
-            parameters: {
-              sampleCount: 1,
-              aspectRatio: '1:1',
-              outputOptions: { mimeType: 'image/jpeg' }
-            }
+            prompt: prompt,
+            sampleCount: 1,
+            aspectRatio: '1:1',
+            outputMimeType: 'image/jpeg'
           })
         }
       );
       if(!res.ok){
         const err = await res.json();
         const msg = err?.error?.message || `HTTP ${res.status}`;
-        if(res.status === 403 || res.status === 404){
-          throw new Error(msg + '\n💡 결제 수단이 등록된 Google AI Studio 계정이 필요합니다.');
+        if(res.status === 400 || res.status === 403 || res.status === 404){
+          throw new Error(msg + '\n💡 Imagen 3은 결제 수단이 등록된 Google AI Studio 계정이 필요합니다.');
         }
         throw new Error(msg);
       }
       const data = await res.json();
-      imageBase64 = data?.predictions?.[0]?.bytesBase64Encoded;
-      mimeType = data?.predictions?.[0]?.mimeType || 'image/jpeg';
+      const imgObj = data?.generatedImages?.[0];
+      imageBase64 = imgObj?.image?.imageBytes ?? imgObj?.bytesBase64Encoded;
+      mimeType = imgObj?.mimeType ?? imgObj?.image?.mimeType ?? 'image/jpeg';
 
     } else {
-      // ── Gemini 3.1 Flash Image Preview ──
+      // ── Gemini (generateContent) ──
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
         {
@@ -440,7 +507,9 @@ async function generateImage(){
 
     // 결과 표시
     const src = `data:${mimeType};base64,${imageBase64}`;
-    document.getElementById('result-img').src = src;
+    window._lastImgSrc = src;
+    window._lastMime = mimeType;
+
     document.getElementById('meta-row').innerHTML = `
       <span class="meta-badge">모델: ${usedModel.split('-').slice(0,3).join('-')}</span>
       <span class="meta-badge">형식: ${mimeType}</span>
@@ -449,9 +518,7 @@ async function generateImage(){
     document.getElementById('result-area').classList.add('show');
     showStatus('success', '✅ 이미지 생성 성공! HiveRoom 연동이 가능해요.');
 
-    // 전역 저장 (다운로드용)
-    window._lastImgSrc = src;
-    window._lastMime = mimeType;
+    applyCanvas(src);
 
   } catch(e){
     showStatus('error', `❌ 오류: ${e.message}`);
@@ -460,11 +527,49 @@ async function generateImage(){
   }
 }
 
+function applyCanvas(src) {
+  const img = new Image();
+  img.onload = function() {
+    const canvas = document.getElementById('result-canvas');
+    const ctx = canvas.getContext('2d');
+    const size = 1024;
+    canvas.width = size;
+    canvas.height = size;
+    ctx.clearRect(0, 0, size, size);
+
+    if (document.getElementById('hex-mask').checked) {
+      // White background outside hexagon
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, size, size);
+
+      // Clip to pointy-top regular hexagon: center (512,512), r=480
+      ctx.save();
+      ctx.beginPath();
+      const cx = 512, cy = 512, r = 480;
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI / 3) * i - Math.PI / 2; // start at top
+        const x = cx + r * Math.cos(angle);
+        const y = cy + r * Math.sin(angle);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.clip();
+      ctx.drawImage(img, 0, 0, size, size);
+      ctx.restore();
+    } else {
+      ctx.drawImage(img, 0, 0, size, size);
+    }
+  };
+  img.src = src;
+}
+
 function downloadImg(){
   if(!window._lastImgSrc) return;
+  const canvas = document.getElementById('result-canvas');
   const a = document.createElement('a');
-  a.href = window._lastImgSrc;
-  a.download = `gemini_room_${Date.now()}.${window._lastMime === 'image/jpeg' ? 'jpg' : 'png'}`;
+  a.href = canvas.toDataURL('image/png');
+  a.download = `gemini_room_${Date.now()}.png`;
   a.click();
 }
 </script>
