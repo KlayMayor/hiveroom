@@ -235,17 +235,28 @@
   <!-- API 키 -->
   <div class="card">
     <div class="card-title">🔑 API 설정</div>
-    <label>Gemini API Key</label>
-    <input type="password" id="api-key" placeholder="AIza...">
-    <div class="hint" style="margin-top:8px;">
-      🔗 <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--hdk);">Google AI Studio</a>에서 무료 발급 가능해요.<br>
-      이 페이지는 로컬에서만 사용하며 키가 전송되지 않아요.
+
+    <label>모델 선택</label>
+    <select id="model-select" onchange="onModelChange(this.value)">
+      <option value="gemini-3.1-flash-image-preview">gemini-3.1-flash-image-preview</option>
+      <option value="ernie-image-turbo">ERNIE-Image-Turbo (무료 · HuggingFace)</option>
+    </select>
+
+    <div id="gemini-key-section">
+      <label style="margin-top:14px;">Gemini API Key</label>
+      <input type="password" id="api-key" placeholder="AIza...">
+      <div class="hint" style="margin-top:8px;">
+        🔗 <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--hdk);">Google AI Studio</a>에서 무료 발급 가능해요.<br>
+        이 페이지는 로컬에서만 사용하며 키가 전송되지 않아요.
+      </div>
     </div>
 
-    <label style="margin-top:14px;">모델 선택</label>
-    <select id="model-select">
-      <option value="gemini-3.1-flash-image-preview">gemini-3.1-flash-image-preview</option>
-    </select>
+    <div id="ernie-hint-section" style="display:none;">
+      <div class="hint" style="margin-top:12px;">
+        🤗 HuggingFace Space를 이용합니다. <strong>API 키 없이 무료</strong>로 사용 가능해요.<br>
+        Space가 유휴 상태이면 처음 요청 시 30~60초 소요될 수 있어요.
+      </div>
+    </div>
   </div>
 
   <!-- 프롬프트 -->
@@ -281,6 +292,12 @@
 </div>
 
 <script>
+function onModelChange(model) {
+  const isERNIE = model === 'ernie-image-turbo';
+  document.getElementById('gemini-key-section').style.display = isERNIE ? 'none' : '';
+  document.getElementById('ernie-hint-section').style.display  = isERNIE ? 'block' : 'none';
+}
+
 function setPrompt(text){
   document.getElementById('prompt').value = text;
 }
@@ -301,7 +318,7 @@ async function generateImage(){
   const model  = document.getElementById('model-select').value;
   const prompt = document.getElementById('prompt').value.trim();
 
-  if(!key)    { showStatus('error', '❌ API 키를 입력해주세요.'); return; }
+  if(model !== 'ernie-image-turbo' && !key) { showStatus('error', '❌ API 키를 입력해주세요.'); return; }
   if(!prompt) { showStatus('error', '❌ 프롬프트를 입력해주세요.'); return; }
 
   const btn = document.getElementById('gen-btn');
@@ -314,7 +331,34 @@ async function generateImage(){
     let mimeType = 'image/png';
     let usedModel = model;
 
-    if(model.startsWith('imagen-')){
+    if(model === 'ernie-image-turbo'){
+      // ── ERNIE-Image-Turbo (HuggingFace Space, 무료) ──
+      showStatus('loading', '🤗 HuggingFace Space 연결 중...');
+      const { Client } = await import('https://esm.sh/@gradio/client');
+      const client = await Client.connect('baidu/ERNIE-Image-Turbo');
+      showStatus('loading', '🎨 이미지 생성 중... (15~60초 소요)');
+      const result = await client.predict('/predict', [prompt]);
+
+      const imgData = result.data?.[0];
+      let imgUrl = typeof imgData === 'string' ? imgData
+        : (imgData?.url || (imgData?.path ? `https://baidu-ernie-image-turbo.hf.space/file=${imgData.path}` : null));
+
+      if(!imgUrl) throw new Error('이미지 URL을 가져오지 못했어요. 응답: ' + JSON.stringify(result.data).slice(0,200));
+
+      // Fetch image → base64 (canvas CORS 문제 방지)
+      showStatus('loading', '⬇️ 이미지 다운로드 중...');
+      const imgRes = await fetch(imgUrl);
+      if(!imgRes.ok) throw new Error(`이미지 다운로드 실패 (HTTP ${imgRes.status})`);
+      const blob = await imgRes.blob();
+      imageBase64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload  = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      mimeType = blob.type || 'image/png';
+
+    } else if(model.startsWith('imagen-')){
       // ── Imagen 3 (유료) — generateImages 엔드포인트 사용 ──
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateImages?key=${key}`,
@@ -344,7 +388,7 @@ async function generateImage(){
       mimeType = imgObj?.mimeType ?? imgObj?.image?.mimeType ?? 'image/jpeg';
 
     } else {
-      // ── Gemini 3.1 Flash Image Preview ──
+      // ── Gemini (generateContent) ──
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
         {
