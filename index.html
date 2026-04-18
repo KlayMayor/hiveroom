@@ -5802,98 +5802,112 @@ async function connectMetaMask() {
   } catch(e) { console.error('connectMetaMask', e); _resolveWallet(false); return false; }
 }
 
-function _detectAbstractProvider() {
-  return new Promise(resolve => {
-    const found = [];
-    const handler = (e) => found.push(e.detail);
-    window.addEventListener('eip6963:announceProvider', handler);
-    window.dispatchEvent(new Event('eip6963:requestProvider'));
-    setTimeout(() => {
-      window.removeEventListener('eip6963:announceProvider', handler);
-      const agw = found.find(p =>
-        p.info?.rdns?.toLowerCase().includes('abstract') ||
-        p.info?.name?.toLowerCase().includes('abstract global')
-      );
-      resolve(agw?.provider || (window.ethereum?.isAbstractGlobalWallet ? window.ethereum : null));
-    }, 150);
-  });
+// ── Abstract Global Wallet OAuth ─────────────────────────────────────────────
+// portal.abs.xyz 에서 앱 등록 후 아래 두 값을 채워넣으세요.
+const AGW_APP_ID    = '';  // e.g. 'cm04asygd...'
+const AGW_CLIENT_ID = '';  // e.g. 'iewxvrjvc...'
+
+function _b64url(arr) {
+  return btoa(String.fromCharCode(...arr)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+async function _generatePKCE() {
+  const verifier  = _b64url(crypto.getRandomValues(new Uint8Array(32)));
+  const hashBytes = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
+  return { verifier, challenge: _b64url(hashBytes) };
 }
 
 async function connectAbstractWallet() {
-  const agwProvider = await _detectAbstractProvider();
-  if (!agwProvider) {
-    // Abstract 지갑 확장 없음 → 안내 패널 전환
+  // 자격증명 미설정 → 등록 안내 패널
+  if (!AGW_APP_ID || !AGW_CLIENT_ID) {
     document.getElementById('wsp-main').style.display = 'none';
     document.getElementById('wsp-agw').style.display = 'block';
     return;
   }
   _closeWalletSelector();
   try {
-    await agwProvider.request({ method: 'eth_requestAccounts' });
-    const provider = new ethers.providers.Web3Provider(agwProvider);
+    const { verifier, challenge } = await _generatePKCE();
+    const state = _b64url(crypto.getRandomValues(new Uint8Array(16)));
+    sessionStorage.setItem('abs_v', verifier);
+    sessionStorage.setItem('abs_s', state);
+
+    const oauthQ = new URLSearchParams({
+      app_id: AGW_APP_ID, client_id: AGW_CLIENT_ID,
+      scope: 'accounts', response_type: 'code',
+      state, code_challenge: challenge, code_challenge_method: 'S256',
+    }).toString();
+
+    const popup = window.open(
+      `https://portal.abs.xyz/login?redirect=${encodeURIComponent('/oauth/authorize?' + oauthQ)}`,
+      'agw-login',
+      `width=460,height=640,popup=yes,left=${(screen.width-460)/2|0},top=${(screen.height-640)/2|0}`
+    );
+    if (!popup) { alert('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.'); _resolveWallet(false); return; }
+
+    // portal.abs.xyz → window.opener.postMessage({ code, state }) 방식
+    const code = await new Promise((resolve, reject) => {
+      const tid = setTimeout(() => { window.removeEventListener('message', h); reject(new Error('Login timeout (5min)')); }, 5*60*1000);
+      function h(e) {
+        if (!e.origin.endsWith('abs.xyz')) return;
+        console.log('[AGW] postMessage received:', e.data);
+        const d = e.data || {};
+        if (d.code && d.state === sessionStorage.getItem('abs_s')) {
+          clearTimeout(tid); window.removeEventListener('message', h); resolve(d.code);
+        }
+      }
+      window.addEventListener('message', h);
+    });
+
+    // 토큰 교환 (실제 엔드포인트는 Abstract API 문서 확인 필요)
+    const tok = await fetch('https://portal.abs.xyz/oauth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ grant_type: 'authorization_code', code, code_verifier: verifier, client_id: AGW_CLIENT_ID }),
+    }).then(r => r.json());
+    if (!tok.access_token) throw new Error('Token exchange failed: ' + JSON.stringify(tok));
+
+    // 지갑 주소 조회
+    const me = await fetch('https://portal.abs.xyz/api/accounts', {
+      headers: { Authorization: `Bearer ${tok.access_token}` },
+    }).then(r => r.json());
+    console.log('[AGW] account info:', me);
+    WALLET_ADDRESS = (Array.isArray(me) ? me[0] : me)?.address || me?.wallet_address;
+    if (!WALLET_ADDRESS) throw new Error('지갑 주소를 받아오지 못했습니다: ' + JSON.stringify(me));
+
+    sessionStorage.setItem('abs_token', tok.access_token);
+
+    // EIP-1193 브릿지 (트랜잭션은 Abstract API를 통해 전송)
+    const eip1193 = {
+      request: async ({ method, params }) => {
+        if (method === 'eth_requestAccounts' || method === 'eth_accounts') return [WALLET_ADDRESS];
+        if (method === 'eth_chainId') return '0x2B74'; // 11124
+        if (method === 'eth_sendTransaction') {
+          const tx = params[0];
+          const res = await fetch('https://portal.abs.xyz/api/transactions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionStorage.getItem('abs_token')}` },
+            body: JSON.stringify(tx),
+          }).then(r => r.json());
+          return res.hash || res.transaction_hash;
+        }
+        return new ethers.providers.JsonRpcProvider('https://api.testnet.abs.xyz').send(method, params || []);
+      },
+      on: () => {}, removeListener: () => {},
+    };
+
+    const provider = new ethers.providers.Web3Provider(eip1193);
     WALLET_SIGNER  = provider.getSigner();
-    WALLET_ADDRESS = await WALLET_SIGNER.getAddress();
     _updateWalletBtn();
     _resolveWallet(true);
-    return true;
   } catch(e) {
     console.error('connectAbstractWallet', e);
-    alert('Abstract Global Wallet connection failed: ' + e.message);
+    alert('Abstract 지갑 연결 실패: ' + e.message);
     _resolveWallet(false);
-    return false;
   }
 }
 
 function _showWspMain() {
   document.getElementById('wsp-main').style.display = 'block';
   document.getElementById('wsp-agw').style.display = 'none';
-}
-
-async function _connectAgwViaSigner() {
-  document.getElementById('wsp-agw').style.display = 'none';
-  _closeWalletSelector();
-  if (!window.ethereum) { alert('No browser wallet found.'); _resolveWallet(false); return; }
-  try {
-    const [{ createWalletClient, custom }, { abstractTestnet }, { createAbstractClient }] = await Promise.all([
-      import('https://esm.sh/viem@2'),
-      import('https://esm.sh/viem@2/chains'),
-      import('https://esm.sh/@abstract-foundation/agw-client'),
-    ]);
-    await window.ethereum.request({ method: 'eth_requestAccounts' });
-    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-    const signerClient = createWalletClient({
-      account: accounts[0],
-      chain: abstractTestnet,
-      transport: custom(window.ethereum),
-    });
-    const agwClient = await createAbstractClient({ signer: signerClient, chain: abstractTestnet });
-    const agwAddress = agwClient.account.address;
-    const eip1193 = {
-      request: async ({ method, params }) => {
-        if (method === 'eth_requestAccounts' || method === 'eth_accounts') return [agwAddress];
-        if (method === 'eth_sendTransaction') {
-          const tx = params[0];
-          return agwClient.sendTransaction({ to: tx.to, value: tx.value ? BigInt(tx.value) : 0n, data: tx.data });
-        }
-        if (method === 'eth_signTypedData_v4') {
-          const td = JSON.parse(params[1]);
-          return agwClient.signTypedData({ account: agwClient.account, domain: td.domain, types: td.types, primaryType: td.primaryType, message: td.message });
-        }
-        return window.ethereum.request({ method, params });
-      },
-      on: () => {},
-      removeListener: () => {},
-    };
-    const provider = new ethers.providers.Web3Provider(eip1193);
-    WALLET_SIGNER  = provider.getSigner();
-    WALLET_ADDRESS = agwAddress;
-    _updateWalletBtn();
-    _resolveWallet(true);
-  } catch(e) {
-    console.error('_connectAgwViaSigner', e);
-    alert('AGW via MetaMask failed: ' + e.message);
-    _resolveWallet(false);
-  }
 }
 
 function _updateWalletBtn() {
@@ -6113,22 +6127,20 @@ async function mintNft() {
       </button>
     </div>
 
-    <!-- 패널 2: AGW 확장 미설치 안내 -->
+    <!-- 패널 2: AGW 앱 등록 안내 -->
     <div id="wsp-agw" style="display:none;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
         <span style="font-size:15px;font-weight:700;color:#3A4BD4;">⬡ Abstract Global Wallet</span>
         <button onclick="_resolveWallet(false)" style="background:none;border:none;font-size:22px;line-height:1;cursor:pointer;color:#888;">×</button>
       </div>
-      <div style="background:#F5F7FF;border-radius:12px;padding:14px;margin-bottom:16px;font-size:12px;color:#555;line-height:1.7;">
-        Abstract Wallet 확장 프로그램이 감지되지 않았습니다.<br>
-        확장 프로그램을 설치하거나, MetaMask를 서명자로 사용해 AGW 스마트 지갑을 생성할 수 있습니다.
+      <div style="background:#F5F7FF;border-radius:12px;padding:14px;margin-bottom:16px;font-size:12px;color:#555;line-height:1.8;">
+        AGW는 <b>portal.abs.xyz</b> 웹 팝업으로 로그인하는 방식입니다.<br>
+        사용하려면 아래에서 앱을 등록하고<br>
+        <code style="background:#e8ecff;padding:1px 4px;border-radius:4px;">app_id</code>와 <code style="background:#e8ecff;padding:1px 4px;border-radius:4px;">client_id</code>를 개발자에게 전달해 주세요.
       </div>
-      <a href="https://abs.xyz" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;margin-bottom:10px;background:linear-gradient(135deg,#3A4BD4,#6C5CE7);border:none;border-radius:14px;font-family:'Jua',sans-serif;font-size:14px;color:#fff;cursor:pointer;text-align:center;text-decoration:none;box-sizing:border-box;">
-        <span style="font-size:18px;">⬡</span> Abstract Wallet 설치
+      <a href="https://portal.abs.xyz" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;margin-bottom:10px;background:linear-gradient(135deg,#3A4BD4,#6C5CE7);border:none;border-radius:14px;font-family:'Jua',sans-serif;font-size:14px;color:#fff;cursor:pointer;text-align:center;text-decoration:none;box-sizing:border-box;">
+        <span style="font-size:18px;">⬡</span> portal.abs.xyz 앱 등록
       </a>
-      <button onclick="_connectAgwViaSigner()" style="width:100%;padding:13px;margin-bottom:8px;background:#fff;border:2px solid #3A4BD4;border-radius:14px;font-family:'Jua',sans-serif;font-size:13px;color:#3A4BD4;cursor:pointer;">
-        🦊 MetaMask로 AGW 스마트 지갑 생성
-      </button>
       <button onclick="_showWspMain()" style="width:100%;padding:8px;background:none;border:none;font-size:12px;color:#aaa;cursor:pointer;">← 뒤로</button>
     </div>
 
