@@ -5802,10 +5802,11 @@ async function connectMetaMask() {
   } catch(e) { console.error('connectMetaMask', e); _resolveWallet(false); return false; }
 }
 
-// ── Abstract Global Wallet OAuth ─────────────────────────────────────────────
-// portal.abs.xyz 에서 앱 등록 후 아래 두 값을 채워넣으세요.
-const AGW_APP_ID    = '';  // e.g. 'cm04asygd...'
-const AGW_CLIENT_ID = '';  // e.g. 'iewxvrjvc...'
+// ── Abstract Global Wallet ────────────────────────────────────────────────────
+// 앱 등록 없이 SDK가 팝업을 처리해주면 아래 두 값은 불필요합니다.
+// 등록이 필요한 경우: portal.abs.xyz 에서 앱 등록 후 값을 채워넣으세요.
+const AGW_APP_ID    = '';
+const AGW_CLIENT_ID = '';
 
 function _b64url(arr) {
   return btoa(String.fromCharCode(...arr)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
@@ -5817,14 +5818,47 @@ async function _generatePKCE() {
 }
 
 async function connectAbstractWallet() {
-  // 자격증명 미설정 → 등록 안내 패널
-  if (!AGW_APP_ID || !AGW_CLIENT_ID) {
-    document.getElementById('wsp-main').style.display = 'none';
-    document.getElementById('wsp-agw').style.display = 'block';
-    return;
-  }
   _closeWalletSelector();
   try {
+    // ① SDK에서 브라우저 로그인 함수 탐색
+    const agwMod = await import('https://esm.sh/@abstract-foundation/agw-client');
+    console.log('[AGW] available exports:', Object.keys(agwMod));
+
+    // 알려진 로그인 함수 이름들 시도
+    const loginFn = agwMod.loginWithAbstract
+                 || agwMod.login
+                 || agwMod.connectAbstract
+                 || agwMod.useAbstractClient?.login;
+
+    if (loginFn) {
+      console.log('[AGW] SDK login function found, calling...');
+      const result = await loginFn();
+      console.log('[AGW] login result:', result);
+
+      WALLET_ADDRESS = result?.address || result?.account?.address;
+      if (!WALLET_ADDRESS) throw new Error('SDK 로그인 결과에서 주소를 찾지 못했습니다: ' + JSON.stringify(result));
+
+      // SDK가 EIP-1193 provider를 제공하는 경우
+      if (result?.request || result?.provider?.request) {
+        const p = result.provider || result;
+        const provider = new ethers.providers.Web3Provider(p);
+        WALLET_SIGNER = provider.getSigner();
+      }
+      _updateWalletBtn();
+      _resolveWallet(true);
+      return;
+    }
+
+    console.log('[AGW] SDK에 로그인 함수 없음 → OAuth PKCE 팝업 방식으로 전환');
+
+    // ② SDK 로그인 함수 없음 → app_id/client_id 필요한 OAuth 팝업
+    if (!AGW_APP_ID || !AGW_CLIENT_ID) {
+      document.getElementById('wallet-selector-ov').style.display = 'flex';
+      document.getElementById('wsp-main').style.display = 'none';
+      document.getElementById('wsp-agw').style.display = 'block';
+      return;
+    }
+
     const { verifier, challenge } = await _generatePKCE();
     const state = _b64url(crypto.getRandomValues(new Uint8Array(16)));
     sessionStorage.setItem('abs_v', verifier);
@@ -5843,7 +5877,6 @@ async function connectAbstractWallet() {
     );
     if (!popup) { alert('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.'); _resolveWallet(false); return; }
 
-    // portal.abs.xyz → window.opener.postMessage({ code, state }) 방식
     const code = await new Promise((resolve, reject) => {
       const tid = setTimeout(() => { window.removeEventListener('message', h); reject(new Error('Login timeout (5min)')); }, 5*60*1000);
       function h(e) {
@@ -5857,7 +5890,6 @@ async function connectAbstractWallet() {
       window.addEventListener('message', h);
     });
 
-    // 토큰 교환 (실제 엔드포인트는 Abstract API 문서 확인 필요)
     const tok = await fetch('https://portal.abs.xyz/oauth/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -5865,7 +5897,6 @@ async function connectAbstractWallet() {
     }).then(r => r.json());
     if (!tok.access_token) throw new Error('Token exchange failed: ' + JSON.stringify(tok));
 
-    // 지갑 주소 조회
     const me = await fetch('https://portal.abs.xyz/api/accounts', {
       headers: { Authorization: `Bearer ${tok.access_token}` },
     }).then(r => r.json());
@@ -5875,11 +5906,10 @@ async function connectAbstractWallet() {
 
     sessionStorage.setItem('abs_token', tok.access_token);
 
-    // EIP-1193 브릿지 (트랜잭션은 Abstract API를 통해 전송)
     const eip1193 = {
       request: async ({ method, params }) => {
         if (method === 'eth_requestAccounts' || method === 'eth_accounts') return [WALLET_ADDRESS];
-        if (method === 'eth_chainId') return '0x2B74'; // 11124
+        if (method === 'eth_chainId') return '0x2B74';
         if (method === 'eth_sendTransaction') {
           const tx = params[0];
           const res = await fetch('https://portal.abs.xyz/api/transactions', {
