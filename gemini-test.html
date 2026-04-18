@@ -124,12 +124,28 @@
     box-shadow: 0 8px 32px rgba(0,0,0,.12);
     margin-bottom: 14px;
   }
-  .result-img-wrap img {
+  .result-img-wrap img,
+  .result-img-wrap canvas {
     display: block;
     width: 100%;
     max-width: 400px;
     height: auto;
     border-radius: var(--radius);
+  }
+  .hex-mask-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 14px;
+    color: var(--text);
+  }
+  .hex-mask-row input[type=checkbox] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--hdk);
+    cursor: pointer;
   }
   .hex-overlay {
     position: absolute;
@@ -247,8 +263,13 @@
   <!-- 결과 -->
   <div class="card result-area" id="result-area" style="margin-top:16px;">
     <div class="card-title">🎨 생성 결과</div>
+    <div class="hex-mask-row">
+      <input type="checkbox" id="hex-mask" checked
+        onchange="if(window._lastImgSrc) applyCanvas(window._lastImgSrc)">
+      <label for="hex-mask" style="cursor:pointer;">🔷 육각형 마스킹 적용</label>
+    </div>
     <div class="result-img-wrap">
-      <img id="result-img" src="" alt="생성된 이미지">
+      <canvas id="result-canvas" width="1024" height="1024"></canvas>
     </div>
     <div class="meta-row" id="meta-row"></div>
     <div style="display:flex;gap:8px;">
@@ -356,7 +377,9 @@ async function generateImage(){
 
     // 결과 표시
     const src = `data:${mimeType};base64,${imageBase64}`;
-    document.getElementById('result-img').src = src;
+    window._lastImgSrc = src;
+    window._lastMime = mimeType;
+
     document.getElementById('meta-row').innerHTML = `
       <span class="meta-badge">모델: ${usedModel.split('-').slice(0,3).join('-')}</span>
       <span class="meta-badge">형식: ${mimeType}</span>
@@ -365,9 +388,7 @@ async function generateImage(){
     document.getElementById('result-area').classList.add('show');
     showStatus('success', '✅ 이미지 생성 성공! HiveRoom 연동이 가능해요.');
 
-    // 전역 저장 (다운로드용)
-    window._lastImgSrc = src;
-    window._lastMime = mimeType;
+    applyCanvas(src);
 
   } catch(e){
     showStatus('error', `❌ 오류: ${e.message}`);
@@ -376,11 +397,49 @@ async function generateImage(){
   }
 }
 
+function applyCanvas(src) {
+  const img = new Image();
+  img.onload = function() {
+    const canvas = document.getElementById('result-canvas');
+    const ctx = canvas.getContext('2d');
+    const size = 1024;
+    canvas.width = size;
+    canvas.height = size;
+    ctx.clearRect(0, 0, size, size);
+
+    if (document.getElementById('hex-mask').checked) {
+      // White background outside hexagon
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, size, size);
+
+      // Clip to pointy-top regular hexagon: center (512,512), r=480
+      ctx.save();
+      ctx.beginPath();
+      const cx = 512, cy = 512, r = 480;
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI / 3) * i - Math.PI / 2; // start at top
+        const x = cx + r * Math.cos(angle);
+        const y = cy + r * Math.sin(angle);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.clip();
+      ctx.drawImage(img, 0, 0, size, size);
+      ctx.restore();
+    } else {
+      ctx.drawImage(img, 0, 0, size, size);
+    }
+  };
+  img.src = src;
+}
+
 function downloadImg(){
   if(!window._lastImgSrc) return;
+  const canvas = document.getElementById('result-canvas');
   const a = document.createElement('a');
-  a.href = window._lastImgSrc;
-  a.download = `gemini_room_${Date.now()}.${window._lastMime === 'image/jpeg' ? 'jpg' : 'png'}`;
+  a.href = canvas.toDataURL('image/png');
+  a.download = `gemini_room_${Date.now()}.png`;
   a.click();
 }
 </script>
