@@ -424,20 +424,34 @@ async function generateImage(){
 
     if(model === 'ernie-image-turbo'){
       // ── ERNIE-Image-Turbo (HuggingFace Space, 무료) ──
-      showStatus('loading', '🤗 HuggingFace Space 연결 중...');
-      const { Client } = await import('https://esm.sh/@gradio/client');
-      const client = await Client.connect('baidu/ERNIE-Image-Turbo');
-      showStatus('loading', '🎨 이미지 생성 중... (15~60초 소요)');
-      const result = await client.predict('/predict', [prompt]);
+      const race = (p, ms, msg) => Promise.race([p, new Promise((_, r) => setTimeout(() => r(new Error(msg)), ms))]);
+
+      showStatus('loading', '🤗 라이브러리 로드 중...');
+      const { Client } = await race(
+        import('https://esm.sh/@gradio/client'),
+        15_000, '라이브러리 로드 시간 초과 (15초)'
+      );
+
+      showStatus('loading', '🤗 HuggingFace Space 연결 중... (처음에는 60초 소요될 수 있어요)');
+      const client = await race(
+        Client.connect('baidu/ERNIE-Image-Turbo'),
+        90_000, 'Space 연결 시간 초과 (90초). Space가 절전 중일 수 있어요.'
+      );
+
+      showStatus('loading', '🎨 이미지 생성 중... (30~90초 소요)');
+      const result = await race(
+        client.predict('/predict', [prompt]),
+        120_000, '이미지 생성 시간 초과 (2분)'
+      );
 
       const imgData = result.data?.[0];
       let imgUrl = typeof imgData === 'string' ? imgData
         : (imgData?.url || (imgData?.path ? `https://baidu-ernie-image-turbo.hf.space/file=${imgData.path}` : null));
 
-      if(!imgUrl) throw new Error('이미지 URL을 가져오지 못했어요. 응답: ' + JSON.stringify(result.data).slice(0,200));
+      if(!imgUrl) throw new Error('이미지 URL 없음. 응답: ' + JSON.stringify(result.data).slice(0,200));
 
       showStatus('loading', '⬇️ 이미지 다운로드 중...');
-      const imgRes = await fetch(imgUrl);
+      const imgRes = await fetch(imgUrl, { signal: abort.signal });
       if(!imgRes.ok) throw new Error(`이미지 다운로드 실패 (HTTP ${imgRes.status})`);
       const blob = await imgRes.blob();
       imageBase64 = await new Promise((resolve, reject) => {
