@@ -252,9 +252,12 @@
     </div>
 
     <div id="ernie-hint-section" style="display:none;">
-      <div class="hint" style="margin-top:12px;">
-        🤗 HuggingFace Space를 이용합니다. <strong>API 키 없이 무료</strong>로 사용 가능해요.<br>
-        Space가 유휴 상태이면 처음 요청 시 30~60초 소요될 수 있어요.
+      <label style="margin-top:14px;">로컬 서버 URL</label>
+      <input type="text" id="ernie-server-url" value="http://127.0.0.1:7860" placeholder="http://127.0.0.1:7860">
+      <div class="hint" style="margin-top:8px;">
+        💻 Mac Mini에서 ERNIE Space를 실행 후 위 주소로 연결합니다.<br>
+        실행 방법: <code style="background:#EEE;padding:1px 4px;border-radius:4px;">python app.py</code> → 브라우저에서 <code style="background:#EEE;padding:1px 4px;border-radius:4px;">http://127.0.0.1:7860</code> 확인<br>
+        Cloudflare Tunnel 사용 시 터널 URL을 입력하세요.
       </div>
     </div>
   </div>
@@ -423,44 +426,50 @@ async function generateImage(){
     let usedModel = model;
 
     if(model === 'ernie-image-turbo'){
-      // ── ERNIE-Image-Turbo (HuggingFace Space, 무료) ──
-      const race = (p, ms, msg) => Promise.race([p, new Promise((_, r) => setTimeout(() => r(new Error(msg)), ms))]);
+      // ── ERNIE-Image-Turbo (로컬 Gradio 서버) ──
+      const serverUrl = (document.getElementById('ernie-server-url').value || 'http://127.0.0.1:7860').replace(/\/$/, '');
 
-      showStatus('loading', '🤗 라이브러리 로드 중...');
-      const { Client } = await race(
-        import('https://esm.sh/@gradio/client'),
-        15_000, '라이브러리 로드 시간 초과 (15초)'
-      );
-
-      showStatus('loading', '🤗 HuggingFace Space 연결 중... (처음에는 60초 소요될 수 있어요)');
-      const client = await race(
-        Client.connect('baidu/ERNIE-Image-Turbo'),
-        90_000, 'Space 연결 시간 초과 (90초). Space가 절전 중일 수 있어요.'
-      );
-
-      showStatus('loading', '🎨 이미지 생성 중... (30~90초 소요)');
-      const result = await race(
-        client.predict('/predict', [prompt]),
-        120_000, '이미지 생성 시간 초과 (2분)'
-      );
-
-      const imgData = result.data?.[0];
-      let imgUrl = typeof imgData === 'string' ? imgData
-        : (imgData?.url || (imgData?.path ? `https://baidu-ernie-image-turbo.hf.space/file=${imgData.path}` : null));
-
-      if(!imgUrl) throw new Error('이미지 URL 없음. 응답: ' + JSON.stringify(result.data).slice(0,200));
-
-      showStatus('loading', '⬇️ 이미지 다운로드 중...');
-      const imgRes = await fetch(imgUrl, { signal: abort.signal });
-      if(!imgRes.ok) throw new Error(`이미지 다운로드 실패 (HTTP ${imgRes.status})`);
-      const blob = await imgRes.blob();
-      imageBase64 = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload  = () => resolve(reader.result.split(',')[1]);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
+      showStatus('loading', '🔌 로컬 ERNIE 서버에 연결 중...');
+      const res = await fetch(`${serverUrl}/api/predict`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: abort.signal,
+        body: JSON.stringify({ data: [prompt], fn_index: 0 })
       });
-      mimeType = blob.type || 'image/png';
+
+      if(!res.ok){
+        let errMsg = `HTTP ${res.status}`;
+        try { const e = await res.json(); errMsg = e?.error || JSON.stringify(e); } catch{}
+        if(res.status === 0 || !res.status) errMsg = '서버에 연결할 수 없어요. python app.py가 실행 중인지 확인해주세요.';
+        throw new Error(errMsg);
+      }
+
+      const data = await res.json();
+      const imgData = data?.data?.[0];
+
+      // Gradio 로컬 응답: {name, is_file, data} 또는 base64 문자열
+      if(imgData?.is_file || imgData?.name){
+        // 파일 경로 → 로컬 서버에서 다운로드
+        const fileUrl = `${serverUrl}/file=${imgData.name}`;
+        showStatus('loading', '⬇️ 이미지 다운로드 중...');
+        const imgRes = await fetch(fileUrl, { signal: abort.signal });
+        if(!imgRes.ok) throw new Error(`파일 다운로드 실패 (HTTP ${imgRes.status})`);
+        const blob = await imgRes.blob();
+        imageBase64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload  = () => resolve(reader.result.split(',')[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        mimeType = blob.type || 'image/png';
+      } else if(typeof imgData === 'string' && imgData.startsWith('data:')){
+        // base64 data URL 직접 반환
+        const [header, b64] = imgData.split(',');
+        imageBase64 = b64;
+        mimeType = header.match(/:(.*?);/)?.[1] || 'image/png';
+      } else {
+        throw new Error('알 수 없는 응답 형식: ' + JSON.stringify(data?.data).slice(0, 200));
+      }
 
     } else if(model.startsWith('imagen-')){
       // ── Imagen 3 (유료) — generateImages 엔드포인트 ──
