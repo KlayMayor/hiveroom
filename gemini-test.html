@@ -253,7 +253,7 @@
 
     <div id="ernie-hint-section" style="display:none;">
       <label style="margin-top:14px;">로컬 서버 URL</label>
-      <input type="text" id="ernie-server-url" value="http://127.0.0.1:7860" placeholder="http://127.0.0.1:7860">
+      <input type="text" id="ernie-server-url" value="http://127.0.0.1:8000" placeholder="http://127.0.0.1:8000">
       <div class="hint" style="margin-top:8px;">
         💻 Mac Mini에서 ERNIE Space를 실행 후 위 주소로 연결합니다.<br>
         실행 방법: <code style="background:#EEE;padding:1px 4px;border-radius:4px;">python app.py</code> → 브라우저에서 <code style="background:#EEE;padding:1px 4px;border-radius:4px;">http://127.0.0.1:7860</code> 확인<br>
@@ -426,50 +426,28 @@ async function generateImage(){
     let usedModel = model;
 
     if(model === 'ernie-image-turbo'){
-      // ── ERNIE-Image-Turbo (로컬 Gradio 서버) ──
-      const serverUrl = (document.getElementById('ernie-server-url').value || 'http://127.0.0.1:7860').replace(/\/$/, '');
+      // ── ERNIE-Image-Turbo (로컬 FastAPI 서버 — server.py) ──
+      const serverUrl = (document.getElementById('ernie-server-url').value || 'http://127.0.0.1:8000').replace(/\/$/, '');
 
-      showStatus('loading', '🔌 로컬 ERNIE 서버에 연결 중...');
-      const res = await fetch(`${serverUrl}/api/predict`, {
+      showStatus('loading', '🔌 ERNIE 서버에 연결 중...');
+      const res = await fetch(`${serverUrl}/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: abort.signal,
-        body: JSON.stringify({ data: [prompt], fn_index: 0 })
+        body: JSON.stringify({ prompt, steps: 8 })
       });
 
       if(!res.ok){
         let errMsg = `HTTP ${res.status}`;
-        try { const e = await res.json(); errMsg = e?.error || JSON.stringify(e); } catch{}
-        if(res.status === 0 || !res.status) errMsg = '서버에 연결할 수 없어요. python app.py가 실행 중인지 확인해주세요.';
+        try { const e = await res.json(); errMsg = e?.detail || JSON.stringify(e); } catch{}
+        if(res.status === 0 || errMsg.includes('fetch')) errMsg = '서버에 연결할 수 없어요. python server.py가 실행 중인지 확인해주세요.';
         throw new Error(errMsg);
       }
 
       const data = await res.json();
-      const imgData = data?.data?.[0];
-
-      // Gradio 로컬 응답: {name, is_file, data} 또는 base64 문자열
-      if(imgData?.is_file || imgData?.name){
-        // 파일 경로 → 로컬 서버에서 다운로드
-        const fileUrl = `${serverUrl}/file=${imgData.name}`;
-        showStatus('loading', '⬇️ 이미지 다운로드 중...');
-        const imgRes = await fetch(fileUrl, { signal: abort.signal });
-        if(!imgRes.ok) throw new Error(`파일 다운로드 실패 (HTTP ${imgRes.status})`);
-        const blob = await imgRes.blob();
-        imageBase64 = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload  = () => resolve(reader.result.split(',')[1]);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
-        mimeType = blob.type || 'image/png';
-      } else if(typeof imgData === 'string' && imgData.startsWith('data:')){
-        // base64 data URL 직접 반환
-        const [header, b64] = imgData.split(',');
-        imageBase64 = b64;
-        mimeType = header.match(/:(.*?);/)?.[1] || 'image/png';
-      } else {
-        throw new Error('알 수 없는 응답 형식: ' + JSON.stringify(data?.data).slice(0, 200));
-      }
+      if(!data?.image) throw new Error('이미지 데이터 없음. 응답: ' + JSON.stringify(data).slice(0, 200));
+      imageBase64 = data.image;
+      mimeType = data.mimeType || 'image/png';
 
     } else if(model.startsWith('imagen-')){
       // ── Imagen 3 (유료) — generateImages 엔드포인트 ──
