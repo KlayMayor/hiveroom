@@ -412,7 +412,10 @@ async function generateImage(){
   const btn = document.getElementById('gen-btn');
   btn.disabled = true;
   document.getElementById('result-area').classList.remove('show');
-  showStatus('loading', '이미지 생성 중... (5~15초 소요)');
+  showStatus('loading', '이미지 생성 중... (최대 2분 소요)');
+
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), 120_000);
 
   try {
     let imageBase64 = null;
@@ -480,25 +483,25 @@ async function generateImage(){
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          signal: abort.signal,
           body: JSON.stringify({
-            contents: [{
-              parts: [{ text: prompt }]
-            }],
-            generationConfig: {
-              responseModalities: ['TEXT', 'IMAGE'],
-            }
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { responseModalities: ['TEXT', 'IMAGE'] }
           })
         }
       );
       if(!res.ok){
-        const err = await res.json();
-        throw new Error(err?.error?.message || `HTTP ${res.status}`);
+        let errMsg = `HTTP ${res.status}`;
+        try { const e = await res.json(); errMsg = e?.error?.message || errMsg; } catch{}
+        throw new Error(errMsg);
       }
       const data = await res.json();
-      // 이미지 파트 찾기
       const parts = data?.candidates?.[0]?.content?.parts || [];
       const imgPart = parts.find(p => p.inlineData?.mimeType?.startsWith('image/'));
-      if(!imgPart) throw new Error('이미지가 반환되지 않았어요. 모델이 텍스트만 반환했을 수 있어요.');
+      if(!imgPart){
+        const textPart = parts.find(p => p.text);
+        throw new Error('이미지가 반환되지 않았어요.' + (textPart ? ' 모델 응답: ' + textPart.text.slice(0,100) : ''));
+      }
       imageBase64 = imgPart.inlineData.data;
       mimeType = imgPart.inlineData.mimeType;
     }
@@ -521,8 +524,11 @@ async function generateImage(){
     applyCanvas(src);
 
   } catch(e){
-    showStatus('error', `❌ 오류: ${e.message}`);
+    clearTimeout(timer);
+    const msg = e.name === 'AbortError' ? '⏱️ 요청 시간 초과 (2분). 다시 시도해주세요.' : `❌ 오류: ${e.message || e}`;
+    showStatus('error', msg);
   } finally {
+    clearTimeout(timer);
     btn.disabled = false;
   }
 }
