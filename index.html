@@ -4891,8 +4891,13 @@ function _tipsUpdateContent(){
 }
 function closeTips(){
   document.getElementById('tips-ov').classList.add('hidden');
+  localStorage.setItem('tips_seen','1');
 }
 function initTips(){
+  if(localStorage.getItem('tips_seen')){
+    document.getElementById('tips-ov').classList.add('hidden');
+    return;
+  }
   _tipsPage = 0;
   _tipsUpdateUI();
 }
