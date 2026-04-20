@@ -1,18 +1,24 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { ethers } from 'npm:ethers@5.7.2';
+import { Provider, Wallet, utils } from 'npm:zksync-ethers@5';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const TILE_ADDRESS = '0x175D30A5027BFb3C28F6ACA47FA5B95f912ad162';
-const CHAIN_ID     = 11124;
-const RPC_URL      = 'https://api.testnet.abs.xyz';
+const TILE_ADDRESS    = Deno.env.get('TILE_ADDRESS')    || '0x175D30A5027BFb3C28F6ACA47FA5B95f912ad162';
+const PAYMASTER_ADDRESS = Deno.env.get('PAYMASTER_ADDRESS') || '0x8BCa39d4413AacaF5aE1FCEF499a7dB7045b22cB';
+const CHAIN_ID        = 11124;
+const RPC_URL         = 'https://api.testnet.abs.xyz';
 
-const TILE_ABI = [
+const READ_ABI = [
   'function getMintNonce(address user) external view returns (uint256)',
   'function minted(uint256 tokenId) external view returns (bool)',
+];
+
+const MINT_ABI = [
+  'function mint(uint256 tileNumber, address recipient, bytes calldata signature) external',
 ];
 
 Deno.serve(async (req) => {
@@ -34,7 +40,7 @@ Deno.serve(async (req) => {
     if (!wallet || tileNumber === undefined) return err(400, 'Missing wallet or tileNumber');
     if (!ethers.utils.isAddress(wallet)) return err(400, 'Invalid wallet address');
 
-    // Verify ownership in Supabase
+    // Verify tile ownership in Supabase
     const { data: roomRow } = await supabase
       .from('rooms')
       .select('email')
@@ -44,16 +50,17 @@ Deno.serve(async (req) => {
     if (roomRow.email.toLowerCase() !== user.email.toLowerCase()) return err(403, 'You do not own this tile');
 
     // Check on-chain state
-    const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
-    const tile = new ethers.Contract(TILE_ADDRESS, TILE_ABI, provider);
+    const readProvider = new ethers.providers.JsonRpcProvider(RPC_URL);
+    const tileRead = new ethers.Contract(TILE_ADDRESS, READ_ABI, readProvider);
     const [isMinted, nonce] = await Promise.all([
-      tile.minted(Number(tileNumber)),
-      tile.getMintNonce(wallet),
+      tileRead.minted(Number(tileNumber)),
+      tileRead.getMintNonce(wallet),
     ]);
     if (isMinted) return err(400, 'NFT already minted');
 
-    // EIP-712 sign
-    const signer = new ethers.Wallet(Deno.env.get('SERVER_SIGNER_PRIVATE_KEY')!);
+    // EIP-712 sign  (user = recipient = wallet)
+    const signerKey = Deno.env.get('SERVER_SIGNER_PRIVATE_KEY')!;
+    const signer = new ethers.Wallet(signerKey);
     const signature = await signer._signTypedData(
       { name: 'HiveRoomTile', version: '1', chainId: CHAIN_ID, verifyingContract: TILE_ADDRESS },
       { Mint: [
@@ -65,7 +72,30 @@ Deno.serve(async (req) => {
       { user: wallet, tileNumber: Number(tileNumber), nonce }
     );
 
-    return json({ signature });
+    // Send transaction via server signer — paymaster covers gas
+    const provider    = new Provider(RPC_URL);
+    const serverWallet = new Wallet(signerKey, provider);
+
+    const mintIface = new ethers.utils.Interface(MINT_ABI);
+    const data      = mintIface.encodeFunctionData('mint', [Number(tileNumber), wallet, signature]);
+
+    const paymasterParams = utils.getPaymasterParams(PAYMASTER_ADDRESS, {
+      type: 'General',
+      innerInput: new Uint8Array(),
+    });
+
+    const tx = await serverWallet.sendTransaction({
+      to:   TILE_ADDRESS,
+      data,
+      customData: {
+        gasPerPubdata: utils.DEFAULT_GAS_PER_PUBDATA_LIMIT,
+        paymasterParams,
+      },
+    });
+
+    console.log('[sign-mint] tx sent:', tx.hash);
+    return json({ txHash: tx.hash });
+
   } catch (e) {
     console.error(e);
     return err(500, String(e));

@@ -82,11 +82,12 @@ contract HiveRoomTile is
      * - 해당 타일이 아직 민팅되지 않아야 함
      * - 서버 서명 검증 통과 (Supabase에서 ownerEmail 확인 후 발급)
      */
-    function mint(uint256 tileNumber, bytes calldata signature) external {
+    function mint(uint256 tileNumber, address recipient, bytes calldata signature) external {
         require(tileNumber > 0, "HiveRoomTile: invalid tile number");
         require(!minted[tileNumber], "HiveRoomTile: already minted");
+        require(recipient != address(0), "HiveRoomTile: zero recipient");
 
-        address user = msg.sender;
+        address user = recipient;
 
         // 서버 서명 검증
         bytes32 structHash = keccak256(

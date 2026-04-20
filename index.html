@@ -5774,7 +5774,7 @@ const HIVE_ABI = [
 ];
 
 const TILE_ABI = [
-  'function mint(uint256 tileNumber, bytes calldata signature) external',
+  'function mint(uint256 tileNumber, address recipient, bytes calldata signature) external',
   'function minted(uint256 tokenId) external view returns (bool)',
   'function getMintNonce(address user) external view returns (uint256)',
 ];
@@ -6213,22 +6213,22 @@ async function mintNft() {
   if (!tileNum) return;
   if (!WALLET_ADDRESS) { if(!(await showWalletSelector())) return; }
 
-  btn.disabled = true; btn.textContent = 'Getting signature…';
+  btn.disabled = true; btn.textContent = 'Minting…';
   try {
     const token = await getValidToken();
+    // Server signs + sends the tx (pays gas via paymaster) — returns txHash
     const resp = await fetch(`${SUPA_URL}/functions/v1/sign-mint`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ wallet: WALLET_ADDRESS, tileNumber: tileNum })
     });
     if (!resp.ok) throw new Error(await resp.text());
-    const { signature } = await resp.json();
+    const { txHash } = await resp.json();
 
-    btn.textContent = 'Confirm in wallet…';
-    const tile = new ethers.Contract(ONCHAIN.TILE, TILE_ABI, WALLET_SIGNER);
-    const tx = await tile.mint(tileNum, signature, { gasLimit: 300000 });
-    btn.textContent = 'Minting…';
-    await tx.wait();
+    btn.textContent = 'Confirming…';
+    const provider = new ethers.providers.JsonRpcProvider(ABSTRACT_CHAIN.rpcUrls[0]);
+    await provider.waitForTransaction(txHash, 1, 60000);
+
     showToast('🎉 NFT for tile #' + tileNum + ' minted!');
     btn.style.display = 'none';
   } catch(e) {

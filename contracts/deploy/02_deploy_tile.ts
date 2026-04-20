@@ -34,5 +34,16 @@ export default async function (hre: HardhatRuntimeEnvironment) {
   console.log("✅ HiveRoomTile proxy deployed to:", proxyAddress);
   console.log("   → Add to .env: HIVE_ROOM_TILE_ADDRESS=" + proxyAddress);
 
+  // Whitelist new tile address in paymaster if PAYMASTER_ADDRESS is set
+  const paymasterAddress = process.env.PAYMASTER_ADDRESS;
+  if (paymasterAddress) {
+    console.log("\nWhitelisting new tile in HiveRoomPaymaster...");
+    const paymasterABI = ["function setAllowedContract(address _contract, bool _allowed) external"];
+    const paymaster = new ethers.Contract(paymasterAddress, paymasterABI, wallet);
+    const tx = await paymaster.setAllowedContract(proxyAddress, true);
+    await tx.wait();
+    console.log("  ✅ New HiveRoomTile whitelisted in paymaster");
+  }
+
   return proxyAddress;
 }
