@@ -1,16 +1,14 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { ethers } from 'npm:ethers@5.7.2';
-import { Provider, Wallet, utils } from 'npm:zksync-ethers@5';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const TILE_ADDRESS    = Deno.env.get('TILE_ADDRESS')    || '0xe02F5144303956dAe6eB42836D9Fc26A0Ca3277a';
-const PAYMASTER_ADDRESS = Deno.env.get('PAYMASTER_ADDRESS') || '0x8BCa39d4413AacaF5aE1FCEF499a7dB7045b22cB';
-const CHAIN_ID        = 11124;
-const RPC_URL         = 'https://api.testnet.abs.xyz';
+const TILE_ADDRESS = Deno.env.get('TILE_ADDRESS') || '0xe02F5144303956dAe6eB42836D9Fc26A0Ca3277a';
+const CHAIN_ID     = 11124;
+const RPC_URL      = 'https://api.testnet.abs.xyz';
 
 const READ_ABI = [
   'function getMintNonce(address user) external view returns (uint256)',
@@ -50,15 +48,15 @@ Deno.serve(async (req) => {
     if (roomRow.email.toLowerCase() !== user.email.toLowerCase()) return err(403, 'You do not own this tile');
 
     // Check on-chain state
-    const readProvider = new ethers.providers.JsonRpcProvider(RPC_URL);
-    const tileRead = new ethers.Contract(TILE_ADDRESS, READ_ABI, readProvider);
+    const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
+    const tileRead = new ethers.Contract(TILE_ADDRESS, READ_ABI, provider);
     const [isMinted, nonce] = await Promise.all([
       tileRead.minted(Number(tileNumber)),
       tileRead.getMintNonce(wallet),
     ]);
     if (isMinted) return err(400, 'NFT already minted');
 
-    // EIP-712 sign  (user = recipient = wallet)
+    // EIP-712 sign (user = recipient = wallet)
     const signerKey = Deno.env.get('SERVER_SIGNER_PRIVATE_KEY')!;
     const signer = new ethers.Wallet(signerKey);
     const signature = await signer._signTypedData(
@@ -72,25 +70,11 @@ Deno.serve(async (req) => {
       { user: wallet, tileNumber: Number(tileNumber), nonce }
     );
 
-    // Send transaction via server signer — paymaster covers gas
-    const provider    = new Provider(RPC_URL);
-    const serverWallet = new Wallet(signerKey, provider);
-
-    const mintIface = new ethers.utils.Interface(MINT_ABI);
-    const data      = mintIface.encodeFunctionData('mint', [Number(tileNumber), wallet, signature]);
-
-    const paymasterParams = utils.getPaymasterParams(PAYMASTER_ADDRESS, {
-      type: 'General',
-      innerInput: new Uint8Array(),
-    });
-
-    const tx = await serverWallet.sendTransaction({
-      to:   TILE_ADDRESS,
-      data,
-      customData: {
-        gasPerPubdata: utils.DEFAULT_GAS_PER_PUBDATA_LIMIT,
-        paymasterParams,
-      },
+    // Send transaction via server signer (server pays gas directly)
+    const serverWallet = new ethers.Wallet(signerKey, provider);
+    const tileContract = new ethers.Contract(TILE_ADDRESS, MINT_ABI, serverWallet);
+    const tx = await tileContract.mint(Number(tileNumber), wallet, signature, {
+      gasLimit: 500000,
     });
 
     console.log('[sign-mint] tx sent:', tx.hash);
