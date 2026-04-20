@@ -934,7 +934,7 @@ header{
     <div id="wallet-drop" style="display:none;position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1.5px solid #E8E0D0;border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,.18);min-width:190px;overflow:hidden;z-index:2000;">
       <div id="wdrop-addr" style="padding:8px 14px 6px;font-size:10px;color:#888;font-family:monospace;white-space:nowrap;border-bottom:1px solid #f0f0f0;overflow:hidden;text-overflow:ellipsis;"></div>
       <button onclick="disconnectWallet()" style="width:100%;padding:9px 14px;border:none;background:none;text-align:left;font-size:12px;font-weight:700;color:#E53935;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">🔌 Disconnect</button>
-      <button onclick="disconnectWallet();showWalletSelector()" style="width:100%;padding:9px 14px;border:none;background:none;text-align:left;font-size:12px;font-weight:700;color:#3A4BD4;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">🔄 Switch Wallet</button>
+      <button onclick="switchWallet()" style="width:100%;padding:9px 14px;border:none;background:none;text-align:left;font-size:12px;font-weight:700;color:#3A4BD4;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">🔄 Switch Wallet</button>
     </div>
   </div>
   <div class="h-profile-wrap" id="profile-wrap" style="display:none;">
@@ -1663,6 +1663,7 @@ function setLoggedIn(user){
   document.getElementById('dd-email').textContent = user.email;
   document.getElementById('h-timers').classList.add('show');
   document.getElementById('wallet-wrap').style.display='block';
+  _tryRestoreAGWWallet(); // restore wallet connection after page refresh
   loadMyBalance();
   startTimers();
 }
@@ -5843,8 +5844,8 @@ async function connectAbstractWallet() {
       const base = details.custom_api_url || 'https://privy.abs.xyz';
       connectUrl  = details.custom_connect_url || (base + '/cross-app/connect');
       const transactUrlFromDetails = details.custom_transact_url || (base + '/cross-app/transact');
-      sessionStorage.setItem('agw_connect_base',   base);
-      sessionStorage.setItem('agw_transact_url_d', transactUrlFromDetails);
+      localStorage.setItem('agw_connect_base',   base);
+      localStorage.setItem('agw_transact_url_d', transactUrlFromDetails);
     } catch(e) {
       console.warn('[AGW] provider details fetch failed, using fallback:', e.message);
     }
@@ -5897,11 +5898,11 @@ async function connectAbstractWallet() {
     try {
       const provPub   = b64dec(resp.providerPublicKey);
       const sharedRaw = secp256k1.getSharedSecret(privKeyBytes, provPub).slice(1);
-      sessionStorage.setItem('agw_shared', b64enc(sharedRaw));
-      sessionStorage.setItem('agw_pub',    pubKeyB64);
+      localStorage.setItem('agw_shared', b64enc(sharedRaw));
+      localStorage.setItem('agw_pub',    pubKeyB64);
     } catch(_) {}
-    const transactUrl = (sessionStorage.getItem('agw_connect_base') || 'https://privy.abs.xyz') + '/cross-app/transact';
-    sessionStorage.setItem('agw_transact_url', transactUrl);
+    const transactUrl = (localStorage.getItem('agw_connect_base') || 'https://privy.abs.xyz') + '/cross-app/transact';
+    localStorage.setItem('agw_transact_url', transactUrl);
 
     // ⑦ Derive AGW smart wallet address from EOA via factory contract
     WALLET_ADDRESS = resp.smartWalletAddress || eoaAddress; // try field first
@@ -5921,14 +5922,15 @@ async function connectAbstractWallet() {
         }
       }
     } catch(e) { console.warn('[AGW] smart wallet derivation failed:', e.message); }
-    sessionStorage.setItem('agw_addr', WALLET_ADDRESS);
-    sessionStorage.setItem('agw_eoa',  eoaAddress);
+    localStorage.setItem('agw_addr', WALLET_ADDRESS);
+    localStorage.setItem('agw_eoa',  eoaAddress);
 
     // ⑧ EIP-1193 bridge — sends txs through AGW cross-app transact popup
     const eip1193 = {
       request: async ({ method, params }) => {
         if (method === 'eth_requestAccounts' || method === 'eth_accounts') return [WALLET_ADDRESS];
         if (method === 'eth_chainId') return '0x2B74';
+        if (method === 'eth_estimateGas') return '0x493E0'; // 300000 — bypass RPC estimation; AGW uses paymaster
         if (method === 'eth_sendTransaction' || method === 'eth_signTypedData_v4' || method === 'eth_sign') {
           return _agwRequest(method, params);
         }
@@ -5951,8 +5953,8 @@ async function connectAbstractWallet() {
 // ── AGW cross-app encrypted transaction request ───────────────────────────────
 // Delegates to @privy-io/cross-app-connect to ensure exact protocol compliance.
 async function _agwRequest(method, params) {
-  const sharedB64 = sessionStorage.getItem('agw_shared');
-  const pubKeyB64 = sessionStorage.getItem('agw_pub');
+  const sharedB64 = localStorage.getItem('agw_shared');
+  const pubKeyB64 = localStorage.getItem('agw_pub');
   if (!sharedB64 || !pubKeyB64) throw new Error('AGW not connected');
 
   // Write our stored connection into the library's localStorage key so it can
@@ -6020,9 +6022,48 @@ function _closeWalletDrop() {
 function disconnectWallet() {
   WALLET_ADDRESS = null;
   WALLET_SIGNER  = null;
-  ['agw_shared','agw_pub','agw_addr','agw_eoa','agw_transact_url','agw_connect_base','agw_transact_url_d'].forEach(k => sessionStorage.removeItem(k));
+  ['agw_shared','agw_pub','agw_addr','agw_eoa','agw_transact_url','agw_connect_base','agw_transact_url_d'].forEach(k => localStorage.removeItem(k));
   try { [`privy-caw:${AGW_APP_ID}:connection:smart-wallet`,`privy-caw:${AGW_APP_ID}:connection_chain_id:smart-wallet`].forEach(k => localStorage.removeItem(k)); } catch(_) {}
   _closeWalletDrop();
+  _updateWalletBtn();
+}
+
+async function switchWallet() {
+  // Save current connection so we can restore it if user cancels
+  const prevAddress = WALLET_ADDRESS;
+  const prevSigner  = WALLET_SIGNER;
+  _closeWalletDrop();
+  const connected = await showWalletSelector();
+  if (!connected && prevAddress) {
+    // User closed the selector without connecting — restore previous wallet
+    WALLET_ADDRESS = prevAddress;
+    WALLET_SIGNER  = prevSigner;
+    _updateWalletBtn();
+  }
+}
+
+function _tryRestoreAGWWallet() {
+  const addr    = localStorage.getItem('agw_addr');
+  const shared  = localStorage.getItem('agw_shared');
+  const pub     = localStorage.getItem('agw_pub');
+  if (!addr || !shared || !pub) return;
+
+  WALLET_ADDRESS = addr;
+
+  const eip1193 = {
+    request: async ({ method, params }) => {
+      if (method === 'eth_requestAccounts' || method === 'eth_accounts') return [WALLET_ADDRESS];
+      if (method === 'eth_chainId') return '0x2B74';
+      if (method === 'eth_estimateGas') return '0x493E0';
+      if (method === 'eth_sendTransaction' || method === 'eth_signTypedData_v4' || method === 'eth_sign') {
+        return _agwRequest(method, params);
+      }
+      return new ethers.providers.JsonRpcProvider('https://api.testnet.abs.xyz').send(method, params || []);
+    },
+    on: () => {}, removeListener: () => {},
+  };
+  const provider = new ethers.providers.Web3Provider(eip1193);
+  WALLET_SIGNER  = provider.getSigner();
   _updateWalletBtn();
 }
 
@@ -6161,7 +6202,7 @@ async function mintNft() {
 
     btn.textContent = 'Confirm in wallet…';
     const tile = new ethers.Contract(ONCHAIN.TILE, TILE_ABI, WALLET_SIGNER);
-    const tx = await tile.mint(tileNum, signature);
+    const tx = await tile.mint(tileNum, signature, { gasLimit: 300000 });
     btn.textContent = 'Minting…';
     await tx.wait();
     showToast('🎉 NFT for tile #' + tileNum + ' minted!');
