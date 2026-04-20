@@ -7,7 +7,7 @@ const CORS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const TILE_ADDRESS    = Deno.env.get('TILE_ADDRESS')    || '0x175D30A5027BFb3C28F6ACA47FA5B95f912ad162';
+const TILE_ADDRESS    = Deno.env.get('TILE_ADDRESS')    || '0xe02F5144303956dAe6eB42836D9Fc26A0Ca3277a';
 const PAYMASTER_ADDRESS = Deno.env.get('PAYMASTER_ADDRESS') || '0x8BCa39d4413AacaF5aE1FCEF499a7dB7045b22cB';
 const CHAIN_ID        = 11124;
 const RPC_URL         = 'https://api.testnet.abs.xyz';
