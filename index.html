@@ -647,7 +647,7 @@ header{
   .h-badge{ display:none; }
   .h-filter-wrap{ display:none; }
   .h-timers{ display:none !important; }
-  #wallet-btn{ font-size:10px !important; padding:4px 8px !important; }
+  #wallet-wrap #wallet-btn{ font-size:10px !important; padding:4px 8px !important; }
   #profile-wrap{ margin-left:auto; }
   #login-btn{ margin-left:auto;font-size:11px;padding:5px 10px; }
   #h-notice{ display:none; }
@@ -929,7 +929,14 @@ header{
     </div>
   </div>
   <!-- 지갑 연결 버튼 (로그인 후 표시, 모바일 포함) -->
-  <button id="wallet-btn" onclick="showWalletSelector()" style="display:none;padding:5px 10px;border-radius:20px;border:1.5px solid #F2B830;background:#FFF8E8;color:#A87800;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">🔗 Wallet</button>
+  <div id="wallet-wrap" style="position:relative;flex-shrink:0;display:none;">
+    <button id="wallet-btn" onclick="walletBtnClick()" style="padding:5px 10px;border-radius:20px;border:1.5px solid #F2B830;background:#FFF8E8;color:#A87800;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">🔗 Wallet</button>
+    <div id="wallet-drop" style="display:none;position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1.5px solid #E8E0D0;border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,.18);min-width:190px;overflow:hidden;z-index:2000;">
+      <div id="wdrop-addr" style="padding:8px 14px 6px;font-size:10px;color:#888;font-family:monospace;white-space:nowrap;border-bottom:1px solid #f0f0f0;overflow:hidden;text-overflow:ellipsis;"></div>
+      <button onclick="disconnectWallet()" style="width:100%;padding:9px 14px;border:none;background:none;text-align:left;font-size:12px;font-weight:700;color:#E53935;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">🔌 Disconnect</button>
+      <button onclick="_closeWalletDrop();showWalletSelector()" style="width:100%;padding:9px 14px;border:none;background:none;text-align:left;font-size:12px;font-weight:700;color:#3A4BD4;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">🔄 Switch Wallet</button>
+    </div>
+  </div>
   <div class="h-profile-wrap" id="profile-wrap" style="display:none;">
     <div class="h-profile-btn" id="profile-btn" onclick="toggleMenu()">
       <img id="profile-img" src="" alt="">
@@ -1655,7 +1662,7 @@ function setLoggedIn(user){
   document.getElementById('dd-name').textContent = user.name;
   document.getElementById('dd-email').textContent = user.email;
   document.getElementById('h-timers').classList.add('show');
-  document.getElementById('wallet-btn').style.display='block';
+  document.getElementById('wallet-wrap').style.display='block';
   loadMyBalance();
   startTimers();
 }
@@ -1663,7 +1670,7 @@ function setLoggedOut(){
   document.getElementById('login-btn').style.display='flex';
   document.getElementById('profile-wrap').style.display='none';
   document.getElementById('h-timers').classList.remove('show');
-  document.getElementById('wallet-btn').style.display='none';
+  document.getElementById('wallet-wrap').style.display='none';
   MY_BALANCE = null;
   stopTimers();
   closeMenu();
@@ -1678,6 +1685,8 @@ function closeMenu(){
 document.addEventListener('click', e=>{
   const wrap = document.getElementById('profile-wrap');
   if(wrap && !wrap.contains(e.target)) closeMenu();
+  const wWrap = document.getElementById('wallet-wrap');
+  if(wWrap && !wWrap.contains(e.target)) _closeWalletDrop();
 });
 
 // ── 방 만들기 (새 방) ──
@@ -5833,6 +5842,7 @@ async function connectAbstractWallet() {
       console.log('[AGW] provider details:', details);
       const base = details.custom_api_url || 'https://privy.abs.xyz';
       connectUrl  = details.custom_connect_url || (base + '/cross-app/connect');
+      sessionStorage.setItem('agw_connect_base', base);
     } catch(e) {
       console.warn('[AGW] provider details fetch failed, using fallback:', e.message);
     }
@@ -5877,24 +5887,49 @@ async function connectAbstractWallet() {
       window.addEventListener('message', h);
     });
 
-    console.log('[AGW] connected:', resp);
-    WALLET_ADDRESS = resp.address;
-    if (!WALLET_ADDRESS) throw new Error('No address in response: ' + JSON.stringify(resp));
+    console.log('[AGW] connected, full resp:', JSON.stringify(resp));
+    const eoaAddress = resp.address;
+    if (!eoaAddress) throw new Error('No address in response: ' + JSON.stringify(resp));
 
-    // ⑥ Compute ECDH shared secret for future encrypted RPC requests
+    // ⑥ Compute ECDH shared secret + store transact URL
     try {
-      const provPub    = b64dec(resp.providerPublicKey);
-      const sharedRaw  = secp256k1.getSharedSecret(privKeyBytes, provPub).slice(1);
+      const provPub   = b64dec(resp.providerPublicKey);
+      const sharedRaw = secp256k1.getSharedSecret(privKeyBytes, provPub).slice(1);
       sessionStorage.setItem('agw_shared', b64enc(sharedRaw));
       sessionStorage.setItem('agw_pub',    pubKeyB64);
     } catch(_) {}
-    sessionStorage.setItem('agw_addr', WALLET_ADDRESS);
+    const transactUrl = (sessionStorage.getItem('agw_connect_base') || 'https://privy.abs.xyz') + '/cross-app/transact';
+    sessionStorage.setItem('agw_transact_url', transactUrl);
 
-    // ⑦ EIP-1193 bridge (read-only RPC; tx signing uses popup protocol)
+    // ⑦ Derive AGW smart wallet address from EOA via factory contract
+    WALLET_ADDRESS = resp.smartWalletAddress || eoaAddress; // try field first
+    try {
+      const agwMod = await import('https://esm.sh/@abstract-foundation/agw-client');
+      if (agwMod.getSmartAccountAddressFromInitialSigner) {
+        const rpc = new ethers.providers.JsonRpcProvider('https://api.testnet.abs.xyz');
+        const viemClient = {
+          chain: { id: 11124 },
+          readContract: async ({ address, abi, functionName, args }) =>
+            new ethers.Contract(address, abi, rpc)[functionName](...(args || [])),
+        };
+        const smartAddr = await agwMod.getSmartAccountAddressFromInitialSigner(eoaAddress, viemClient);
+        if (smartAddr && ethers.utils.isAddress(smartAddr)) {
+          WALLET_ADDRESS = smartAddr;
+          console.log('[AGW] EOA:', eoaAddress, '→ Smart Wallet:', smartAddr);
+        }
+      }
+    } catch(e) { console.warn('[AGW] smart wallet derivation failed:', e.message); }
+    sessionStorage.setItem('agw_addr', WALLET_ADDRESS);
+    sessionStorage.setItem('agw_eoa',  eoaAddress);
+
+    // ⑧ EIP-1193 bridge — sends txs through AGW cross-app transact popup
     const eip1193 = {
       request: async ({ method, params }) => {
         if (method === 'eth_requestAccounts' || method === 'eth_accounts') return [WALLET_ADDRESS];
         if (method === 'eth_chainId') return '0x2B74';
+        if (method === 'eth_sendTransaction' || method === 'eth_signTypedData_v4' || method === 'eth_sign') {
+          return _agwRequest(method, params);
+        }
         return new ethers.providers.JsonRpcProvider('https://api.testnet.abs.xyz').send(method, params || []);
       },
       on: () => {}, removeListener: () => {},
@@ -5911,6 +5946,69 @@ async function connectAbstractWallet() {
   }
 }
 
+// ── AGW cross-app encrypted transaction request ───────────────────────────────
+async function _agwRequest(method, params) {
+  const sharedB64  = sessionStorage.getItem('agw_shared');
+  const pubKeyB64  = sessionStorage.getItem('agw_pub');
+  const transactUrl = sessionStorage.getItem('agw_transact_url') || 'https://privy.abs.xyz/cross-app/transact';
+  if (!sharedB64 || !pubKeyB64) throw new Error('AGW not connected');
+
+  // Import fflate for zlib compression (required by Privy protocol)
+  const { zlibSync, unzlibSync } = await import('https://esm.sh/fflate@0.8.2');
+  const b64enc_safe = bytes => {
+    let s = ''; const a = new Uint8Array(bytes.buffer || bytes);
+    for (let i = 0; i < a.length; i += 8192) s += String.fromCharCode(...a.subarray(i, Math.min(i + 8192, a.length)));
+    return btoa(s);
+  };
+  const b64dec = s => new Uint8Array([...atob(s)].map(c => c.charCodeAt(0)));
+
+  // Encrypt the request with AES-GCM using the shared secret
+  const keyBytes  = b64dec(sharedB64);
+  const encKey    = await crypto.subtle.importKey('raw', keyBytes, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+  const reqJson   = JSON.stringify({ method, params, chainId: 11124 });
+  const compressed = zlibSync(new TextEncoder().encode(reqJson));
+  const iv        = crypto.getRandomValues(new Uint8Array(12));
+  const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, encKey, compressed));
+  const ivB64     = b64enc_safe(iv);
+  const encB64    = b64enc_safe(encrypted);
+
+  // Open transact popup
+  const u = new URL(transactUrl);
+  u.searchParams.set('requester_public_key', pubKeyB64);
+  u.searchParams.set('encrypted_request',    encB64);
+  u.searchParams.set('requester_origin',     window.location.origin);
+  u.searchParams.set('iv',                   ivB64);
+  u.searchParams.set('provider_app_id',      AGW_APP_ID);
+  u.searchParams.set('signout_enabled',      'true');
+  u.searchParams.set('v',                    '1');
+  const popup = window.open(u.href, 'agw-transact',
+    `width=460,height=640,popup=yes,left=${(screen.width-460)/2|0},top=${(screen.height-640)/2|0}`);
+  if (!popup) throw new Error('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');
+
+  // Wait for encrypted response
+  const result = await new Promise((resolve, reject) => {
+    const tid    = setTimeout(() => { cleanup(); reject(new Error('Transaction timeout')); }, 5*60*1000);
+    const pollId = setInterval(() => { if (popup.closed) { cleanup(); reject(new Error('User rejected')); } }, 300);
+    function cleanup() { clearTimeout(tid); clearInterval(pollId); window.removeEventListener('message', h); popup.close(); }
+    async function h(ev) {
+      if (!ev.data) return;
+      if (ev.data.type === 'PRIVY_CROSS_APP_ACTION_RESPONSE' && ev.data.encryptedResult) {
+        try {
+          const dec = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64dec(ev.data.iv) }, encKey, b64dec(ev.data.encryptedResult));
+          cleanup();
+          resolve(new TextDecoder().decode(unzlibSync(new Uint8Array(dec))));
+        } catch(e) { cleanup(); reject(e); }
+      } else if (ev.data.type === 'PRIVY_CROSS_APP_ACTION_ERROR') {
+        cleanup(); reject(new Error(ev.data.error || 'Transaction rejected'));
+      }
+    }
+    window.addEventListener('message', h);
+  });
+
+  // Result is a JSON-encoded value (e.g. "\"0xhash\"" or "0xhash")
+  try { return JSON.parse(result); } catch(_) { return result; }
+}
+
 function _showWspMain() {
   document.getElementById('wsp-main').style.display = 'block';
   document.getElementById('wsp-agw').style.display = 'none';
@@ -5924,7 +6022,33 @@ function _updateWalletBtn() {
     btn.style.background = '#E8F5E9'; btn.style.borderColor = '#4CAF50'; btn.style.color = '#2E7D32';
   } else {
     btn.textContent = '🔗 Wallet'; btn.style.background = '#FFF8E8'; btn.style.borderColor = '#F2B830'; btn.style.color = '#A87800';
+    _closeWalletDrop();
   }
+}
+
+function walletBtnClick() {
+  if (!WALLET_ADDRESS) { showWalletSelector(); return; }
+  const drop = document.getElementById('wallet-drop');
+  if (!drop) return;
+  const opening = drop.style.display !== 'block';
+  drop.style.display = opening ? 'block' : 'none';
+  if (opening) {
+    document.getElementById('wdrop-addr').textContent =
+      WALLET_ADDRESS.slice(0,10) + '…' + WALLET_ADDRESS.slice(-6);
+  }
+}
+
+function _closeWalletDrop() {
+  const d = document.getElementById('wallet-drop');
+  if (d) d.style.display = 'none';
+}
+
+function disconnectWallet() {
+  WALLET_ADDRESS = null;
+  WALLET_SIGNER  = null;
+  ['agw_shared','agw_pub','agw_addr','agw_eoa','agw_transact_url','agw_connect_base'].forEach(k => sessionStorage.removeItem(k));
+  _closeWalletDrop();
+  _updateWalletBtn();
 }
 
 // ── Claim Modal ──────────────────────────────────────────────────────────────
