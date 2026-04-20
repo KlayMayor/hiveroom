@@ -5808,172 +5808,104 @@ async function connectMetaMask() {
 }
 
 // ── Abstract Global Wallet ────────────────────────────────────────────────────
-// 앱 등록 없이 SDK가 팝업을 처리해주면 아래 두 값은 불필요합니다.
-// 등록이 필요한 경우: portal.abs.xyz 에서 앱 등록 후 값을 채워넣으세요.
-const AGW_APP_ID    = 'cm04asygd041fmry9zmcyn5o5'; // Abstract 공통 ID
-const AGW_CLIENT_ID = 'cmo3w6jww00450djrdr7kzrx3'; // HiveRoom Privy App ID
-
-function _b64url(arr) {
-  return btoa(String.fromCharCode(...arr)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-}
-async function _generatePKCE() {
-  const verifier  = _b64url(crypto.getRandomValues(new Uint8Array(32)));
-  const hashBytes = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
-  return { verifier, challenge: _b64url(hashBytes) };
-}
+// Uses @privy-io/cross-app-connect ECDH protocol (not OAuth PKCE)
+const AGW_APP_ID = 'cm04asygd041fmry9zmcyn5o5'; // AGW's Privy App ID (fixed constant)
 
 async function connectAbstractWallet() {
   _closeWalletSelector();
   try {
-    // ① SDK에서 브라우저 로그인 함수 탐색
-    const agwMod = await import('https://esm.sh/@abstract-foundation/agw-client');
-    console.log('[AGW] available exports:', Object.keys(agwMod));
+    // ① Import secp256k1 for ECDH key pair (Privy cross-app-connect protocol)
+    const { secp256k1 } = await import('https://esm.sh/@noble/curves@1.4.2/secp256k1');
+    const b64enc = b => btoa(String.fromCharCode(...b));
+    const b64dec = s => new Uint8Array([...atob(s)].map(c => c.charCodeAt(0)));
 
-    // 알려진 로그인 함수 이름들 시도
-    const loginFn = agwMod.loginWithAbstract
-                 || agwMod.login
-                 || agwMod.connectAbstract
-                 || agwMod.useAbstractClient?.login;
+    // ② Generate ephemeral ECDH key pair
+    const privKeyBytes = secp256k1.utils.randomPrivateKey();
+    const pubKeyBytes  = secp256k1.getPublicKey(privKeyBytes); // 33-byte compressed
+    const pubKeyB64    = b64enc(pubKeyBytes);
 
-    if (loginFn) {
-      console.log('[AGW] SDK login function found, calling...');
-      const result = await loginFn();
-      console.log('[AGW] login result:', result);
-
-      WALLET_ADDRESS = result?.address || result?.account?.address;
-      if (!WALLET_ADDRESS) throw new Error('SDK 로그인 결과에서 주소를 찾지 못했습니다: ' + JSON.stringify(result));
-
-      // SDK가 EIP-1193 provider를 제공하는 경우
-      if (result?.request || result?.provider?.request) {
-        const p = result.provider || result;
-        const provider = new ethers.providers.Web3Provider(p);
-        WALLET_SIGNER = provider.getSigner();
-      }
-      _updateWalletBtn();
-      _resolveWallet(true);
-      return;
+    // ③ Fetch AGW's cross-app connect URL from Privy
+    let connectUrl = 'https://privy.abs.xyz/cross-app/connect'; // fallback
+    try {
+      const details = await fetch(
+        'https://auth.privy.io/api/v1/apps/' + AGW_APP_ID + '/cross-app/details'
+      ).then(r => r.json());
+      console.log('[AGW] provider details:', details);
+      const base = details.custom_api_url || 'https://privy.abs.xyz';
+      connectUrl  = details.custom_connect_url || (base + '/cross-app/connect');
+    } catch(e) {
+      console.warn('[AGW] provider details fetch failed, using fallback:', e.message);
     }
 
-    console.log('[AGW] SDK에 로그인 함수 없음 → OAuth PKCE 팝업 방식으로 전환');
-
-    // ② SDK 로그인 함수 없음 → app_id/client_id 필요한 OAuth 팝업
-    if (!AGW_APP_ID || !AGW_CLIENT_ID) {
-      document.getElementById('wallet-selector-ov').style.display = 'flex';
-      document.getElementById('wsp-main').style.display = 'none';
-      document.getElementById('wsp-agw').style.display = 'block';
-      return;
-    }
-
-    const { verifier, challenge } = await _generatePKCE();
-    const state = _b64url(crypto.getRandomValues(new Uint8Array(16)));
-    sessionStorage.setItem('abs_v', verifier);
-    sessionStorage.setItem('abs_s', state);
-
-    const REDIRECT_URI = window.location.origin + '/oauth-callback.html';
-
-    const oauthQ = new URLSearchParams({
-      app_id: AGW_APP_ID, client_id: AGW_CLIENT_ID,
-      scope: 'accounts', response_type: 'code',
-      state, code_challenge: challenge, code_challenge_method: 'S256',
-      redirect_uri: REDIRECT_URI,
-    }).toString();
+    // ④ Open popup with ECDH public key
+    const u = new URL(connectUrl);
+    u.searchParams.set('requester_public_key', pubKeyB64);
+    u.searchParams.set('connect',              'true');
+    u.searchParams.set('provider_app_id',      AGW_APP_ID);
+    u.searchParams.set('requester_origin',     window.location.origin);
+    u.searchParams.set('smart_wallet_mode',    'true');
 
     const popup = window.open(
-      `https://portal.abs.xyz/login?redirect=${encodeURIComponent('/oauth/authorize?' + oauthQ)}`,
-      'agw-login',
+      u.href, 'agw-login',
       `width=460,height=640,popup=yes,left=${(screen.width-460)/2|0},top=${(screen.height-640)/2|0}`
     );
     if (!popup) { alert('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.'); _resolveWallet(false); return; }
+    console.log('[AGW] popup opened:', u.href);
 
-    const code = await new Promise((resolve, reject) => {
-      const storedState = sessionStorage.getItem('abs_s');
-      const tid = setTimeout(() => {
-        clearInterval(pollId);
+    // ⑤ Wait for PRIVY_CROSS_APP_CONNECT_RESPONSE via postMessage or BroadcastChannel
+    const resp = await new Promise((resolve, reject) => {
+      let bc = null;
+      const tid = setTimeout(() => { cleanup(); reject(new Error('Login timeout (5min)')); }, 5*60*1000);
+      const pollId = setInterval(() => { if (popup.closed) { cleanup(); reject(new Error('popup_closed')); } }, 300);
+      function cleanup() {
+        clearTimeout(tid); clearInterval(pollId);
         window.removeEventListener('message', h);
-        reject(new Error('Login timeout (5min)'));
-      }, 5*60*1000);
-
-      function h(e) {
-        // oauth-callback.html 에서 보낸 메시지 (same-origin)
-        if (e.origin === window.location.origin) {
-          const d = e.data || {};
-          if (d.type === 'agw_oauth_callback') {
-            console.log('[AGW] callback received:', d);
-            clearTimeout(tid); clearInterval(pollId);
-            window.removeEventListener('message', h);
-            if (d.error) { reject(new Error('OAuth error: ' + d.error)); return; }
-            if (d.code && (!d.state || d.state === storedState)) { resolve(d.code); return; }
-            reject(new Error('Invalid callback: ' + JSON.stringify(d)));
-          }
-          return;
-        }
-        // abs.xyz / privy.io 에서 직접 postMessage 오는 경우도 처리
-        if (e.origin && (e.origin.includes('abs.xyz') || e.origin.includes('privy.io'))) {
-          console.log('[AGW] msg from', e.origin, ':', JSON.stringify(e.data));
-          const d = e.data || {};
-          const c = d.code || d.authorization_code || d.data?.code;
-          const s = d.state || d.data?.state;
-          if (c && (!s || s === storedState)) {
-            clearTimeout(tid); clearInterval(pollId);
-            window.removeEventListener('message', h);
-            resolve(c);
-          }
+        if (bc) { bc.close(); bc = null; }
+      }
+      function h(ev) {
+        if (!ev.data) return;
+        const d = ev.data;
+        if (d.type === 'PRIVY_CROSS_APP_CONNECT_RESPONSE') {
+          cleanup(); popup.close(); resolve(d);
+        } else if (d.type === 'PRIVY_CROSS_APP_ACTION_ERROR') {
+          cleanup(); popup.close(); reject(new Error(d.error || 'Connection rejected'));
+        } else if (d.type === 'PRIVY_OAUTH_USE_BROADCAST_CHANNEL') {
+          bc = new BroadcastChannel('popup-privy-oauth');
+          bc.onmessage = ev2 => h(ev2);
         }
       }
       window.addEventListener('message', h);
-
-      // 팝업이 닫힌 경우 감지
-      const pollId = setInterval(() => {
-        if (popup.closed) {
-          clearInterval(pollId);
-          clearTimeout(tid);
-          window.removeEventListener('message', h);
-          reject(new Error('popup_closed'));
-        }
-      }, 500);
     });
 
-    const tok = await fetch('https://portal.abs.xyz/oauth/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ grant_type: 'authorization_code', code, code_verifier: verifier, client_id: AGW_CLIENT_ID }),
-    }).then(r => r.json());
-    if (!tok.access_token) throw new Error('Token exchange failed: ' + JSON.stringify(tok));
+    console.log('[AGW] connected:', resp);
+    WALLET_ADDRESS = resp.address;
+    if (!WALLET_ADDRESS) throw new Error('No address in response: ' + JSON.stringify(resp));
 
-    const me = await fetch('https://portal.abs.xyz/api/accounts', {
-      headers: { Authorization: `Bearer ${tok.access_token}` },
-    }).then(r => r.json());
-    console.log('[AGW] account info:', me);
-    WALLET_ADDRESS = (Array.isArray(me) ? me[0] : me)?.address || me?.wallet_address;
-    if (!WALLET_ADDRESS) throw new Error('지갑 주소를 받아오지 못했습니다: ' + JSON.stringify(me));
+    // ⑥ Compute ECDH shared secret for future encrypted RPC requests
+    try {
+      const provPub    = b64dec(resp.providerPublicKey);
+      const sharedRaw  = secp256k1.getSharedSecret(privKeyBytes, provPub).slice(1);
+      sessionStorage.setItem('agw_shared', b64enc(sharedRaw));
+      sessionStorage.setItem('agw_pub',    pubKeyB64);
+    } catch(_) {}
+    sessionStorage.setItem('agw_addr', WALLET_ADDRESS);
 
-    sessionStorage.setItem('abs_token', tok.access_token);
-
+    // ⑦ EIP-1193 bridge (read-only RPC; tx signing uses popup protocol)
     const eip1193 = {
       request: async ({ method, params }) => {
         if (method === 'eth_requestAccounts' || method === 'eth_accounts') return [WALLET_ADDRESS];
         if (method === 'eth_chainId') return '0x2B74';
-        if (method === 'eth_sendTransaction') {
-          const tx = params[0];
-          const res = await fetch('https://portal.abs.xyz/api/transactions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionStorage.getItem('abs_token')}` },
-            body: JSON.stringify(tx),
-          }).then(r => r.json());
-          return res.hash || res.transaction_hash;
-        }
         return new ethers.providers.JsonRpcProvider('https://api.testnet.abs.xyz').send(method, params || []);
       },
       on: () => {}, removeListener: () => {},
     };
-
     const provider = new ethers.providers.Web3Provider(eip1193);
     WALLET_SIGNER  = provider.getSigner();
     _updateWalletBtn();
     _resolveWallet(true);
   } catch(e) {
-    if (e.message === 'popup_closed') { _resolveWallet(false); return; } // 사용자가 팝업 닫음
-    console.error('connectAbstractWallet', e);
+    if (e.message === 'popup_closed') { _resolveWallet(false); return; }
+    console.error('[AGW] connectAbstractWallet error:', e);
     alert('Abstract 지갑 연결 실패: ' + e.message);
     _resolveWallet(false);
   }
