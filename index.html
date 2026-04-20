@@ -934,7 +934,7 @@ header{
     <div id="wallet-drop" style="display:none;position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1.5px solid #E8E0D0;border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,.18);min-width:190px;overflow:hidden;z-index:2000;">
       <div id="wdrop-addr" style="padding:8px 14px 6px;font-size:10px;color:#888;font-family:monospace;white-space:nowrap;border-bottom:1px solid #f0f0f0;overflow:hidden;text-overflow:ellipsis;"></div>
       <button onclick="disconnectWallet()" style="width:100%;padding:9px 14px;border:none;background:none;text-align:left;font-size:12px;font-weight:700;color:#E53935;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">🔌 Disconnect</button>
-      <button onclick="_closeWalletDrop();showWalletSelector()" style="width:100%;padding:9px 14px;border:none;background:none;text-align:left;font-size:12px;font-weight:700;color:#3A4BD4;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">🔄 Switch Wallet</button>
+      <button onclick="disconnectWallet();showWalletSelector()" style="width:100%;padding:9px 14px;border:none;background:none;text-align:left;font-size:12px;font-weight:700;color:#3A4BD4;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">🔄 Switch Wallet</button>
     </div>
   </div>
   <div class="h-profile-wrap" id="profile-wrap" style="display:none;">
@@ -5842,7 +5842,9 @@ async function connectAbstractWallet() {
       console.log('[AGW] provider details:', details);
       const base = details.custom_api_url || 'https://privy.abs.xyz';
       connectUrl  = details.custom_connect_url || (base + '/cross-app/connect');
-      sessionStorage.setItem('agw_connect_base', base);
+      const transactUrlFromDetails = details.custom_transact_url || (base + '/cross-app/transact');
+      sessionStorage.setItem('agw_connect_base',   base);
+      sessionStorage.setItem('agw_transact_url_d', transactUrlFromDetails);
     } catch(e) {
       console.warn('[AGW] provider details fetch failed, using fallback:', e.message);
     }
@@ -5947,66 +5949,38 @@ async function connectAbstractWallet() {
 }
 
 // ── AGW cross-app encrypted transaction request ───────────────────────────────
+// Delegates to @privy-io/cross-app-connect to ensure exact protocol compliance.
 async function _agwRequest(method, params) {
-  const sharedB64  = sessionStorage.getItem('agw_shared');
-  const pubKeyB64  = sessionStorage.getItem('agw_pub');
-  const transactUrl = sessionStorage.getItem('agw_transact_url') || 'https://privy.abs.xyz/cross-app/transact';
+  const sharedB64 = sessionStorage.getItem('agw_shared');
+  const pubKeyB64 = sessionStorage.getItem('agw_pub');
   if (!sharedB64 || !pubKeyB64) throw new Error('AGW not connected');
 
-  // Import fflate for zlib compression (required by Privy protocol)
-  const { zlibSync, unzlibSync } = await import('https://esm.sh/fflate@0.8.2');
-  const b64enc_safe = bytes => {
-    let s = ''; const a = new Uint8Array(bytes.buffer || bytes);
-    for (let i = 0; i < a.length; i += 8192) s += String.fromCharCode(...a.subarray(i, Math.min(i + 8192, a.length)));
-    return btoa(s);
+  // Write our stored connection into the library's localStorage key so it can
+  // reload it. Format: {address, sharedSecret, publicKey, exp}
+  const CONN_KEY  = `privy-caw:${AGW_APP_ID}:connection:smart-wallet`;
+  const CHAIN_KEY = `privy-caw:${AGW_APP_ID}:connection_chain_id:smart-wallet`;
+  try {
+    localStorage.setItem(CONN_KEY,  JSON.stringify({
+      address: WALLET_ADDRESS, sharedSecret: sharedB64, publicKey: pubKeyB64,
+      exp: Date.now() + 2 * 60 * 60 * 1000,
+    }));
+    localStorage.setItem(CHAIN_KEY, JSON.stringify(11124));
+  } catch(_) {}
+
+  // Import the library (handles all encryption + popup internally)
+  const { createPrivyCrossAppClient } = await import('https://esm.sh/@privy-io/cross-app-connect@0.5.7');
+  const abstractTestnet = {
+    id: 11124, name: 'Abstract Testnet',
+    nativeCurrency: { decimals: 18, name: 'Ether', symbol: 'ETH' },
+    rpcUrls: { default: { http: ['https://api.testnet.abs.xyz'] } },
   };
-  const b64dec = s => new Uint8Array([...atob(s)].map(c => c.charCodeAt(0)));
-
-  // Encrypt the request with AES-GCM using the shared secret
-  const keyBytes  = b64dec(sharedB64);
-  const encKey    = await crypto.subtle.importKey('raw', keyBytes, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
-  const reqJson   = JSON.stringify({ method, params, chainId: 11124 });
-  const compressed = zlibSync(new TextEncoder().encode(reqJson));
-  const iv        = crypto.getRandomValues(new Uint8Array(12));
-  const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, encKey, compressed));
-  const ivB64     = b64enc_safe(iv);
-  const encB64    = b64enc_safe(encrypted);
-
-  // Open transact popup
-  const u = new URL(transactUrl);
-  u.searchParams.set('requester_public_key', pubKeyB64);
-  u.searchParams.set('encrypted_request',    encB64);
-  u.searchParams.set('requester_origin',     window.location.origin);
-  u.searchParams.set('iv',                   ivB64);
-  u.searchParams.set('provider_app_id',      AGW_APP_ID);
-  u.searchParams.set('signout_enabled',      'true');
-  u.searchParams.set('v',                    '1');
-  const popup = window.open(u.href, 'agw-transact',
-    `width=460,height=640,popup=yes,left=${(screen.width-460)/2|0},top=${(screen.height-640)/2|0}`);
-  if (!popup) throw new Error('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');
-
-  // Wait for encrypted response
-  const result = await new Promise((resolve, reject) => {
-    const tid    = setTimeout(() => { cleanup(); reject(new Error('Transaction timeout')); }, 5*60*1000);
-    const pollId = setInterval(() => { if (popup.closed) { cleanup(); reject(new Error('User rejected')); } }, 300);
-    function cleanup() { clearTimeout(tid); clearInterval(pollId); window.removeEventListener('message', h); popup.close(); }
-    async function h(ev) {
-      if (!ev.data) return;
-      if (ev.data.type === 'PRIVY_CROSS_APP_ACTION_RESPONSE' && ev.data.encryptedResult) {
-        try {
-          const dec = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64dec(ev.data.iv) }, encKey, b64dec(ev.data.encryptedResult));
-          cleanup();
-          resolve(new TextDecoder().decode(unzlibSync(new Uint8Array(dec))));
-        } catch(e) { cleanup(); reject(e); }
-      } else if (ev.data.type === 'PRIVY_CROSS_APP_ACTION_ERROR') {
-        cleanup(); reject(new Error(ev.data.error || 'Transaction rejected'));
-      }
-    }
-    window.addEventListener('message', h);
+  const client = createPrivyCrossAppClient({
+    providerAppId:  AGW_APP_ID,
+    chains:         [abstractTestnet],
+    connectionOpts: { smartWalletMode: true },
   });
-
-  // Result is a JSON-encoded value (e.g. "\"0xhash\"" or "0xhash")
-  try { return JSON.parse(result); } catch(_) { return result; }
+  // client constructor loaded connection state from localStorage above
+  return client.sendRequest(method, params);
 }
 
 function _showWspMain() {
@@ -6046,7 +6020,8 @@ function _closeWalletDrop() {
 function disconnectWallet() {
   WALLET_ADDRESS = null;
   WALLET_SIGNER  = null;
-  ['agw_shared','agw_pub','agw_addr','agw_eoa','agw_transact_url','agw_connect_base'].forEach(k => sessionStorage.removeItem(k));
+  ['agw_shared','agw_pub','agw_addr','agw_eoa','agw_transact_url','agw_connect_base','agw_transact_url_d'].forEach(k => sessionStorage.removeItem(k));
+  try { [`privy-caw:${AGW_APP_ID}:connection:smart-wallet`,`privy-caw:${AGW_APP_ID}:connection_chain_id:smart-wallet`].forEach(k => localStorage.removeItem(k)); } catch(_) {}
   _closeWalletDrop();
   _updateWalletBtn();
 }
