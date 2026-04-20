@@ -5757,10 +5757,13 @@ const ABSTRACT_CHAIN = {
 };
 
 const ONCHAIN = {
-  HIVE:   '0xE46AfBa60F86D34F110d5ADC5Ea763dB883096dE',
-  TILE:   '0x175D30A5027BFb3C28F6ACA47FA5B95f912ad162',
-  MARKET: '0x49386B0d73Ac64BfD302ADd525712E2c5C0801A4',
+  HIVE:      '0xE46AfBa60F86D34F110d5ADC5Ea763dB883096dE',
+  TILE:      '0x175D30A5027BFb3C28F6ACA47FA5B95f912ad162',
+  MARKET:    '0x49386B0d73Ac64BfD302ADd525712E2c5C0801A4',
+  PAYMASTER: '0x8BCa39d4413AacaF5aE1FCEF499a7dB7045b22cB',
 };
+// general(bytes) selector + abi.encode(bytes("")) — for HiveRoomPaymaster general flow
+const PAYMASTER_INPUT = '0x8c5a344500000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000';
 
 const HIVE_ABI = [
   'function claim(uint256 amount, bytes calldata signature) external',
@@ -5930,8 +5933,11 @@ async function connectAbstractWallet() {
       request: async ({ method, params }) => {
         if (method === 'eth_requestAccounts' || method === 'eth_accounts') return [WALLET_ADDRESS];
         if (method === 'eth_chainId') return '0x2B74';
-        if (method === 'eth_estimateGas') return '0x493E0'; // 300000 — bypass RPC estimation; AGW uses paymaster
-        if (method === 'eth_sendTransaction' || method === 'eth_signTypedData_v4' || method === 'eth_sign') {
+        if (method === 'eth_estimateGas') return '0x493E0';
+        if (method === 'eth_sendTransaction') {
+          return _agwRequest(method, [_injectPaymaster(params && params[0])]);
+        }
+        if (method === 'eth_signTypedData_v4' || method === 'eth_sign') {
           return _agwRequest(method, params);
         }
         return new ethers.providers.JsonRpcProvider('https://api.testnet.abs.xyz').send(method, params || []);
@@ -5948,6 +5954,21 @@ async function connectAbstractWallet() {
     alert('Abstract 지갑 연결 실패: ' + e.message);
     _resolveWallet(false);
   }
+}
+
+// Injects HiveRoomPaymaster customData into any tx targeting our whitelisted contracts.
+function _injectPaymaster(tx) {
+  if (!tx) return tx;
+  const whitelist = [ONCHAIN.HIVE, ONCHAIN.TILE, ONCHAIN.MARKET].map(a => a.toLowerCase());
+  if (tx.to && whitelist.includes(tx.to.toLowerCase())) {
+    return {
+      ...tx,
+      customData: {
+        paymasterParams: { paymaster: ONCHAIN.PAYMASTER, paymasterInput: PAYMASTER_INPUT },
+      },
+    };
+  }
+  return tx;
 }
 
 // ── AGW cross-app encrypted transaction request ───────────────────────────────
@@ -6055,7 +6076,10 @@ function _tryRestoreAGWWallet() {
       if (method === 'eth_requestAccounts' || method === 'eth_accounts') return [WALLET_ADDRESS];
       if (method === 'eth_chainId') return '0x2B74';
       if (method === 'eth_estimateGas') return '0x493E0';
-      if (method === 'eth_sendTransaction' || method === 'eth_signTypedData_v4' || method === 'eth_sign') {
+      if (method === 'eth_sendTransaction') {
+        return _agwRequest(method, [_injectPaymaster(params && params[0])]);
+      }
+      if (method === 'eth_signTypedData_v4' || method === 'eth_sign') {
         return _agwRequest(method, params);
       }
       return new ethers.providers.JsonRpcProvider('https://api.testnet.abs.xyz').send(method, params || []);
