@@ -5878,16 +5878,47 @@ async function connectAbstractWallet() {
     if (!popup) { alert('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.'); _resolveWallet(false); return; }
 
     const code = await new Promise((resolve, reject) => {
-      const tid = setTimeout(() => { window.removeEventListener('message', h); reject(new Error('Login timeout (5min)')); }, 5*60*1000);
+      const storedState = sessionStorage.getItem('abs_s');
+      const tid = setTimeout(() => {
+        clearInterval(pollId);
+        window.removeEventListener('message', h);
+        reject(new Error('Login timeout (5min)'));
+      }, 5*60*1000);
+
       function h(e) {
-        if (!e.origin.endsWith('abs.xyz')) return;
-        console.log('[AGW] postMessage received:', e.data);
-        const d = e.data || {};
-        if (d.code && d.state === sessionStorage.getItem('abs_s')) {
-          clearTimeout(tid); window.removeEventListener('message', h); resolve(d.code);
+        // abs.xyz 또는 privy.io 모든 메시지 로깅
+        if (e.origin && (e.origin.includes('abs.xyz') || e.origin.includes('privy.io'))) {
+          console.log('[AGW] msg from', e.origin, ':', JSON.stringify(e.data));
+        } else return;
+
+        const d = e.data;
+        if (!d) return;
+
+        // 여러 가지 Privy/Abstract 메시지 형식 처리
+        const c = d.code
+               || d.authorization_code
+               || d.data?.code
+               || d.payload?.code
+               || d.response?.code;
+        const s = d.state || d.data?.state || d.payload?.state;
+
+        if (c && (!s || s === storedState)) {
+          clearTimeout(tid); clearInterval(pollId);
+          window.removeEventListener('message', h);
+          resolve(c);
         }
       }
       window.addEventListener('message', h);
+
+      // 팝업이 닫힌 경우 감지
+      const pollId = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(pollId);
+          clearTimeout(tid);
+          window.removeEventListener('message', h);
+          reject(new Error('popup_closed'));
+        }
+      }, 500);
     });
 
     const tok = await fetch('https://portal.abs.xyz/oauth/token', {
@@ -5929,6 +5960,7 @@ async function connectAbstractWallet() {
     _updateWalletBtn();
     _resolveWallet(true);
   } catch(e) {
+    if (e.message === 'popup_closed') { _resolveWallet(false); return; } // 사용자가 팝업 닫음
     console.error('connectAbstractWallet', e);
     alert('Abstract 지갑 연결 실패: ' + e.message);
     _resolveWallet(false);
