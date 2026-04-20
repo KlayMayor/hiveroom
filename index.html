@@ -932,7 +932,7 @@ header{
   <div id="wallet-wrap" style="position:relative;flex-shrink:0;display:none;">
     <button id="wallet-btn" onclick="walletBtnClick()" style="padding:5px 10px;border-radius:20px;border:1.5px solid #F2B830;background:#FFF8E8;color:#A87800;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">🔗 Wallet</button>
     <div id="wallet-drop" style="display:none;position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1.5px solid #E8E0D0;border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,.18);min-width:190px;overflow:hidden;z-index:2000;">
-      <div id="wdrop-addr" style="padding:8px 14px 6px;font-size:10px;color:#888;font-family:monospace;white-space:nowrap;border-bottom:1px solid #f0f0f0;overflow:hidden;text-overflow:ellipsis;"></div>
+      <div id="wdrop-addr" onclick="_copyWalletAddr()" style="padding:8px 14px 6px;font-size:12px;color:#555;font-family:monospace;white-space:nowrap;border-bottom:1px solid #f0f0f0;overflow:hidden;text-overflow:ellipsis;cursor:pointer;" title="Click to copy"></div>
       <button onclick="disconnectWallet()" style="width:100%;padding:9px 14px;border:none;background:none;text-align:left;font-size:12px;font-weight:700;color:#E53935;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">🔌 Disconnect</button>
       <button onclick="switchWallet()" style="width:100%;padding:9px 14px;border:none;background:none;text-align:left;font-size:12px;font-weight:700;color:#3A4BD4;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">🔄 Switch Wallet</button>
     </div>
@@ -1324,6 +1324,13 @@ header{
     <button class="rp-move-btn" id="rp-move-btn" onclick="openMoveOv()" style="display:none">🚚 <span data-i18n="move">Move</span></button>
     <button class="rp-buy-btn" id="rp-attend-btn" onclick="openAttendanceQuiz()" style="display:none;background:linear-gradient(135deg,#4A8A50,#2E6B35);margin-top:8px;">📅 <span data-i18n="checkin_btn">Check-in (+5 HIVE)</span></button>
     <button class="rp-move-btn" id="rp-nft-btn" onclick="mintNft()" style="display:none;margin-top:8px;background:#EEF0FF;border-color:#5B6CF2;color:#3A4BD4;">⬡ Mint NFT</button>
+    <div id="rp-nft-owner" style="display:none;margin-top:8px;padding:7px 10px;background:#F4F6FF;border-radius:10px;border:1px solid #C8CEFF;">
+      <div style="font-size:10px;color:#888;margin-bottom:3px;">⬡ NFT Owner</div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span id="rp-nft-owner-addr" style="font-family:monospace;font-size:11px;color:#3A4BD4;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+        <button onclick="_copyNftOwner()" style="border:none;background:none;cursor:pointer;font-size:13px;padding:0;line-height:1;" title="Copy">📋</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -3926,6 +3933,7 @@ function openRoomPanel(num){
     document.getElementById('rp-move-btn').style.display = 'block';
     document.getElementById('rp-attend-btn').style.display = 'none';
     document.getElementById('rp-nft-btn').style.display = 'none';
+    _hideNftOwner();
     checkAndShowNftBtn(num);
   } else if(room.reserved){
     buyBtn.style.display = 'none';
@@ -6030,9 +6038,15 @@ function walletBtnClick() {
   const opening = drop.style.display !== 'block';
   drop.style.display = opening ? 'block' : 'none';
   if (opening) {
-    document.getElementById('wdrop-addr').textContent =
-      WALLET_ADDRESS.slice(0,10) + '…' + WALLET_ADDRESS.slice(-6);
+    const el = document.getElementById('wdrop-addr');
+    el.textContent = WALLET_ADDRESS.slice(0,10) + '…' + WALLET_ADDRESS.slice(-6);
+    el.dataset.full = WALLET_ADDRESS;
   }
+}
+function _copyWalletAddr() {
+  const addr = document.getElementById('wdrop-addr')?.dataset.full;
+  if (!addr) return;
+  navigator.clipboard.writeText(addr).then(() => showToast('Copied!'));
 }
 
 function _closeWalletDrop() {
@@ -6194,16 +6208,47 @@ async function executeBurn() {
 
 // ── NFT Mint ─────────────────────────────────────────────────────────────────
 
+function _showNftOwner(addr) {
+  const el = document.getElementById('rp-nft-owner');
+  const addrEl = document.getElementById('rp-nft-owner-addr');
+  if (!el || !addrEl) return;
+  addrEl.textContent = addr.slice(0,10) + '…' + addr.slice(-6);
+  addrEl.dataset.full = addr;
+  el.style.display = 'block';
+}
+function _hideNftOwner() {
+  const el = document.getElementById('rp-nft-owner');
+  if (el) el.style.display = 'none';
+}
+function _copyNftOwner() {
+  const addr = document.getElementById('rp-nft-owner-addr')?.dataset.full;
+  if (!addr) return;
+  navigator.clipboard.writeText(addr).then(() => showToast('Copied!'));
+}
+
 async function checkAndShowNftBtn(tileNum) {
   const btn = document.getElementById('rp-nft-btn');
   if (!btn) return;
   btn.style.display = 'none';
+  btn.disabled = false;
+  btn.textContent = '⬡ Mint NFT';
   if (!WALLET_ADDRESS) return;
   try {
     const provider = new ethers.providers.JsonRpcProvider(ABSTRACT_CHAIN.rpcUrls[0]);
     const tile = new ethers.Contract(ONCHAIN.TILE, TILE_ABI, provider);
     const isMinted = await tile.minted(tileNum);
-    if (!isMinted) { btn.style.display = 'block'; btn.dataset.tile = tileNum; }
+    if (!isMinted) {
+      btn.style.display = 'block';
+      btn.dataset.tile = tileNum;
+    } else {
+      // Show NFT owner address in panel
+      try {
+        const fullABI = [...TILE_ABI, 'function ownerOf(uint256 tokenId) external view returns (address)'];
+        const tileOwner = new ethers.Contract(ONCHAIN.TILE, fullABI, provider);
+        const owner = await tileOwner.ownerOf(tileNum);
+        _showNftOwner(owner);
+      } catch(_) {}
+    }
   } catch(e) { console.error('checkAndShowNftBtn', e); }
 }
 
