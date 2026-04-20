@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Connecting...</title>
+  <style>
+    body { font-family: sans-serif; display: flex; align-items: center; justify-content: center;
+           height: 100vh; margin: 0; background: #f5f7ff; color: #3A4BD4; }
+    p { font-size: 14px; }
+  </style>
+</head>
+<body>
+  <p>Connecting Abstract Wallet...</p>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const code  = params.get('code');
+    const state = params.get('state');
+    const error = params.get('error');
+
+    if (window.opener && !window.opener.closed) {
+      window.opener.postMessage(
+        { type: 'agw_oauth_callback', code, state, error },
+        window.location.origin
+      );
+      window.close();
+    } else {
+      document.querySelector('p').textContent = 'Authentication complete. You can close this window.';
+    }
+  </script>
+</body>
+</html>

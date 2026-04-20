@@ -5864,10 +5864,13 @@ async function connectAbstractWallet() {
     sessionStorage.setItem('abs_v', verifier);
     sessionStorage.setItem('abs_s', state);
 
+    const REDIRECT_URI = window.location.origin + '/oauth-callback.html';
+
     const oauthQ = new URLSearchParams({
       app_id: AGW_APP_ID, client_id: AGW_CLIENT_ID,
       scope: 'accounts', response_type: 'code',
       state, code_challenge: challenge, code_challenge_method: 'S256',
+      redirect_uri: REDIRECT_URI,
     }).toString();
 
     const popup = window.open(
@@ -5886,27 +5889,33 @@ async function connectAbstractWallet() {
       }, 5*60*1000);
 
       function h(e) {
-        // abs.xyz 또는 privy.io 모든 메시지 로깅
+        // oauth-callback.html 에서 보낸 메시지 (same-origin)
+        if (e.origin === window.location.origin) {
+          const d = e.data || {};
+          if (d.type === 'agw_oauth_callback') {
+            console.log('[AGW] callback received:', d);
+            clearTimeout(tid); clearInterval(pollId);
+            window.removeEventListener('message', h);
+            if (d.error) { reject(new Error('OAuth error: ' + d.error)); return; }
+            if (d.code && (!d.state || d.state === storedState)) { resolve(d.code); return; }
+            reject(new Error('Invalid callback: ' + JSON.stringify(d)));
+          }
+          return;
+        }
+        // abs.xyz / privy.io 에서 직접 postMessage 오는 경우도 처리
         if (e.origin && (e.origin.includes('abs.xyz') || e.origin.includes('privy.io'))) {
           console.log('[AGW] msg from', e.origin, ':', JSON.stringify(e.data));
-        } else return;
-
-        const d = e.data;
-        if (!d) return;
-
-        // 여러 가지 Privy/Abstract 메시지 형식 처리
-        const c = d.code
-               || d.authorization_code
-               || d.data?.code
-               || d.payload?.code
-               || d.response?.code;
-        const s = d.state || d.data?.state || d.payload?.state;
-
-        if (c && (!s || s === storedState)) {
-          clearTimeout(tid); clearInterval(pollId);
-          window.removeEventListener('message', h);
-          resolve(c);
+          const d = e.data || {};
+          const c = d.code || d.authorization_code || d.data?.code;
+          const s = d.state || d.data?.state;
+          if (c && (!s || s === storedState)) {
+            clearTimeout(tid); clearInterval(pollId);
+            window.removeEventListener('message', h);
+            resolve(c);
+          }
         }
+      }
+      window.addEventListener('message', h);
       }
       window.addEventListener('message', h);
 
