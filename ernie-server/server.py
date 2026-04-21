@@ -27,9 +27,9 @@ print("모델 로드 중... 처음 실행 시 약 16GB 다운로드")
 print("=" * 50)
 
 try:
-    from diffusers import ERNIEImagePipeline
+    from diffusers import ErnieImagePipeline
 
-    pipe = ERNIEImagePipeline.from_pretrained(
+    pipe = ErnieImagePipeline.from_pretrained(
         "baidu/ERNIE-Image-Turbo",
         torch_dtype=torch.bfloat16,
     )
