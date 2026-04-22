@@ -267,7 +267,7 @@
     <div class="card-title">✏️ 프롬프트</div>
 
     <!-- 이미지 규격 — 숨김 -->
-    <textarea id="base-prompt" style="display:none;">Cute isometric illustration, fit inside a pointy-top regular hexagon, The hexagon proportions are width:height = √3:2 (approximately 0.87:1), meaning it is taller than it is wide. Design the isometric interior so it fills this vertically-oriented hexagonal boundary — wider in the middle, narrowing toward the top and bottom points. The overall canvas is square (1:1), with the hexagon centered and occupying about 87% of the canvas width. diamond shaped floor area, wall are divided 1:1 left and right side, vivid colors highlighted, kawaii cute Japanese inspired style, interior image without people, isometric 3/4 front view, white background,</textarea>
+    <textarea id="base-prompt" style="display:none;">Cute isometric illustration, fit inside a flat-top regular hexagon. The hexagon has flat horizontal edges at top and bottom, and pointed vertices on the left and right. Proportions are width:height = 2:√3 (approximately 1.15:1), meaning it is wider than it is tall. The overall canvas is square (1:1), with the hexagon centered. Design the isometric interior so it fills the entire hexagonal boundary — the floor forms a diamond shape at the bottom half, the back-left and back-right walls fill the upper half. Walls divided equally left and right. Vivid colors highlighted, kawaii cute Japanese inspired style, interior without people, isometric view from upper-front, white background outside the hexagon.</textarea>
 
     <!-- 빠른 선택 드롭다운 -->
     <label>이미지 설명</label>
@@ -556,12 +556,12 @@ function applyCanvas(src) {
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, size, size);
 
-      // Clip to pointy-top regular hexagon: center (512,512), r=480
+      // Clip to flat-top regular hexagon: center (512,512), r=480
       ctx.save();
       ctx.beginPath();
       const cx = 512, cy = 512, r = 480;
       for (let i = 0; i < 6; i++) {
-        const angle = (Math.PI / 3) * i - Math.PI / 2; // start at top
+        const angle = (Math.PI / 3) * i; // start at right (flat-top orientation)
         const x = cx + r * Math.cos(angle);
         const y = cy + r * Math.sin(angle);
         if (i === 0) ctx.moveTo(x, y);
