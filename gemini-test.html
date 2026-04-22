@@ -571,6 +571,22 @@ function applyCanvas(src) {
       ctx.clip();
       ctx.drawImage(img, 0, 0, size, size);
       ctx.restore();
+
+      // Draw masking outline on top
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI / 3) * i - Math.PI / 2;
+        const x = cx + r * Math.cos(angle);
+        const y = cy + r * Math.sin(angle);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.strokeStyle = 'rgba(255, 0, 0, 0.7)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([8, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
     } else {
       ctx.drawImage(img, 0, 0, size, size);
     }
