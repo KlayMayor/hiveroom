@@ -1,38 +1,70 @@
 """
-Draw Things CORS Proxy
-Run: python proxy.py
-Tunnel: cloudflared tunnel --url http://localhost:8000
+Draw Things CORS Proxy (no external dependencies)
+Run: python3 proxy.py
+Tunnel: ssh -R 80:localhost:8000 nokey@localhost.run
 """
 
-import uvicorn
-import httpx
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+import json
+import urllib.request
+import urllib.error
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
 DRAW_THINGS = "http://localhost:7860"
 
-@app.get("/")
-def health():
-    return {"status": "ok"}
+class Proxy(BaseHTTPRequestHandler):
+    def log_message(self, fmt, *args):
+        print(fmt % args)
 
-@app.post("/sdapi/v1/txt2img")
-async def txt2img(request: Request):
-    body = await request.json()
-    try:
-        async with httpx.AsyncClient(timeout=300.0) as client:
-            resp = await client.post(f"{DRAW_THINGS}/sdapi/v1/txt2img", json=body)
-            return JSONResponse(content=resp.json())
-    except httpx.ConnectError:
-        return JSONResponse(status_code=503, content={"error": "Draw Things에 연결할 수 없습니다. 앱이 열려 있고 API 서버가 활성화되어 있는지 확인하세요."})
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
+    def _cors(self):
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self._cors()
+        self.end_headers()
+
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self._cors()
+        self.end_headers()
+        self.wfile.write(b'{"status":"ok"}')
+
+    def do_POST(self):
+        length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(length)
+        req = urllib.request.Request(
+            DRAW_THINGS + self.path,
+            data=body,
+            headers={"Content-Type": "application/json"},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=300) as resp:
+                data = resp.read()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self._cors()
+            self.end_headers()
+            self.wfile.write(data)
+        except urllib.error.URLError as e:
+            err = json.dumps({"error": f"Draw Things 연결 실패: {e.reason}"}).encode()
+            self.send_response(503)
+            self.send_header("Content-Type", "application/json")
+            self._cors()
+            self.end_headers()
+            self.wfile.write(err)
+        except Exception as e:
+            err = json.dumps({"error": str(e)}).encode()
+            self.send_response(500)
+            self.send_header("Content-Type", "application/json")
+            self._cors()
+            self.end_headers()
+            self.wfile.write(err)
+
+if __name__ == "__main__":
+    server = HTTPServer(("", 8000), Proxy)
+    print("Proxy running on http://localhost:8000")
+    print(f"Forwarding to {DRAW_THINGS}")
+    server.serve_forever()
