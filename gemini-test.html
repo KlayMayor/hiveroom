@@ -238,8 +238,9 @@
 
     <label>모델 선택</label>
     <select id="model-select" onchange="onModelChange(this.value)">
-      <option value="gemini-3.1-flash-image-preview">gemini-3.1-flash-image-preview</option>
-      <option value="ernie-image-turbo">ERNIE-Image-Turbo (무료 · HuggingFace)</option>
+      <option value="gemini-3.1-flash-image-preview">gemini-3.1-flash-image-preview (Gemini API)</option>
+      <option value="flux-schnell-local">FLUX.1 Schnell (로컬 · Draw Things)</option>
+      <option value="ernie-image-turbo">ERNIE-Image-Turbo (로컬 · Draw Things)</option>
     </select>
 
     <div id="gemini-key-section">
@@ -370,9 +371,9 @@
 
 <script>
 function onModelChange(model) {
-  const isERNIE = model === 'ernie-image-turbo';
-  document.getElementById('gemini-key-section').style.display = isERNIE ? 'none' : '';
-  document.getElementById('ernie-hint-section').style.display  = isERNIE ? 'block' : 'none';
+  const isLocal = model === 'ernie-image-turbo' || model === 'flux-schnell-local';
+  document.getElementById('gemini-key-section').style.display = isLocal ? 'none' : '';
+  document.getElementById('ernie-hint-section').style.display  = isLocal ? 'block' : 'none';
 }
 
 function buildPrompt() {
@@ -425,21 +426,23 @@ async function generateImage(){
     let mimeType = 'image/png';
     let usedModel = model;
 
-    if(model === 'ernie-image-turbo'){
-      // ── ERNIE-Image-Turbo (Draw Things API — AUTOMATIC1111 호환) ──
+    if(model === 'ernie-image-turbo' || model === 'flux-schnell-local'){
+      // ── 로컬 Draw Things API (AUTOMATIC1111 호환) ──
       const serverUrl = (document.getElementById('ernie-server-url').value || 'http://127.0.0.1:7860').replace(/\/$/, '');
+      const isFlux    = model === 'flux-schnell-local';
+      const modelLabel = isFlux ? 'FLUX.1 Schnell' : 'ERNIE-Image-Turbo';
 
-      showStatus('loading', '🎨 Draw Things로 이미지 생성 중...');
+      showStatus('loading', `🎨 ${modelLabel} 이미지 생성 중...`);
       const res = await fetch(`${serverUrl}/sdapi/v1/txt2img`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: abort.signal,
         body: JSON.stringify({
           prompt,
-          steps: 8,
-          width: 768,
-          height: 768,
-          cfg_scale: 1
+          steps:     isFlux ? 4 : 8,
+          width:     768,
+          height:    768,
+          cfg_scale: isFlux ? 1 : 1
         })
       });
 
