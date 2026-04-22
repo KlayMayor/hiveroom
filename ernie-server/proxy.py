@@ -28,6 +28,11 @@ def health():
 @app.post("/sdapi/v1/txt2img")
 async def txt2img(request: Request):
     body = await request.json()
-    async with httpx.AsyncClient(timeout=300.0) as client:
-        resp = await client.post(f"{DRAW_THINGS}/sdapi/v1/txt2img", json=body)
-        return JSONResponse(content=resp.json())
+    try:
+        async with httpx.AsyncClient(timeout=300.0) as client:
+            resp = await client.post(f"{DRAW_THINGS}/sdapi/v1/txt2img", json=body)
+            return JSONResponse(content=resp.json())
+    except httpx.ConnectError:
+        return JSONResponse(status_code=503, content={"error": "Draw Things에 연결할 수 없습니다. 앱이 열려 있고 API 서버가 활성화되어 있는지 확인하세요."})
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
