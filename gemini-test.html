@@ -267,7 +267,7 @@
     <div class="card-title">✏️ 프롬프트</div>
 
     <!-- 이미지 규격 — 숨김 -->
-    <textarea id="base-prompt" style="display:none;">Cute kawaii isometric room illustration. Isometric 3D view of a room corner: a diamond-shaped floor at the bottom, a left wall and a right wall meeting at the top-center back corner. The scene naturally forms a hexagonal outline — one point at the very top, one point at the very bottom. White background. No people. Vivid pastel colors, Japanese kawaii cute style,</textarea>
+    <textarea id="base-prompt" style="display:none;">Cute kawaii isometric room illustration. Isometric 3D view of a room corner: a diamond-shaped floor at the bottom, a left wall and a right wall meeting at the top-center back corner. The scene naturally forms a hexagonal outline — one point at the very top, one point at the very bottom. The hexagon fills the entire image with no white border or margin outside it. No people. Vivid pastel colors, Japanese kawaii cute style,</textarea>
 
     <!-- 빠른 선택 드롭다운 -->
     <label>이미지 설명</label>
@@ -556,10 +556,10 @@ function applyCanvas(src) {
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, size, size);
 
-      // Clip to pointy-top regular hexagon: center (320,320), r=300
+      // Clip to pointy-top regular hexagon: center (320,320), r=265
       ctx.save();
       ctx.beginPath();
-      const cx = 320, cy = 320, r = 300;
+      const cx = 320, cy = 320, r = 265;
       for (let i = 0; i < 6; i++) {
         const angle = (Math.PI / 3) * i - Math.PI / 2; // start at top
         const x = cx + r * Math.cos(angle);
