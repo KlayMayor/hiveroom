@@ -432,7 +432,7 @@ async function generateImage(){
       showStatus('loading', '🎨 Draw Things로 이미지 생성 중...');
       const res = await fetch(`${serverUrl}/sdapi/v1/txt2img`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'localtonet-skip-warning': '1' },
         signal: abort.signal,
         body: JSON.stringify({
           prompt,
