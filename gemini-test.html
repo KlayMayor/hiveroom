@@ -427,7 +427,8 @@ async function generateImage(){
 
     if(model === 'ernie-image-turbo'){
       // ── ERNIE-Image-Turbo (Draw Things API — AUTOMATIC1111 호환) ──
-      const serverUrl = (document.getElementById('ernie-server-url').value || 'http://127.0.0.1:7860').replace(/\/$/, '');
+      let serverUrl = (document.getElementById('ernie-server-url').value || 'http://127.0.0.1:7860').trim().replace(/\/$/, '');
+      if(serverUrl && !/^https?:\/\//i.test(serverUrl)) serverUrl = 'https://' + serverUrl;
 
       showStatus('loading', '🎨 Draw Things로 이미지 생성 중...');
       const res = await fetch(`${serverUrl}/sdapi/v1/txt2img`, {
