@@ -132,20 +132,20 @@
     height: auto;
     border-radius: var(--radius);
   }
-  .hex-mask-row {
+  .chk-label {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 8px;
-    margin-bottom: 12px;
-    font-size: 14px;
-    color: var(--text);
+    gap: 5px;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 2px 0;
   }
-  .hex-mask-row input[type=checkbox] {
-    width: 16px;
-    height: 16px;
+  .chk-label input[type=checkbox] {
+    width: 15px;
+    height: 15px;
     accent-color: var(--hdk);
     cursor: pointer;
+    flex-shrink: 0;
   }
   .hex-overlay {
     position: absolute;
@@ -232,35 +232,6 @@
     <p>HiveRoom 연동 전 API 동작 확인용</p>
   </div>
 
-  <!-- API 키 -->
-  <div class="card">
-    <div class="card-title">🔑 API 설정</div>
-
-    <label>모델 선택</label>
-    <select id="model-select" onchange="onModelChange(this.value)">
-      <option value="gemini-3.1-flash-image-preview">gemini-3.1-flash-image-preview</option>
-      <option value="ernie-image-turbo">ERNIE-Image-Turbo (무료 · HuggingFace)</option>
-    </select>
-
-    <div id="gemini-key-section">
-      <label style="margin-top:14px;">Gemini API Key</label>
-      <input type="password" id="api-key" placeholder="AIza...">
-      <div class="hint" style="margin-top:8px;">
-        🔗 <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--hdk);">Google AI Studio</a>에서 무료 발급 가능해요.<br>
-        이 페이지는 로컬에서만 사용하며 키가 전송되지 않아요.
-      </div>
-    </div>
-
-    <div id="ernie-hint-section" style="display:none;">
-      <label style="margin-top:14px;">서버 URL</label>
-      <input type="text" id="ernie-server-url" value="http://127.0.0.1:8000" placeholder="http://127.0.0.1:8000">
-      <div class="hint" style="margin-top:8px;">
-        🖥️ Mac Mini에서 <code>python3 ernie-server/proxy.py</code> 실행 후 사용하세요.<br>
-        외부 접속 시 ngrok 터널 URL을 입력하세요.<br>
-        Draw Things 앱 → 설정 → <strong>API 서버 활성화</strong> 필요.
-      </div>
-    </div>
-  </div>
 
   <!-- 프롬프트 -->
   <div class="card">
@@ -269,7 +240,7 @@
     <!-- 이미지 규격 — 숨김 -->
     <textarea id="base-prompt" style="display:none;">Cute kawaii isometric room illustration. Isometric 3D view of a room corner: a diamond-shaped floor at the bottom, a left wall and a right wall meeting at the top-center back corner. The scene naturally forms a hexagonal outline — one point at the very top, one point at the very bottom. The hexagon fills the entire image with no white border or margin outside it. No border frame, no outline stroke, no decorative edge around the hexagon — the walls and floor meet the hexagon boundary directly. No people. Vivid pastel colors, Japanese kawaii cute style,</textarea>
 
-    <!-- 빠른 선택 드롭다운 -->
+    <!-- 빠른 선택 -->
     <label>이미지 설명</label>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
       <div>
@@ -305,38 +276,46 @@
           <option value="nature-inspired">🌿 Nature-inspired</option>
         </select>
       </div>
-      <div>
-        <label style="margin-bottom:4px;">🖼️ Wall decorated with</label>
-        <select id="sel-wall" onchange="buildPrompt()">
-          <option value="">선택</option>
-          <option value="bright lights">💡 Bright lights</option>
-          <option value="paintings">🖼️ Paintings</option>
-          <option value="neon signs">🪩 Neon signs</option>
-          <option value="large windows">🪟 Large windows</option>
-          <option value="glass panels">🔲 Glass panels</option>
-          <option value="bookshelves">📚 Bookshelves</option>
-          <option value="hanging plants">🌿 Hanging plants</option>
-          <option value="fairy lights">✨ Fairy lights</option>
-          <option value="photo frames">🖼️ Photo frames</option>
-          <option value="mirrors">🪞 Mirrors</option>
-          <option value="tapestry">🎨 Tapestry</option>
-        </select>
+    </div>
+
+    <div style="margin-bottom:10px;">
+      <label style="margin-bottom:6px;">🖼️ Wall decorated with <small style="color:#999;font-weight:400;">(최대 2개)</small></label>
+      <div id="wall-checks" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-top:4px;">
+        <label class="chk-label"><input type="checkbox" name="wall" value="bright lights"   onchange="limitChecks('wall',2);buildPrompt()"> 💡 Bright lights</label>
+        <label class="chk-label"><input type="checkbox" name="wall" value="paintings"        onchange="limitChecks('wall',2);buildPrompt()"> 🖼️ Paintings</label>
+        <label class="chk-label"><input type="checkbox" name="wall" value="neon signs"       onchange="limitChecks('wall',2);buildPrompt()"> 🪩 Neon signs</label>
+        <label class="chk-label"><input type="checkbox" name="wall" value="large windows"    onchange="limitChecks('wall',2);buildPrompt()"> 🪟 Large windows</label>
+        <label class="chk-label"><input type="checkbox" name="wall" value="glass panels"     onchange="limitChecks('wall',2);buildPrompt()"> 🔲 Glass panels</label>
+        <label class="chk-label"><input type="checkbox" name="wall" value="bookshelves"      onchange="limitChecks('wall',2);buildPrompt()"> 📚 Bookshelves</label>
+        <label class="chk-label"><input type="checkbox" name="wall" value="hanging plants"   onchange="limitChecks('wall',2);buildPrompt()"> 🌿 Hanging plants</label>
+        <label class="chk-label"><input type="checkbox" name="wall" value="fairy lights"     onchange="limitChecks('wall',2);buildPrompt()"> ✨ Fairy lights</label>
+        <label class="chk-label"><input type="checkbox" name="wall" value="photo frames"     onchange="limitChecks('wall',2);buildPrompt()"> 🖼️ Photo frames</label>
+        <label class="chk-label"><input type="checkbox" name="wall" value="mirrors"          onchange="limitChecks('wall',2);buildPrompt()"> 🪞 Mirrors</label>
+        <label class="chk-label"><input type="checkbox" name="wall" value="tapestry"         onchange="limitChecks('wall',2);buildPrompt()"> 🎨 Tapestry</label>
       </div>
-      <div>
-        <label style="margin-bottom:4px;">🪑 Furnitures</label>
-        <select id="sel-furniture" onchange="buildPrompt()">
-          <option value="">선택</option>
-          <option value="sofa and coffee table">🛋️ Sofa &amp; Coffee table</option>
-          <option value="bed and nightstand">🛏️ Bed &amp; Nightstand</option>
-          <option value="computer desk and chair">💻 Computer desk &amp; Chair</option>
-          <option value="dining table and chairs">🪑 Dining table &amp; Chairs</option>
-          <option value="bookshelf and armchair">📚 Bookshelf &amp; Armchair</option>
-          <option value="gaming setup with RGB lighting">🎮 Gaming setup</option>
-          <option value="kitchen counter and bar stools">🍳 Kitchen counter &amp; Stools</option>
-          <option value="wardrobe and dresser">👗 Wardrobe &amp; Dresser</option>
-          <option value="study desk and lamp">📖 Study desk &amp; Lamp</option>
-          <option value="piano and music stand">🎹 Piano &amp; Music stand</option>
-        </select>
+    </div>
+
+    <div style="margin-bottom:10px;">
+      <label style="margin-bottom:6px;">🪑 Furnitures <small style="color:#999;font-weight:400;">(최대 5개)</small></label>
+      <div id="furniture-checks" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-top:4px;">
+        <label class="chk-label"><input type="checkbox" name="furniture" value="sofa"           onchange="limitChecks('furniture',5);buildPrompt()"> 🛋️ Sofa</label>
+        <label class="chk-label"><input type="checkbox" name="furniture" value="coffee table"   onchange="limitChecks('furniture',5);buildPrompt()"> ☕ Coffee table</label>
+        <label class="chk-label"><input type="checkbox" name="furniture" value="bed"            onchange="limitChecks('furniture',5);buildPrompt()"> 🛏️ Bed</label>
+        <label class="chk-label"><input type="checkbox" name="furniture" value="nightstand"     onchange="limitChecks('furniture',5);buildPrompt()"> 🌙 Nightstand</label>
+        <label class="chk-label"><input type="checkbox" name="furniture" value="computer desk"  onchange="limitChecks('furniture',5);buildPrompt()"> 💻 Computer desk</label>
+        <label class="chk-label"><input type="checkbox" name="furniture" value="office chair"   onchange="limitChecks('furniture',5);buildPrompt()"> 🪑 Office chair</label>
+        <label class="chk-label"><input type="checkbox" name="furniture" value="dining table"   onchange="limitChecks('furniture',5);buildPrompt()"> 🍽️ Dining table</label>
+        <label class="chk-label"><input type="checkbox" name="furniture" value="bookshelf"      onchange="limitChecks('furniture',5);buildPrompt()"> 📚 Bookshelf</label>
+        <label class="chk-label"><input type="checkbox" name="furniture" value="armchair"       onchange="limitChecks('furniture',5);buildPrompt()"> 💺 Armchair</label>
+        <label class="chk-label"><input type="checkbox" name="furniture" value="gaming setup"   onchange="limitChecks('furniture',5);buildPrompt()"> 🎮 Gaming setup</label>
+        <label class="chk-label"><input type="checkbox" name="furniture" value="wardrobe"       onchange="limitChecks('furniture',5);buildPrompt()"> 👗 Wardrobe</label>
+        <label class="chk-label"><input type="checkbox" name="furniture" value="dresser"        onchange="limitChecks('furniture',5);buildPrompt()"> 🪞 Dresser</label>
+        <label class="chk-label"><input type="checkbox" name="furniture" value="study desk"     onchange="limitChecks('furniture',5);buildPrompt()"> 📖 Study desk</label>
+        <label class="chk-label"><input type="checkbox" name="furniture" value="floor lamp"     onchange="limitChecks('furniture',5);buildPrompt()"> 💡 Floor lamp</label>
+        <label class="chk-label"><input type="checkbox" name="furniture" value="piano"          onchange="limitChecks('furniture',5);buildPrompt()"> 🎹 Piano</label>
+        <label class="chk-label"><input type="checkbox" name="furniture" value="music stand"    onchange="limitChecks('furniture',5);buildPrompt()"> 🎵 Music stand</label>
+        <label class="chk-label"><input type="checkbox" name="furniture" value="indoor plant"   onchange="limitChecks('furniture',5);buildPrompt()"> 🪴 Indoor plant</label>
+        <label class="chk-label"><input type="checkbox" name="furniture" value="kitchen counter" onchange="limitChecks('furniture',5);buildPrompt()"> 🍳 Kitchen counter</label>
       </div>
     </div>
     <textarea id="prompt" placeholder="또는 직접 입력하세요..."></textarea>
@@ -351,11 +330,6 @@
   <!-- 결과 -->
   <div class="card result-area" id="result-area" style="margin-top:16px;">
     <div class="card-title">🎨 생성 결과</div>
-    <div class="hex-mask-row">
-      <input type="checkbox" id="hex-mask" checked
-        onchange="if(window._lastImgSrc) applyCanvas(window._lastImgSrc)">
-      <label for="hex-mask" style="cursor:pointer;">🔷 육각형 마스킹 적용</label>
-    </div>
     <div class="result-img-wrap">
       <canvas id="result-canvas" width="1024" height="1024"></canvas>
     </div>
@@ -369,21 +343,25 @@
 </div>
 
 <script>
-function onModelChange(model) {
-  const isERNIE = model === 'ernie-image-turbo';
-  document.getElementById('gemini-key-section').style.display = isERNIE ? 'none' : '';
-  document.getElementById('ernie-hint-section').style.display  = isERNIE ? 'block' : 'none';
+const PROXY_URL = 'https://oval-trombone-obedience.ngrok-free.dev';
+
+function limitChecks(name, max) {
+  const boxes = document.querySelectorAll(`input[name="${name}"]`);
+  const checked = [...boxes].filter(b => b.checked);
+  if (checked.length > max) {
+    checked[checked.length - 1].checked = false;
+  }
 }
 
 function buildPrompt() {
-  const room      = document.getElementById('sel-room').value;
-  const mood      = document.getElementById('sel-mood').value;
-  const wall      = document.getElementById('sel-wall').value;
-  const furniture = document.getElementById('sel-furniture').value;
-  if (!room && !mood && !wall && !furniture) return;
+  const room = document.getElementById('sel-room').value;
+  const mood = document.getElementById('sel-mood').value;
+  const walls = [...document.querySelectorAll('input[name="wall"]:checked')].map(b => b.value);
+  const furns = [...document.querySelectorAll('input[name="furniture"]:checked')].map(b => b.value);
+  if (!room && !mood && !walls.length && !furns.length) return;
   let sentence = (mood ? mood + ' ' : '') + (room || '');
-  if (wall)      sentence += ' with ' + wall + ' on wall';
-  if (furniture) sentence += ', ' + furniture + ' placed';
+  if (walls.length)  sentence += ' with ' + walls.join(' and ') + ' on wall';
+  if (furns.length)  sentence += ', ' + furns.join(', ') + ' placed';
   document.getElementById('prompt').value = sentence.trim();
 }
 
@@ -403,13 +381,10 @@ function hideStatus(){
 }
 
 async function generateImage(){
-  const key         = document.getElementById('api-key').value.trim();
-  const model       = document.getElementById('model-select').value;
   const basePrompt  = document.getElementById('base-prompt').value.trim();
   const userPrompt  = document.getElementById('prompt').value.trim();
   const prompt      = userPrompt ? basePrompt + ' ' + userPrompt : basePrompt;
 
-  if(model !== 'ernie-image-turbo' && !key) { showStatus('error', '❌ API 키를 입력해주세요.'); return; }
   if(!userPrompt){ showStatus('error', '❌ 이미지 설명을 입력해주세요.'); return; }
 
   const btn = document.getElementById('gen-btn');
@@ -423,100 +398,34 @@ async function generateImage(){
   try {
     let imageBase64 = null;
     let mimeType = 'image/png';
-    let usedModel = model;
 
-    if(model === 'ernie-image-turbo'){
-      // ── ERNIE-Image-Turbo (fetch → proxy.py → Draw Things) ──
-      let serverUrl = (document.getElementById('ernie-server-url').value || 'http://127.0.0.1:8000').trim().replace(/\/$/, '');
-      if(serverUrl && !/^https?:\/\//i.test(serverUrl)) serverUrl = 'https://' + serverUrl;
+    showStatus('loading', '🎨 이미지 생성 중...');
+    const res = await fetch(`${PROXY_URL}/sdapi/v1/txt2img`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: abort.signal,
+      body: JSON.stringify({ prompt, steps: 9, width: 640, height: 640, cfg_scale: 1 })
+    });
 
-      showStatus('loading', '🎨 Draw Things로 이미지 생성 중...');
-      const res = await fetch(`${serverUrl}/sdapi/v1/txt2img`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: abort.signal,
-        body: JSON.stringify({ prompt, steps: 9, width: 640, height: 640, cfg_scale: 1 })
-      });
-
-      if(!res.ok){
-        let errMsg = `HTTP ${res.status}`;
-        try { const e = await res.json(); errMsg = e?.error || e?.detail || JSON.stringify(e); } catch{}
-        throw new Error(`서버 연결 실패. proxy.py 실행 여부를 확인해주세요. (${errMsg})`);
-      }
-
-      const data = await res.json();
-      const b64 = data?.images?.[0];
-      if(!b64) throw new Error('이미지 데이터 없음. 응답: ' + JSON.stringify(data).slice(0, 200));
-      imageBase64 = b64;
-      mimeType = 'image/png';
-
-    } else if(model.startsWith('imagen-')){
-      // ── Imagen 3 (유료) — generateImages 엔드포인트 ──
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateImages?key=${key}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            prompt: prompt,
-            sampleCount: 1,
-            aspectRatio: '1:1',
-            outputMimeType: 'image/jpeg'
-          })
-        }
-      );
-      if(!res.ok){
-        const err = await res.json();
-        const msg = err?.error?.message || `HTTP ${res.status}`;
-        if(res.status === 400 || res.status === 403 || res.status === 404){
-          throw new Error(msg + '\n💡 Imagen 3은 결제 수단이 등록된 Google AI Studio 계정이 필요합니다.');
-        }
-        throw new Error(msg);
-      }
-      const data = await res.json();
-      const imgObj = data?.generatedImages?.[0];
-      imageBase64 = imgObj?.image?.imageBytes ?? imgObj?.bytesBase64Encoded;
-      mimeType = imgObj?.mimeType ?? imgObj?.image?.mimeType ?? 'image/jpeg';
-
-    } else {
-      // ── Gemini (generateContent) ──
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: abort.signal,
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { responseModalities: ['TEXT', 'IMAGE'] }
-          })
-        }
-      );
-      if(!res.ok){
-        let errMsg = `HTTP ${res.status}`;
-        try { const e = await res.json(); errMsg = e?.error?.message || errMsg; } catch{}
-        throw new Error(errMsg);
-      }
-      const data = await res.json();
-      const parts = data?.candidates?.[0]?.content?.parts || [];
-      const imgPart = parts.find(p => p.inlineData?.mimeType?.startsWith('image/'));
-      if(!imgPart){
-        const textPart = parts.find(p => p.text);
-        throw new Error('이미지가 반환되지 않았어요.' + (textPart ? ' 모델 응답: ' + textPart.text.slice(0,100) : ''));
-      }
-      imageBase64 = imgPart.inlineData.data;
-      mimeType = imgPart.inlineData.mimeType;
+    if(!res.ok){
+      let errMsg = `HTTP ${res.status}`;
+      try { const e = await res.json(); errMsg = e?.error || e?.detail || JSON.stringify(e); } catch{}
+      throw new Error(`서버 연결 실패 (${errMsg})`);
     }
+
+    const data = await res.json();
+    const b64 = data?.images?.[0];
+    if(!b64) throw new Error('이미지 데이터 없음');
+    imageBase64 = b64;
 
     if(!imageBase64) throw new Error('이미지 데이터가 없어요.');
 
-    // 결과 표시
     const src = `data:${mimeType};base64,${imageBase64}`;
     window._lastImgSrc = src;
     window._lastMime = mimeType;
 
     document.getElementById('meta-row').innerHTML = `
-      <span class="meta-badge">모델: ${usedModel.split('-').slice(0,3).join('-')}</span>
+      <span class="meta-badge">ERNIE-Image-Turbo</span>
       <span class="meta-badge">형식: ${mimeType}</span>
       <span class="meta-badge">✅ 생성 완료</span>
     `;
@@ -545,45 +454,23 @@ function applyCanvas(src) {
     canvas.height = size;
     ctx.clearRect(0, 0, size, size);
 
-    if (document.getElementById('hex-mask').checked) {
-      // White background outside hexagon
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, size, size);
-
-      // Clip to pointy-top regular hexagon: center (320,320), r=265
-      ctx.save();
-      ctx.beginPath();
-      const cx = 320, cy = 330, r = 275;
-      for (let i = 0; i < 6; i++) {
-        const angle = (Math.PI / 3) * i - Math.PI / 2; // start at top
-        const x = cx + r * Math.cos(angle);
-        const y = cy + r * Math.sin(angle);
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.closePath();
-      ctx.clip();
-      ctx.drawImage(img, 0, 0, size, size);
-      ctx.restore();
-
-      // Draw masking outline on top
-      ctx.beginPath();
-      for (let i = 0; i < 6; i++) {
-        const angle = (Math.PI / 3) * i - Math.PI / 2;
-        const x = cx + r * Math.cos(angle);
-        const y = cy + r * Math.sin(angle);
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.closePath();
-      ctx.strokeStyle = 'rgba(255, 0, 0, 0.7)';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([8, 4]);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    } else {
-      ctx.drawImage(img, 0, 0, size, size);
+    // Always apply hexagon masking
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, size, size);
+    ctx.save();
+    ctx.beginPath();
+    const cx = 320, cy = 330, r = 275;
+    for (let i = 0; i < 6; i++) {
+      const angle = (Math.PI / 3) * i - Math.PI / 2;
+      const x = cx + r * Math.cos(angle);
+      const y = cy + r * Math.sin(angle);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
     }
+    ctx.closePath();
+    ctx.clip();
+    ctx.drawImage(img, 0, 0, size, size);
+    ctx.restore();
   };
   img.src = src;
 }
