@@ -182,6 +182,29 @@ header{
 .con-finish-btn{padding:5px 14px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.5);color:#fff;border-radius:14px;font-size:11px;font-weight:700;font-family:'Noto Sans KR',sans-serif;cursor:pointer;opacity:.4;pointer-events:none;transition:all .15s;}
 .con-finish-btn.on{opacity:1;pointer-events:auto;}
 .con-finish-btn.on:hover{background:rgba(255,255,255,.3);}
+@keyframes finish-flash{
+  0%,100%{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.5);}
+  50%{background:rgba(255,220,50,.5);border-color:rgba(255,220,50,.9);box-shadow:0 0 16px rgba(255,220,50,.8);}
+}
+.con-finish-btn.flash{animation:finish-flash .7s ease-in-out 4;}
+/* AI gen section */
+.ai-gen-section{padding:8px 12px;background:#fff;border-top:1px solid var(--border);display:flex;gap:10px;align-items:center;flex-shrink:0;}
+.ai-canvas-wrap{width:88px;height:88px;flex-shrink:0;background:#f4f2ef;border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+#ai-room-canvas{width:88px;height:88px;display:block;}
+.ai-btn-col{flex:1;display:flex;flex-direction:column;gap:6px;}
+.ai-gen-btn{padding:8px;background:#F7A800;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .15s;}
+.ai-gen-btn:disabled{opacity:.5;cursor:not-allowed;}
+.ai-regen-btn{padding:6px;background:#f0ece4;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;}
+.ai-regen-btn:disabled{opacity:.4;cursor:not-allowed;}
+#ai-gen-status{font-size:10px;color:#888;min-height:13px;}
+/* AI pane */
+.ai-pane-inner{padding:10px 12px;}
+.ai-pane-inner .ai-sect{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.4px;text-transform:uppercase;margin:10px 0 4px;display:block;}
+.ai-pane-inner .ai-sect:first-child{margin-top:4px;}
+.ai-pane-inner select{width:100%;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:#fff;margin-bottom:2px;}
+.ai-chk-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 6px;}
+.ai-chk-lbl{display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;padding:2px 0;}
+.ai-chk-lbl input[type=checkbox]{width:14px;height:14px;accent-color:#F7A800;flex-shrink:0;}
 .con-close-btn{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;}
 .con-close-btn:hover{background:rgba(255,255,255,.35);}
 .con-help-btn{padding:5px 11px;background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.35);color:#fff;border-radius:14px;font-size:11px;font-weight:700;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:all .15s;position:relative;}
@@ -1194,6 +1217,17 @@ header{
             <button class="ctrl-btn" title="Deselect" onclick="onCtrlDeselect()" style="font-size:10px;width:44px;color:#666;" data-i18n="ctrl_deselect">Desel</button>
             <button class="ctrl-btn" title="Delete" onclick="onCtrlDelete()" style="font-size:10px;width:36px;color:#C44;background:#FFF0F0;" data-i18n="ctrl_delete">Del</button>
           </div>
+          <!-- AI 이미지 생성 섹션 -->
+          <div class="ai-gen-section">
+            <div class="ai-canvas-wrap">
+              <canvas id="ai-room-canvas" width="640" height="640"></canvas>
+            </div>
+            <div class="ai-btn-col">
+              <button class="ai-gen-btn" id="ai-gen-btn" onclick="generateAIRoom()">✨ 이미지 생성</button>
+              <button class="ai-regen-btn" id="ai-regen-btn" onclick="generateAIRoom()" disabled>🔄 다시 생성</button>
+              <div id="ai-gen-status"></div>
+            </div>
+          </div>
         </div>
 
         <!-- 오른쪽: 에셋 선택 -->
@@ -1206,6 +1240,7 @@ header{
             <button class="atab"     onclick="switchTab(this,'furniture')">🪑 <span data-i18n="tab_furniture">Furniture</span></button>
             <button class="atab"     onclick="switchTab(this,'walldeco')">✨ <span data-i18n="tab_deco">Decor</span></button>
             <button class="atab"     onclick="switchTab(this,'item')">🎁 <span data-i18n="tab_item">Item</span></button>
+            <button class="atab"     onclick="switchTab(this,'ai')">✨ AI</button>
           </div>
 
           <div class="asset-pane on" id="pane-wall">
@@ -1229,15 +1264,76 @@ header{
             <div class="pane-sel-lbl none" id="sel-item" data-i18n="sel_none_multi">None (multi)</div>
           </div>
 
+          <div class="asset-pane" id="pane-ai">
+            <div class="ai-pane-inner">
+              <span class="ai-sect">🏠 Room Type</span>
+              <select id="con-sel-room" onchange="buildConsolePrompt()">
+                <option value="">-- Select --</option>
+                <option value="bedroom">🛏️ Bedroom</option>
+                <option value="living room">🛋️ Living room</option>
+                <option value="game room">🎮 Game room</option>
+                <option value="library room">📚 Library room</option>
+                <option value="study room">💻 Study room</option>
+                <option value="kitchen">🍳 Kitchen</option>
+                <option value="music room">🎵 Music room</option>
+                <option value="art studio">🎨 Art studio</option>
+                <option value="kids room">🧸 Kids room</option>
+                <option value="walk-in closet">👗 Walk-in closet</option>
+              </select>
+              <span class="ai-sect">🌈 Mood</span>
+              <select id="con-sel-mood" onchange="buildConsolePrompt()">
+                <option value="">-- Select --</option>
+                <option value="cozy">🏡 Cozy</option>
+                <option value="delighted">😊 Delighted</option>
+                <option value="light and airy">☀️ Light &amp; Airy</option>
+                <option value="dark and moody">🌑 Dark &amp; Moody</option>
+                <option value="colorful and vivid">🌈 Colorful &amp; Vivid</option>
+                <option value="clean and minimal">✨ Clean &amp; Minimal</option>
+                <option value="romantic">💕 Romantic</option>
+                <option value="retro">📺 Retro</option>
+                <option value="futuristic">🚀 Futuristic</option>
+                <option value="nature-inspired">🌿 Nature-inspired</option>
+              </select>
+              <span class="ai-sect">🖼️ Wall Deco <small style="text-transform:none;font-weight:400;">(max 2)</small></span>
+              <div class="ai-chk-grid">
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="bright lights"  onchange="limitConsoleChecks('con-wall',2);buildConsolePrompt()"> 💡 Bright lights</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="paintings"      onchange="limitConsoleChecks('con-wall',2);buildConsolePrompt()"> 🖼️ Paintings</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="neon signs"     onchange="limitConsoleChecks('con-wall',2);buildConsolePrompt()"> 🪩 Neon signs</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="large windows"  onchange="limitConsoleChecks('con-wall',2);buildConsolePrompt()"> 🪟 Large windows</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="fairy lights"   onchange="limitConsoleChecks('con-wall',2);buildConsolePrompt()"> ✨ Fairy lights</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="photo frames"   onchange="limitConsoleChecks('con-wall',2);buildConsolePrompt()"> 🖼️ Photo frames</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="mirrors"        onchange="limitConsoleChecks('con-wall',2);buildConsolePrompt()"> 🪞 Mirrors</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="hanging plants" onchange="limitConsoleChecks('con-wall',2);buildConsolePrompt()"> 🌿 Hanging plants</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="tapestry"       onchange="limitConsoleChecks('con-wall',2);buildConsolePrompt()"> 🎨 Tapestry</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="bookshelves"    onchange="limitConsoleChecks('con-wall',2);buildConsolePrompt()"> 📚 Bookshelves</label>
+              </div>
+              <span class="ai-sect">🪑 Furnitures <small style="text-transform:none;font-weight:400;">(max 5)</small></span>
+              <div class="ai-chk-grid">
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="sofa"            onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 🛋️ Sofa</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="coffee table"    onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> ☕ Coffee table</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="bed"             onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 🛏️ Bed</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="nightstand"      onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 🌙 Nightstand</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="computer desk"   onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 💻 Computer desk</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="office chair"    onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 🪑 Office chair</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="dining table"    onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 🍽️ Dining table</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="bookshelf"       onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 📚 Bookshelf</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="armchair"        onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 💺 Armchair</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="gaming setup"    onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 🎮 Gaming setup</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="wardrobe"        onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 👗 Wardrobe</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="dresser"         onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 🪞 Dresser</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="study desk"      onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 📖 Study desk</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="floor lamp"      onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 💡 Floor lamp</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="piano"           onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 🎹 Piano</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="music stand"     onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 🎵 Music stand</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="indoor plant"    onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 🪴 Indoor plant</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="kitchen counter" onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 🍳 Kitchen counter</label>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div><!-- /con-body-top -->
 
-      <!-- 하단: 광고 영역 (전체 너비) -->
-      <div class="preview-ad">
-        <!-- Google AdSense 가로형 광고 삽입 위치 -->
-        <!-- <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-XXXXXXXXXXXXXXXX" data-ad-slot="XXXXXXXXXX" data-ad-format="horizontal"></ins> -->
-        광고 영역
-      </div>
 
     </div>
   </div><!-- /#console -->
@@ -1999,6 +2095,101 @@ function switchTab(btn, cat) {
   document.getElementById('pane-'+cat).classList.add('on');
   // 모바일: 에셋 탭 클릭 시 자동으로 Assets 뷰로 전환
   if(window.innerWidth <= 768) mobSwitchView('assets');
+}
+
+// ══════════════════════════════════════
+// AI 이미지 생성
+// ══════════════════════════════════════
+const AI_PROXY_URL = 'https://oval-trombone-obedience.ngrok-free.app';
+const AI_BASE_PROMPT = 'Cute kawaii isometric room illustration. Isometric 3D view of a room corner: a diamond-shaped floor at the bottom, a left wall and a right wall meeting at the top-center back corner. The scene naturally forms a hexagonal outline — one point at the very top, one point at the very bottom. The hexagon fills the entire image with no white border or margin outside it. No border frame, no outline stroke, no decorative edge around the hexagon — the walls and floor meet the hexagon boundary directly. No people. Vivid pastel colors, Japanese kawaii cute style,';
+
+function limitConsoleChecks(name, max) {
+  const boxes = document.querySelectorAll(`input[name="${name}"]`);
+  const checked = Array.from(boxes).filter(b => b.checked);
+  if (checked.length > max) {
+    boxes.forEach(b => { if (!b.checked) b.disabled = true; });
+  } else {
+    boxes.forEach(b => b.disabled = false);
+  }
+}
+
+function buildConsolePrompt() {
+  const room = document.getElementById('ai-room-type')?.value || '';
+  const mood = document.getElementById('ai-mood')?.value || '';
+  const walls = Array.from(document.querySelectorAll('input[name="con-wall"]:checked')).map(b => b.value);
+  const furns = Array.from(document.querySelectorAll('input[name="con-furn"]:checked')).map(b => b.value);
+  let prompt = AI_BASE_PROMPT;
+  if (room) prompt += ` ${room},`;
+  if (mood) prompt += ` ${mood} mood,`;
+  if (walls.length) prompt += ` wall decorations: ${walls.join(', ')},`;
+  if (furns.length) prompt += ` furniture: ${furns.join(', ')},`;
+  return prompt;
+}
+
+async function generateAIRoom() {
+  const genBtn = document.getElementById('ai-gen-btn');
+  const regenBtn = document.getElementById('ai-regen-btn');
+  const status = document.getElementById('ai-gen-status');
+  genBtn.disabled = true;
+  regenBtn.disabled = true;
+  status.textContent = '생성 중...';
+  try {
+    const prompt = buildConsolePrompt();
+    const res = await fetch(`${AI_PROXY_URL}/sdapi/v1/txt2img`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' },
+      body: JSON.stringify({ prompt, steps: 9, width: 640, height: 640, cfg_scale: 1 })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const b64 = data.images?.[0];
+    if (!b64) throw new Error('이미지 없음');
+    await applyAICanvas('data:image/png;base64,' + b64);
+    status.textContent = '완료!';
+    regenBtn.disabled = false;
+    const finBtn = document.querySelector('.con-finish-btn');
+    if (finBtn) {
+      finBtn.classList.remove('flash');
+      void finBtn.offsetWidth;
+      finBtn.classList.add('flash');
+    }
+  } catch(e) {
+    status.textContent = '오류: ' + e.message;
+    regenBtn.disabled = false;
+  } finally {
+    genBtn.disabled = false;
+  }
+}
+
+function applyAICanvas(src) {
+  return new Promise((resolve, reject) => {
+    const canvas = document.getElementById('ai-room-canvas');
+    if (!canvas) return reject('canvas not found');
+    const ctx = canvas.getContext('2d');
+    const size = 640;
+    const img = new Image();
+    img.onload = () => {
+      ctx.clearRect(0, 0, size, size);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, size, size);
+      ctx.save();
+      ctx.beginPath();
+      const cx = 320, cy = 330, r = 275;
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI / 3) * i - Math.PI / 2;
+        const x = cx + r * Math.cos(angle);
+        const y = cy + r * Math.sin(angle);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.clip();
+      ctx.drawImage(img, 0, 0, size, size);
+      ctx.restore();
+      resolve();
+    };
+    img.onerror = reject;
+    img.src = src;
+  });
 }
 
 // ══════════════════════════════════════
