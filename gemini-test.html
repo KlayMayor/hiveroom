@@ -553,7 +553,7 @@ function applyCanvas(src) {
       // Clip to pointy-top regular hexagon: center (320,320), r=265
       ctx.save();
       ctx.beginPath();
-      const cx = 320, cy = 320, r = 275;
+      const cx = 320, cy = 330, r = 275;
       for (let i = 0; i < 6; i++) {
         const angle = (Math.PI / 3) * i - Math.PI / 2; // start at top
         const x = cx + r * Math.cos(angle);
