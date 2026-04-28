@@ -2096,6 +2096,74 @@ function switchTab(btn, cat) {
 const AI_PROXY_URL = 'https://oval-trombone-obedience.ngrok-free.dev';
 const AI_BASE_PROMPT = 'Cute kawaii isometric room illustration. Isometric 3D view of a room corner: a diamond-shaped floor at the bottom, a left wall and a right wall meeting at the top-center back corner. The scene forms a POINTY-TOP hexagonal silhouette — one sharp vertex at the very top, one sharp vertex at the very bottom, with the widest points at mid-height on the left and right sides. The hexagon is TALLER THAN WIDE (portrait orientation, vertical axis longer than horizontal axis). The hexagon fills the entire 640x640 image edge-to-edge with no white border or empty margin. No border frame, no outline stroke around the hexagon. The room walls and floor extend all the way to the hexagon boundary. No people. Vivid pastel colors, Japanese kawaii cute style,';
 
+function buildRoomTemplate() {
+  // 640×640 이소메트릭 방 구도 템플릿 (pointy-top 육각형 3등분)
+  const canvas = document.createElement('canvas');
+  canvas.width = 640; canvas.height = 640;
+  const ctx = canvas.getContext('2d');
+
+  const cx = 320, cy = 330, r = 275;
+  const vx = [], vy = [];
+  for (let i = 0; i < 6; i++) {
+    const angle = (Math.PI / 3) * i - Math.PI / 2;
+    vx[i] = cx + r * Math.cos(angle);
+    vy[i] = cy + r * Math.sin(angle);
+  }
+  // v[0]=TOP(320,55) v[1]=UR(558,193) v[2]=LR(558,468)
+  // v[3]=BOT(320,605) v[4]=LL(82,468) v[5]=UL(82,193)
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, 640, 640);
+
+  // 좌측 벽: TOP → UL → LL → CENTER (파스텔 블루-라벤더)
+  const lgLeft = ctx.createLinearGradient(vx[5], vy[5], cx, cy);
+  lgLeft.addColorStop(0, '#B8CCE8');
+  lgLeft.addColorStop(1, '#D0DCF0');
+  ctx.beginPath();
+  ctx.moveTo(vx[0], vy[0]);
+  ctx.lineTo(vx[5], vy[5]);
+  ctx.lineTo(vx[4], vy[4]);
+  ctx.lineTo(cx, cy);
+  ctx.closePath();
+  ctx.fillStyle = lgLeft;
+  ctx.fill();
+
+  // 우측 벽: TOP → CENTER → LR → UR (파스텔 핑크-베이지)
+  const lgRight = ctx.createLinearGradient(vx[1], vy[1], cx, cy);
+  lgRight.addColorStop(0, '#F0D0C0');
+  lgRight.addColorStop(1, '#F4DDD0');
+  ctx.beginPath();
+  ctx.moveTo(vx[0], vy[0]);
+  ctx.lineTo(cx, cy);
+  ctx.lineTo(vx[2], vy[2]);
+  ctx.lineTo(vx[1], vy[1]);
+  ctx.closePath();
+  ctx.fillStyle = lgRight;
+  ctx.fill();
+
+  // 바닥: CENTER → LL → BOTTOM → LR (따뜻한 크림-베이지)
+  const lgFloor = ctx.createLinearGradient(cx, cy, cx, vy[3]);
+  lgFloor.addColorStop(0, '#EDE0C8');
+  lgFloor.addColorStop(1, '#E8D8B8');
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(vx[4], vy[4]);
+  ctx.lineTo(vx[3], vy[3]);
+  ctx.lineTo(vx[2], vy[2]);
+  ctx.closePath();
+  ctx.fillStyle = lgFloor;
+  ctx.fill();
+
+  // 벽 경계선 (구도 강조용 얇은 선)
+  ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(vx[0], vy[0]); ctx.lineTo(cx, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(vx[4], vy[4]); ctx.lineTo(cx, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(vx[2], vy[2]); ctx.lineTo(cx, cy); ctx.stroke();
+
+  return canvas.toDataURL('image/png').split(',')[1];
+}
+
 function limitConsoleChecks(name, max) {
   const boxes = document.querySelectorAll(`input[name="${name}"]`);
   const checked = Array.from(boxes).filter(b => b.checked);
@@ -2143,10 +2211,19 @@ async function generateAIRoom() {
     const ta = document.getElementById('ai-prompt-input');
     const userPart = ta ? ta.value.trim() : buildConsolePrompt();
     const prompt = AI_BASE_PROMPT + (userPart ? ' ' + userPart : '');
-    const res = await fetch(`${AI_PROXY_URL}/sdapi/v1/txt2img`, {
+    const template = buildRoomTemplate();
+    const res = await fetch(`${AI_PROXY_URL}/sdapi/v1/img2img`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, steps: 9, width: 640, height: 640, cfg_scale: 1 })
+      body: JSON.stringify({
+        prompt,
+        init_images: [template],
+        denoising_strength: 0.78,
+        steps: 12,
+        width: 640,
+        height: 640,
+        cfg_scale: 3
+      })
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
