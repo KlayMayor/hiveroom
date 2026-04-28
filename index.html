@@ -2139,7 +2139,7 @@ async function generateAIRoom() {
     const prompt = AI_BASE_PROMPT + (userPart ? ' ' + userPart : '');
     const res = await fetch(`${AI_PROXY_URL}/sdapi/v1/txt2img`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt, steps: 9, width: 640, height: 640, cfg_scale: 1 })
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
