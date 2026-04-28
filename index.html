@@ -2094,7 +2094,7 @@ function switchTab(btn, cat) {
 // AI 이미지 생성
 // ══════════════════════════════════════
 const AI_PROXY_URL = 'https://oval-trombone-obedience.ngrok-free.dev';
-const AI_BASE_PROMPT = 'Cute kawaii isometric room illustration. Isometric 3D view of a room corner: a diamond-shaped floor at the bottom, a left wall and a right wall meeting at the top-center back corner. The scene naturally forms a hexagonal outline — one point at the very top, one point at the very bottom. The hexagon fills the entire image with no white border or margin outside it. No border frame, no outline stroke, no decorative edge around the hexagon — the walls and floor meet the hexagon boundary directly. No people. Vivid pastel colors, Japanese kawaii cute style,';
+const AI_BASE_PROMPT = 'Cute kawaii isometric room illustration. Isometric 3D view of a room corner: a diamond-shaped floor at the bottom, a left wall and a right wall meeting at the top-center back corner. The scene forms a POINTY-TOP hexagonal silhouette — one sharp vertex at the very top, one sharp vertex at the very bottom, with the widest points at mid-height on the left and right sides. The hexagon is TALLER THAN WIDE (portrait orientation, vertical axis longer than horizontal axis). The hexagon fills the entire 640x640 image edge-to-edge with no white border or empty margin. No border frame, no outline stroke around the hexagon. The room walls and floor extend all the way to the hexagon boundary. No people. Vivid pastel colors, Japanese kawaii cute style,';
 
 function limitConsoleChecks(name, max) {
   const boxes = document.querySelectorAll(`input[name="${name}"]`);
@@ -2133,10 +2133,11 @@ async function generateAIRoom() {
   // 경과 타이머
   const startTime = Date.now();
   let timerInterval = setInterval(() => {
-    const elapsed = ((Date.now() - startTime) / 1000).toFixed(0);
-    status.textContent = `Generating... ${elapsed}s`;
+    const sec = Math.floor((Date.now() - startTime) / 1000);
+    const m = Math.floor(sec / 60), s = sec % 60;
+    status.textContent = `Generating... ${m}m:${String(s).padStart(2,'0')}s (estimated 1:30)`;
   }, 1000);
-  status.textContent = 'Generating... 0s';
+  status.textContent = 'Generating... 0m:00s (estimated 1:30)';
 
   try {
     const ta = document.getElementById('ai-prompt-input');
@@ -2185,7 +2186,7 @@ function applyAICanvas(src) {
       ctx.save();
       ctx.beginPath();
       // 육각형 마스크: 700px 기준으로 스케일 (640→700: cx,cy,r * 700/640)
-      const cx = 350, cy = 360, r = 300;
+      const cx = 350, cy = 350, r = 300;
       for (let i = 0; i < 6; i++) {
         const angle = (Math.PI / 3) * i - Math.PI / 2;
         const x = cx + r * Math.cos(angle);
