@@ -26,11 +26,21 @@ class Proxy(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json")
-        self._cors()
-        self.end_headers()
-        self.wfile.write(b'{"status":"ok"}')
+        req = urllib.request.Request(DRAW_THINGS + self.path)
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                data = resp.read()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self._cors()
+            self.end_headers()
+            self.wfile.write(data)
+        except Exception:
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self._cors()
+            self.end_headers()
+            self.wfile.write(b'{"status":"ok"}')
 
     def do_POST(self):
         length = int(self.headers.get("Content-Length", 0))

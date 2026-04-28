@@ -188,18 +188,16 @@ header{
 }
 .con-finish-btn.flash{animation:finish-flash .7s ease-in-out 4;}
 /* AI gen section */
-.ai-gen-section{padding:8px 12px;background:#fff;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px;flex-shrink:0;}
+/* AI 액션 섹션 (오른쪽 하단) */
+.ai-action-section{padding:10px 12px;background:#fff;border-top:2px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;gap:8px;}
 .ai-prompt-ta{width:100%;box-sizing:border-box;resize:none;border:1.5px solid var(--border);border-radius:8px;font-size:12px;padding:7px 9px;font-family:'Noto Sans KR',sans-serif;line-height:1.5;color:#333;background:#fafaf8;}
 .ai-prompt-ta:focus{outline:none;border-color:var(--honey);}
-.ai-gen-row{display:flex;gap:10px;align-items:center;}
-.ai-canvas-wrap{width:88px;height:88px;flex-shrink:0;background:#f4f2ef;border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
-#ai-room-canvas{width:88px;height:88px;display:block;}
-.ai-btn-col{flex:1;display:flex;flex-direction:column;gap:6px;}
-.ai-gen-btn{padding:8px;background:#F7A800;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .15s;}
+.ai-action-row{display:flex;gap:8px;align-items:center;}
+.ai-gen-btn{flex:1;padding:9px 8px;background:#F7A800;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .15s;}
 .ai-gen-btn:disabled{opacity:.5;cursor:not-allowed;}
-.ai-regen-btn{padding:6px;background:#f0ece4;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;}
+.ai-regen-btn{padding:9px 10px;background:#f0ece4;border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;white-space:nowrap;}
 .ai-regen-btn:disabled{opacity:.4;cursor:not-allowed;}
-#ai-gen-status{font-size:10px;color:#888;min-height:13px;}
+#ai-gen-status{font-size:11px;color:#888;min-height:14px;}
 /* AI pane */
 .ai-pane-inner{padding:10px 12px;}
 .ai-pane-inner .ai-sect{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.4px;text-transform:uppercase;margin:10px 0 4px;display:block;}
@@ -239,8 +237,9 @@ header{
   flex:1;display:flex;flex-direction:column;
   align-items:center;justify-content:flex-start;
   gap:0;padding:12px 12px 8px;width:100%;
-  min-height:0;overflow-y:auto;
+  min-height:0;overflow-y:auto;position:relative;
 }
+#ai-preview-cv{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:460px;height:460px;pointer-events:none;display:none;border-radius:4px;}
 /* ── 하단 광고 영역 (전체 너비) ── */
 .preview-ad{
   height:90px;flex-shrink:0;
@@ -1203,6 +1202,8 @@ header{
             <div style="display:flex;flex-direction:column;align-items:center;">
               <canvas id="room-cv" width="700" height="700" style="width:460px;height:460px;display:block;"></canvas>
             </div>
+            <!-- AI 이미지 미리보기 오버레이 (생성 후 덮어씌움) -->
+            <canvas id="ai-preview-cv" width="700" height="700"></canvas>
           </div>
           <!-- 컨트롤 핸들 -->
           <div id="item-ctrl">
@@ -1219,20 +1220,6 @@ header{
             <div class="ctrl-sep"></div>
             <button class="ctrl-btn" title="Deselect" onclick="onCtrlDeselect()" style="font-size:10px;width:44px;color:#666;" data-i18n="ctrl_deselect">Desel</button>
             <button class="ctrl-btn" title="Delete" onclick="onCtrlDelete()" style="font-size:10px;width:36px;color:#C44;background:#FFF0F0;" data-i18n="ctrl_delete">Del</button>
-          </div>
-          <!-- AI 이미지 생성 섹션 -->
-          <div class="ai-gen-section">
-            <textarea id="ai-prompt-input" class="ai-prompt-ta" rows="3" placeholder="선택 항목이 자동으로 채워집니다..."></textarea>
-            <div class="ai-gen-row">
-              <div class="ai-canvas-wrap">
-                <canvas id="ai-room-canvas" width="640" height="640"></canvas>
-              </div>
-              <div class="ai-btn-col">
-                <button class="ai-gen-btn" id="ai-gen-btn" onclick="generateAIRoom()">✨ 이미지 생성</button>
-                <button class="ai-regen-btn" id="ai-regen-btn" onclick="generateAIRoom()" disabled>🔄 다시 생성</button>
-                <div id="ai-gen-status"></div>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -1325,6 +1312,16 @@ header{
                 <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="kitchen counter" onchange="limitConsoleChecks('con-furn',5)"> 🍳 Kitchen counter</label>
               </div>
             </div>
+          </div>
+
+          <!-- AI 액션 섹션: 프롬프트 + 버튼 -->
+          <div class="ai-action-section">
+            <textarea id="ai-prompt-input" class="ai-prompt-ta" rows="3" placeholder="Selections auto-filled here — editable"></textarea>
+            <div class="ai-action-row">
+              <button class="ai-gen-btn" id="ai-gen-btn" onclick="generateAIRoom()">✨ Generate</button>
+              <button class="ai-regen-btn" id="ai-regen-btn" onclick="generateAIRoom()" disabled>🔄 Regenerate</button>
+            </div>
+            <div id="ai-gen-status"></div>
           </div>
 
         </div>
@@ -2132,7 +2129,15 @@ async function generateAIRoom() {
   const status = document.getElementById('ai-gen-status');
   genBtn.disabled = true;
   regenBtn.disabled = true;
-  status.textContent = '생성 중...';
+
+  // 경과 타이머
+  const startTime = Date.now();
+  let timerInterval = setInterval(() => {
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(0);
+    status.textContent = `Generating... ${elapsed}s`;
+  }, 1000);
+  status.textContent = 'Generating... 0s';
+
   try {
     const ta = document.getElementById('ai-prompt-input');
     const userPart = ta ? ta.value.trim() : buildConsolePrompt();
@@ -2145,9 +2150,10 @@ async function generateAIRoom() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     const b64 = data.images?.[0];
-    if (!b64) throw new Error('이미지 없음');
+    if (!b64) throw new Error('No image returned');
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     await applyAICanvas('data:image/png;base64,' + b64);
-    status.textContent = '완료!';
+    status.textContent = `Done ✓ (${elapsed}s)`;
     regenBtn.disabled = false;
     const finBtn = document.querySelector('.con-finish-btn');
     if (finBtn) {
@@ -2156,19 +2162,21 @@ async function generateAIRoom() {
       finBtn.classList.add('flash');
     }
   } catch(e) {
-    status.textContent = '오류: ' + e.message;
+    status.textContent = 'Error: ' + e.message;
     regenBtn.disabled = false;
   } finally {
+    clearInterval(timerInterval);
     genBtn.disabled = false;
   }
 }
 
 function applyAICanvas(src) {
   return new Promise((resolve, reject) => {
-    const canvas = document.getElementById('ai-room-canvas');
+    // 미리보기 오버레이 캔버스에 그림 (700×700, display 460×460)
+    const canvas = document.getElementById('ai-preview-cv');
     if (!canvas) return reject('canvas not found');
     const ctx = canvas.getContext('2d');
-    const size = 640;
+    const size = 700;
     const img = new Image();
     img.onload = () => {
       ctx.clearRect(0, 0, size, size);
@@ -2176,7 +2184,8 @@ function applyAICanvas(src) {
       ctx.fillRect(0, 0, size, size);
       ctx.save();
       ctx.beginPath();
-      const cx = 320, cy = 330, r = 275;
+      // 육각형 마스크: 700px 기준으로 스케일 (640→700: cx,cy,r * 700/640)
+      const cx = 350, cy = 360, r = 300;
       for (let i = 0; i < 6; i++) {
         const angle = (Math.PI / 3) * i - Math.PI / 2;
         const x = cx + r * Math.cos(angle);
@@ -2187,6 +2196,7 @@ function applyAICanvas(src) {
       ctx.clip();
       ctx.drawImage(img, 0, 0, size, size);
       ctx.restore();
+      canvas.style.display = 'block';
       resolve();
     };
     img.onerror = reject;
