@@ -2265,22 +2265,56 @@ async function generateAIRoom() {
   }
 }
 
+function detectHexVertices(imgEl, size) {
+  // 임시 캔버스에 이미지 그리고 픽셀 스캔
+  const tmp = document.createElement('canvas');
+  tmp.width = tmp.height = size;
+  const tc = tmp.getContext('2d');
+  tc.drawImage(imgEl, 0, 0, size, size);
+  const data = tc.getImageData(0, 0, size, size).data;
+  const midX = Math.floor(size / 2);
+  const BG = 238; // 이 값 이상이면 배경(흰색)으로 판정
+
+  function isBg(x, y) {
+    const i = (y * size + x) * 4;
+    return data[i] >= BG && data[i+1] >= BG && data[i+2] >= BG;
+  }
+  // 중앙 열을 위에서 아래로 스캔 → 상단 꼭지점
+  let topY = -1;
+  for (let y = 0; y < size && topY < 0; y++) {
+    for (let dx = -2; dx <= 2; dx++) {
+      if (!isBg(midX + dx, y)) { topY = y; break; }
+    }
+  }
+  // 중앙 열을 아래에서 위로 스캔 → 하단 꼭지점
+  let botY = -1;
+  for (let y = size - 1; y >= 0 && botY < 0; y--) {
+    for (let dx = -2; dx <= 2; dx++) {
+      if (!isBg(midX + dx, y)) { botY = y; break; }
+    }
+  }
+  if (topY < 0 || botY < 0 || botY - topY < 10) {
+    return { cx: size / 2, cy: size / 2, r: size / 2 }; // 감지 실패 시 기본값
+  }
+  const r = (botY - topY) / 2;
+  return { cx: size / 2, cy: (topY + botY) / 2, r };
+}
+
 function applyAICanvas(src) {
   return new Promise((resolve, reject) => {
-    // 미리보기 오버레이 캔버스에 그림 (700×700, display 460×460)
     const canvas = document.getElementById('ai-preview-cv');
     if (!canvas) return reject('canvas not found');
     const ctx = canvas.getContext('2d');
     const size = 700;
     const img = new Image();
     img.onload = () => {
+      // 생성 이미지에서 육각형 상·하단 꼭지점 자동 감지
+      const { cx, cy, r } = detectHexVertices(img, size);
       ctx.clearRect(0, 0, size, size);
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, size, size);
       ctx.save();
       ctx.beginPath();
-      // 육각형 마스크: 700px 기준으로 스케일 (640→700: cx,cy,r * 700/640)
-      const cx = 350, cy = 350, r = 350; // hex 높이=700px=이미지 높이, 여백 없음
       for (let i = 0; i < 6; i++) {
         const angle = (Math.PI / 3) * i - Math.PI / 2;
         const x = cx + r * Math.cos(angle);

@@ -444,6 +444,36 @@ async function generateImage(){
   }
 }
 
+function detectHexVertices(imgEl, size) {
+  const tmp = document.createElement('canvas');
+  tmp.width = tmp.height = size;
+  const tc = tmp.getContext('2d');
+  tc.drawImage(imgEl, 0, 0, size, size);
+  const data = tc.getImageData(0, 0, size, size).data;
+  const midX = Math.floor(size / 2);
+  const BG = 238;
+  function isBg(x, y) {
+    const i = (y * size + x) * 4;
+    return data[i] >= BG && data[i+1] >= BG && data[i+2] >= BG;
+  }
+  let topY = -1;
+  for (let y = 0; y < size && topY < 0; y++) {
+    for (let dx = -2; dx <= 2; dx++) {
+      if (!isBg(midX + dx, y)) { topY = y; break; }
+    }
+  }
+  let botY = -1;
+  for (let y = size - 1; y >= 0 && botY < 0; y--) {
+    for (let dx = -2; dx <= 2; dx++) {
+      if (!isBg(midX + dx, y)) { botY = y; break; }
+    }
+  }
+  if (topY < 0 || botY < 0 || botY - topY < 10) {
+    return { cx: size / 2, cy: size / 2, r: size / 2 };
+  }
+  return { cx: size / 2, cy: (topY + botY) / 2, r: (botY - topY) / 2 };
+}
+
 function applyCanvas(src) {
   const img = new Image();
   img.onload = function() {
@@ -453,13 +483,11 @@ function applyCanvas(src) {
     canvas.width = size;
     canvas.height = size;
     ctx.clearRect(0, 0, size, size);
-
-    // Always apply hexagon masking
+    const { cx, cy, r } = detectHexVertices(img, size);
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, size, size);
     ctx.save();
     ctx.beginPath();
-    const cx = 320, cy = 320, r = 320; // hex 높이=640px=캔버스 높이
     for (let i = 0; i < 6; i++) {
       const angle = (Math.PI / 3) * i - Math.PI / 2;
       const x = cx + r * Math.cos(angle);
