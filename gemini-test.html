@@ -238,7 +238,7 @@
     <div class="card-title">✏️ 프롬프트</div>
 
     <!-- 이미지 규격 — 숨김 -->
-    <textarea id="base-prompt" style="display:none;">Cute kawaii isometric view room illustration. Strict isometric projection of a room interior corner. The back corner where two walls meet is at the very top-center of the image, forming the top vertex of a pointy-top hexagon. The left wall spreads diagonally from top-center down to the left side. The right wall spreads diagonally from top-center down to the right side. The floor is a diamond shape at the bottom, with its lowest point at the very bottom-center of the image. The entire composition fits inside a pointy-top hexagon that is taller than wide. Left wall visible on upper-left, right wall visible on upper-right, floor diamond at the bottom. No ceiling. No people. Vivid pastel colors, Japanese kawaii cute style, highly detailed clean illustration,</textarea>
+    <textarea id="base-prompt" style="display:none;">Cute kawaii isometric view room illustration. Strict isometric projection of a room interior showing three faces: left wall, right wall, and floor. The inner corner point where all three faces converge is placed exactly at the center of the image (320,320 in a 640x640 canvas). The left wall occupies the upper-left rhombus region. The right wall occupies the upper-right rhombus region. The floor diamond occupies the lower rhombus region, with its top vertex at the image center and its bottom vertex at the very bottom-center of the image. The overall silhouette is a regular pointy-top hexagon with all six sides equal length, taller than wide (height 600px, width 520px). Top vertex at top-center, bottom vertex at bottom-center, widest at mid-height. No ceiling. No people. Vivid pastel colors, Japanese kawaii cute style, highly detailed clean illustration,</textarea>
 
     <!-- 빠른 선택 -->
     <label>이미지 설명</label>
@@ -459,7 +459,7 @@ function applyCanvas(src) {
     ctx.fillRect(0, 0, size, size);
     ctx.save();
     ctx.beginPath();
-    const cx = 320, cy = 330, r = 275;
+    const cx = 320, cy = 320, r = 300; // 캔버스 정중앙, 정규 육각형
     for (let i = 0; i < 6; i++) {
       const angle = (Math.PI / 3) * i - Math.PI / 2;
       const x = cx + r * Math.cos(angle);
