@@ -2310,6 +2310,10 @@ function applyAICanvas(src) {
     img.onload = () => {
       // 생성 이미지에서 육각형 상·하단 꼭지점 자동 감지
       const { cx, cy, r } = detectHexVertices(img, size);
+      // 저장 시 크롭에 사용할 수 있도록 canvas에 보존
+      canvas.dataset.hexCx = cx;
+      canvas.dataset.hexCy = cy;
+      canvas.dataset.hexR  = r;
       ctx.clearRect(0, 0, size, size);
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, size, size);
@@ -3034,10 +3038,14 @@ async function registerRoom(){
   octx.imageSmoothingQuality = 'high';
   octx.fillStyle='#fff'; octx.fillRect(0,0,OUTPUT_SIZE,OUTPUT_SIZE);
   octx.drawImage(RCV, cropX, cropY, cropSize, cropSize, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
-  // AI 생성 이미지가 있으면 위에 합성
+  // AI 생성 이미지가 있으면 위에 합성 — 감지된 hex 범위만 크롭해서 저장
   const _aiCv = document.getElementById('ai-preview-cv');
   if(_aiCv && _aiCv.style.display !== 'none') {
-    octx.drawImage(_aiCv, 0, 0, 700, 700, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+    const hcx = parseFloat(_aiCv.dataset.hexCx || 350);
+    const hcy = parseFloat(_aiCv.dataset.hexCy || 350);
+    const hr  = parseFloat(_aiCv.dataset.hexR  || 350);
+    // 육각형의 세로 크기(2r)를 기준으로 정사각형 크롭
+    octx.drawImage(_aiCv, hcx - hr, hcy - hr, hr * 2, hr * 2, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
   }
   pngUrl = off.toDataURL('image/jpeg', 0.92);
   CTRL_SEL = _prevCtrl; // 원복
