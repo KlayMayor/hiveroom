@@ -2094,7 +2094,7 @@ function switchTab(btn, cat) {
 // AI 이미지 생성
 // ══════════════════════════════════════
 const AI_PROXY_URL = 'https://oval-trombone-obedience.ngrok-free.dev';
-const AI_BASE_PROMPT = 'Cute kawaii isometric view room illustration. Strict isometric projection of a room interior showing three faces: left wall, right wall, and floor. The inner corner point where all three faces converge is placed exactly at the center of the image (320,320 in a 640x640 canvas). The left wall occupies the upper-left rhombus region. The right wall occupies the upper-right rhombus region. The floor diamond occupies the lower rhombus region, with its top vertex at the image center and its bottom vertex at the very bottom-center of the image. The overall silhouette is a regular pointy-top hexagon with all six sides equal length, taller than wide (height 600px, width 520px). Top vertex at top-center, bottom vertex at bottom-center, widest at mid-height. No ceiling. No people. Vivid pastel colors, Japanese kawaii cute style, highly detailed clean illustration,';
+const AI_BASE_PROMPT = 'Cute kawaii isometric view room illustration. Centered image. regular pointy-top hexagon with all six sides equal length. hexagon is taller than wide. No ceiling. No people. Vivid pastel colors, Japanese kawaii cute style, highly detailed clean illustration,';
 
 function buildRoomTemplate() {
   // 640×640 이소메트릭 방 구도 템플릿 (pointy-top 육각형 3등분)
