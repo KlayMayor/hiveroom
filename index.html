@@ -755,66 +755,80 @@ header{
   .h-dropdown{ right:0 !important; top:46px !important; position:fixed !important; }
   #ranking-ov .ranking-box{ width:96vw; }
 
-  /* ── 모바일 콘솔: 전체화면 오버레이 ── */
-  /* 기존 PC 콘솔은 opacity/transform으로 숨김 — 모바일도 동일 방식 유지 */
-  /* PC: position:absolute, right:14px, width:920px */
-  /* 모바일: position:fixed, inset:0, 아래서 위로 슬라이드 */
+  /* ── 모바일 콘솔: 전체화면 슬라이드업 팝업 ── */
   #console{
     position:fixed !important;
     top:0 !important; left:0 !important;
     right:0 !important; bottom:0 !important;
-    width:100% !important;
-    max-width:100% !important;
+    width:100% !important; max-width:100% !important;
     border-radius:0 !important;
     transform:translateY(100%) !important;
   }
-  #console.open{
-    transform:translateY(0) !important;
-    opacity:1 !important;
-    pointer-events:auto !important;
+  #console.open{ transform:translateY(0) !important; opacity:1 !important; pointer-events:auto !important; }
+
+  /* 전환 탭 바 */
+  #mob-view-tabs{
+    display:flex !important;
+    flex-shrink:0;
+    background:#fff;
+    border-bottom:2px solid var(--border);
   }
+  .mob-vtab{
+    flex:1; padding:13px 8px;
+    font-size:14px; font-weight:700;
+    font-family:'Noto Sans KR',sans-serif;
+    border:none; background:transparent; cursor:pointer;
+    color:var(--muted);
+    border-bottom:3px solid transparent; margin-bottom:-2px;
+    transition:all .15s;
+  }
+  .mob-vtab.on{ color:var(--hdk); border-bottom-color:var(--honey); background:#FFFBF0; }
 
-  /* 모바일 탭 전환 버튼 표시 */
-  #mob-view-tabs{ display:flex !important; }
+  /* con-body-top: 세로 스택, 탭 패널이 flex:1로 공간 채움 */
+  .con-body-top{ flex-direction:column !important; flex:1 !important; overflow:hidden !important; min-height:0 !important; }
 
-  /* con-body-top: 가로→세로 */
-  .con-body-top{ flex-direction:column !important; }
-
-  /* con-left: 기본 숨김, mob-active 시 표시 */
+  /* ── 미리보기 패널 (con-left) ── */
   .con-left{
-    width:100% !important;
-    border-right:none !important;
-    border-bottom:1px solid var(--border) !important;
-    display:none !important;
-    flex:1 !important;
+    width:100% !important; flex:1 !important;
+    border-right:none !important; border-bottom:none !important;
+    display:none !important; overflow-y:auto !important;
   }
-  .con-left.mob-active{ display:flex !important; }
+  .con-left.mob-active{ display:flex !important; flex-direction:column !important; align-items:center !important; }
 
-  /* 캔버스 크기 */
-  #room-cv{
-    width:min(300px,80vw) !important;
-    height:min(300px,80vw) !important;
-  }
-  .preview-area{ padding:12px !important; justify-content:center !important; }
+  /* 캔버스 반응형 */
+  .preview-area{ padding:16px 12px 8px !important; justify-content:flex-start !important; align-items:center !important; }
+  #room-cv{ width:min(calc(100vw - 32px),380px) !important; height:min(calc(100vw - 32px),380px) !important; }
+  #ai-preview-cv{ width:min(calc(100vw - 32px),380px) !important; height:min(calc(100vw - 32px),380px) !important; top:16px !important; }
 
-  /* 컨트롤 버튼 터치 크기 확대 */
-  .ctrl-btn{ width:36px !important; height:36px !important; font-size:16px !important; }
-  .ctrl-size input[type=range]{ width:90px !important; }
+  /* Upload to Map 버튼 (모바일) */
+  .con-left .con-finish-btn{ width:calc(100% - 24px) !important; margin:8px 12px 20px !important; font-size:15px !important; padding:13px 16px !important; }
 
-  /* con-right: 기본 숨김, mob-active 시 표시 */
-  .con-right{
-    width:100% !important;
-    display:none !important;
-    flex:1 !important;
-  }
+  /* item-ctrl: AI 플로우에선 불필요 — 모바일 숨김 */
+  #item-ctrl{ display:none !important; }
+
+  /* ── 생성 패널 (con-right) ── */
+  .con-right{ width:100% !important; flex:1 !important; display:none !important; overflow:hidden !important; min-height:0 !important; }
   .con-right.mob-active{ display:flex !important; }
 
-  /* 에셋 탭/그리드 */
-  .atab{ font-size:10px !important; padding:10px 2px !important; }
+  /* asset-pane: 고정높이 해제, 남은 공간 차지 */
+  .asset-pane{ flex:1 !important; max-height:none !important; }
+
+  /* 탭 버튼 작게 */
+  .atab{ font-size:11px !important; padding:10px 2px !important; }
   .agrid{ grid-template-columns:repeat(4,1fr) !important; gap:6px !important; padding:8px !important; }
 
-  /* 광고 영역 숨김 */
+  /* AI 체크박스 터치 영역 확대 */
+  .ai-chk-lbl{ font-size:15px !important; padding:5px 0 !important; }
+  .ai-chk-lbl input[type=checkbox]{ width:18px !important; height:18px !important; }
+
+  /* 프롬프트+버튼 영역 */
+  .ai-action-section{ padding:10px 12px 20px !important; }
+  .ai-gen-btn, .ai-regen-btn{ font-size:15px !important; padding:12px 10px !important; }
+
+  /* 광고·제어 불필요 요소 숨김 */
   .preview-ad{ display:none !important; }
+  .ctrl-btn{ width:36px !important; height:36px !important; font-size:16px !important; }
+  .ctrl-size input[type=range]{ width:90px !important; }
 
   /* 줌 버튼 */
   .map-zoom{ bottom:16px;right:12px; }
@@ -1196,8 +1210,8 @@ header{
 
       <!-- 모바일 전용: 미리보기 ↔ 에셋 탭 전환 버튼 (PC에서는 #mob-view-tabs가 display:none) -->
       <div id="mob-view-tabs">
-        <button class="mob-vtab on" id="mob-tab-preview" onclick="mobSwitchView('preview')">🖼 <span data-i18n="mob_tab_preview">Preview</span></button>
-        <button class="mob-vtab" id="mob-tab-assets" onclick="mobSwitchView('assets')">🛋 <span data-i18n="mob_tab_assets">Assets</span></button>
+        <button class="mob-vtab on" id="mob-tab-preview" onclick="mobSwitchView('preview')">🖼 Preview</button>
+        <button class="mob-vtab" id="mob-tab-assets" onclick="mobSwitchView('assets')">✨ Generate</button>
       </div>
 
       <!-- 상단: 미리보기 + 아이템선택 -->
@@ -2259,6 +2273,8 @@ async function generateAIRoom() {
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     await applyAICanvas('data:image/png;base64,' + b64);
     status.textContent = `Done ✓ (${elapsed}s)`;
+    // 모바일: 생성 완료 후 Preview 탭으로 자동 전환
+    if (window.innerWidth <= 768) mobSwitchView('preview');
     regenBtn.disabled = false;
     const finBtn = document.querySelector('.con-finish-btn');
     if (finBtn) {
