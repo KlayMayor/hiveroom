@@ -182,12 +182,16 @@ header{
 .con-finish-btn{padding:5px 14px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.5);color:#fff;border-radius:14px;font-size:11px;font-weight:700;font-family:'Noto Sans KR',sans-serif;cursor:pointer;opacity:.4;pointer-events:none;transition:all .15s;}
 .con-finish-btn.on{opacity:1;pointer-events:auto;}
 .con-finish-btn.on:hover{background:rgba(255,255,255,.3);}
+/* Upload to Map 버튼 — con-left 내 배치 시 오버라이드 */
+.con-left .con-finish-btn{background:var(--honey);border:2px solid var(--honey);color:#fff;border-radius:10px;font-size:13px;padding:11px 16px;width:calc(100% - 24px);margin:0 12px 12px;text-align:center;opacity:0;}
+.con-left .con-finish-btn.on{opacity:1;}
+.con-left .con-finish-btn.on:hover{background:var(--accent);border-color:var(--accent);}
 @keyframes finish-flash{
-  0%,100%{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.5);transform:scale(1);}
-  30%{background:rgba(255,220,50,.65);border-color:rgba(255,200,0,1);box-shadow:0 0 22px rgba(255,210,0,.9);transform:scale(1.13);}
-  60%{background:rgba(255,180,0,.4);border-color:rgba(255,220,50,.8);box-shadow:0 0 10px rgba(255,210,0,.5);transform:scale(0.97);}
+  0%,100%{transform:scale(1);box-shadow:0 2px 8px rgba(242,184,48,.3);}
+  35%{transform:scale(1.07);box-shadow:0 0 28px rgba(242,184,48,.9),0 4px 16px rgba(224,120,32,.5);}
+  65%{transform:scale(0.97);box-shadow:0 0 10px rgba(242,184,48,.4);}
 }
-.con-finish-btn.flash{animation:finish-flash .65s ease-in-out 6;}
+.con-finish-btn.flash{animation:finish-flash .7s ease-in-out infinite;}
 /* AI gen section */
 /* AI 액션 섹션 (오른쪽 하단) */
 .ai-action-section{padding:10px 12px;background:#fff;border-top:2px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;gap:8px;}
@@ -1182,7 +1186,6 @@ header{
             <div class="con-help-drop-body" id="con-help-drop-body"></div>
           </div>
         </div>
-        <button class="con-finish-btn" id="finish-btn" onclick="showDone()"><span data-i18n="finish">Upload to Map</span> ✦</button>
         <button class="con-close-btn" onclick="closeConsole()">✕</button>
       </div>
     </div>
@@ -1208,6 +1211,9 @@ header{
             <!-- AI 이미지 미리보기 오버레이 (생성 후 덮어씌움) -->
             <canvas id="ai-preview-cv" width="700" height="700"></canvas>
           </div>
+          <!-- Upload to Map 버튼 (미리보기 바로 아래) -->
+          <button class="con-finish-btn" id="finish-btn" onclick="showDone()"><span data-i18n="finish">Upload to Map</span> ✦</button>
+
           <!-- 컨트롤 핸들 -->
           <div id="item-ctrl">
             <div class="ctrl-size">
@@ -1235,6 +1241,16 @@ header{
             <button class="atab"     onclick="switchTab(this,'mood')">🌈 Mood</button>
             <button class="atab"     onclick="switchTab(this,'walldeco')">🖼️ Wall</button>
             <button class="atab"     onclick="switchTab(this,'furnitures')">🪑 Furniture</button>
+          </div>
+
+          <!-- AI 액션 섹션: 프롬프트 + 버튼 (탭 바로 아래) -->
+          <div class="ai-action-section">
+            <textarea id="ai-prompt-input" class="ai-prompt-ta" rows="3" placeholder="Selections auto-filled here — editable"></textarea>
+            <div class="ai-action-row">
+              <button class="ai-gen-btn" id="ai-gen-btn" onclick="generateAIRoom()">✨ Generate</button>
+              <button class="ai-regen-btn" id="ai-regen-btn" onclick="generateAIRoom()" disabled>🔄 Regenerate</button>
+            </div>
+            <div id="ai-gen-status"></div>
           </div>
 
           <!-- Room Type (max 1) -->
@@ -1315,16 +1331,6 @@ header{
                 <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="kitchen counter" onchange="limitConsoleChecks('con-furn',5)"> 🍳 Kitchen counter</label>
               </div>
             </div>
-          </div>
-
-          <!-- AI 액션 섹션: 프롬프트 + 버튼 -->
-          <div class="ai-action-section">
-            <textarea id="ai-prompt-input" class="ai-prompt-ta" rows="3" placeholder="Selections auto-filled here — editable"></textarea>
-            <div class="ai-action-row">
-              <button class="ai-gen-btn" id="ai-gen-btn" onclick="generateAIRoom()">✨ Generate</button>
-              <button class="ai-regen-btn" id="ai-regen-btn" onclick="generateAIRoom()" disabled>🔄 Regenerate</button>
-            </div>
-            <div id="ai-gen-status"></div>
           </div>
 
         </div>
