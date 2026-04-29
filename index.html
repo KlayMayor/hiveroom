@@ -2102,7 +2102,7 @@ function buildRoomTemplate() {
   canvas.width = 640; canvas.height = 640;
   const ctx = canvas.getContext('2d');
 
-  const cx = 320, cy = 320, r = 300; // 캔버스 정중앙, 정규 육각형
+  const cx = 320, cy = 320, r = 295; // 캔버스 정중앙, 정규 육각형
   const vx = [], vy = [];
   for (let i = 0; i < 6; i++) {
     const angle = (Math.PI / 3) * i - Math.PI / 2;
@@ -2261,7 +2261,7 @@ function applyAICanvas(src) {
       ctx.save();
       ctx.beginPath();
       // 육각형 마스크: 700px 기준으로 스케일 (640→700: cx,cy,r * 700/640)
-      const cx = 350, cy = 350, r = 328; // 640→700 스케일: 300*(700/640)
+      const cx = 350, cy = 350, r = 323; // 640→700 스케일: 295*(700/640)
       for (let i = 0; i < 6; i++) {
         const angle = (Math.PI / 3) * i - Math.PI / 2;
         const x = cx + r * Math.cos(angle);

@@ -459,7 +459,7 @@ function applyCanvas(src) {
     ctx.fillRect(0, 0, size, size);
     ctx.save();
     ctx.beginPath();
-    const cx = 320, cy = 320, r = 300; // 캔버스 정중앙, 정규 육각형
+    const cx = 320, cy = 320, r = 295; // 캔버스 정중앙, 정규 육각형
     for (let i = 0; i < 6; i++) {
       const angle = (Math.PI / 3) * i - Math.PI / 2;
       const x = cx + r * Math.cos(angle);
