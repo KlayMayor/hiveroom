@@ -1905,7 +1905,7 @@ function showRoomSelect(rooms, mode){
   rooms.forEach(room => {
     const item = document.createElement('div');
     item.className = 'rs-item';
-    const imgUrl = `${SUPA_URL}/storage/v1/object/public/room-pic/${room.room_number}/room.jpg`;
+    const imgUrl = `${SUPA_URL}/storage/v1/object/public/room-pic/${room.room_number}/room.jpg?t=${Date.now()}`;
     item.innerHTML = `
       <img src="${imgUrl}" alt="${room.room_number}번" onerror="this.style.background='#F0EBE0';this.removeAttribute('src')">
       <div class="rs-item-num">${t('room_num_fmt', room.room_number)}</div>
