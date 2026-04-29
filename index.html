@@ -1876,6 +1876,22 @@ async function startEditRoom(room){
 
   // 7. renderRoom (벽지/바닥/가구/장식 모두 표시)
   await renderRoom();
+
+  // 8. 저장된 room.jpg를 미리보기 오버레이에 표시
+  const aiCv = document.getElementById('ai-preview-cv');
+  if(aiCv) {
+    const roomImgUrl = `${SUPA_URL}/storage/v1/object/public/room-pic/${EDIT_ROOM_NUM}/room.jpg?t=${Date.now()}`;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const ctx = aiCv.getContext('2d');
+      ctx.clearRect(0, 0, 700, 700);
+      ctx.drawImage(img, 0, 0, 700, 700);
+      aiCv.style.display = 'block';
+    };
+    img.onerror = () => { aiCv.style.display = 'none'; };
+    img.src = roomImgUrl;
+  }
 }
 
 function showRoomSelect(rooms, mode){
@@ -2021,6 +2037,9 @@ function closeConsole() {
     makeBtn.textContent = LANG==='ko'?'🏠 방 만들기':'🏠 Make Room';
     makeBtn.onclick = openConsole;
   }
+  // AI 미리보기 오버레이 초기화
+  const aiCv = document.getElementById('ai-preview-cv');
+  if(aiCv) { aiCv.style.display = 'none'; aiCv.getContext('2d').clearRect(0,0,700,700); }
 }
 
 // ── 모바일 햄버거 메뉴 ──
