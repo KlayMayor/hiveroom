@@ -4269,6 +4269,7 @@ function openRoomPanel(num){
   }
 
   const myBal = MY_BALANCE !== null ? MY_BALANCE : 0;
+  _hideNftOwner();
   const isOwnFinal = !!(
     CURRENT_USER &&
     CURRENT_USER.email &&
@@ -4289,7 +4290,6 @@ function openRoomPanel(num){
     document.getElementById('rp-move-btn').style.display = 'block';
     document.getElementById('rp-attend-btn').style.display = 'none';
     document.getElementById('rp-nft-btn').style.display = 'none';
-    _hideNftOwner();
     checkAndShowNftBtn(num);
   } else if(room.reserved){
     buyBtn.style.display = 'none';
