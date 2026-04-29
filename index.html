@@ -864,6 +864,8 @@ header{
   <div class="h-sep"></div>
   <button class="h-badge" onclick="openHelp()" style="cursor:pointer;border:1px solid var(--honey);background:var(--hlt);color:var(--hdk);font-family:'Noto Sans KR',sans-serif;" data-i18n="help">❓ Help</button>
   <div class="h-sep"></div>
+  <button class="h-badge" onclick="openTips()" style="cursor:pointer;border:1px solid #5BBCCC;background:#EBF8F8;color:#1A7A8A;font-family:'Noto Sans KR',sans-serif;">💡 Tips</button>
+  <div class="h-sep"></div>
   <button class="h-badge" onclick="openRanking()" style="cursor:pointer;border:1px solid #B8A0E8;background:#F5F0FF;color:#6040B0;font-family:'Noto Sans KR',sans-serif;" data-i18n="ranking">🏆 Ranking</button>
   <div class="h-sep"></div>
   <div class="h-filter-wrap">
@@ -5218,6 +5220,11 @@ function _tipsUpdateContent(){
 function closeTips(){
   document.getElementById('tips-ov').classList.add('hidden');
   localStorage.setItem('tips_seen','1');
+}
+function openTips(){
+  _tipsPage = 0;
+  _tipsUpdateUI();
+  document.getElementById('tips-ov').classList.remove('hidden');
 }
 function initTips(){
   if(localStorage.getItem('tips_seen')){
