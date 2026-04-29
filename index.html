@@ -1824,40 +1824,6 @@ async function startEditRoom(room){
   });
   CTRL_SEL={cat:null,id:null};
 
-  // 2. design_json으로 SEL/POS/SIZE/FLIP/LAYER 복원
-  if(room.design_json){
-    try{
-      const d = typeof room.design_json === 'string' ? JSON.parse(room.design_json) : room.design_json;
-      if(d.sel){
-        SEL.wall  = d.sel.wall  || null;
-        SEL.floor = d.sel.floor || null;
-        SEL.furniture = new Set(d.sel.furniture || []);
-        SEL.walldeco  = new Set(d.sel.walldeco  || []);
-        SEL.item      = new Set(d.sel.item      || []);
-      }
-      if(d.pos){
-        Object.assign(POS.furniture, d.pos.furniture || {});
-        Object.assign(POS.walldeco,  d.pos.walldeco  || {});
-        Object.assign(POS.item,      d.pos.item      || {});
-      }
-      if(d.size){
-        Object.assign(SIZE.furniture, d.size.furniture || {});
-        Object.assign(SIZE.walldeco,  d.size.walldeco  || {});
-        Object.assign(SIZE.item,      d.size.item      || {});
-      }
-      if(d.flip){
-        Object.assign(FLIP.furniture, d.flip.furniture || {});
-        Object.assign(FLIP.walldeco,  d.flip.walldeco  || {});
-        Object.assign(FLIP.item,      d.flip.item      || {});
-      }
-      if(d.layerOrder){
-        LAYER_ORDER.furniture = [...(d.layerOrder.furniture || [])];
-        LAYER_ORDER.walldeco  = [...(d.layerOrder.walldeco  || [])];
-        LAYER_ORDER.item      = [...(d.layerOrder.item      || [])];
-      }
-    }catch(e){ console.warn('design_json 복원 실패', e); }
-  }
-
   // 3. Twitter ID 미리 채우기
   const twEl = document.getElementById('tw-id');
   if(twEl) twEl.value = room.twitter_id || '';
@@ -3089,14 +3055,6 @@ async function registerRoom(){
   // 4. DB 저장 (신규: INSERT / 수정: PATCH)
   st.textContent='🗃 DB 저장 중...'; bar.style.width='85%';
   const email = CURRENT_USER?.email || '';
-  const designJson = JSON.stringify({
-    sel: { wall: SEL.wall, floor: SEL.floor,
-           furniture: [...SEL.furniture], walldeco: [...SEL.walldeco], item: [...SEL.item] },
-    pos: { furniture: {...POS.furniture}, walldeco: {...POS.walldeco}, item: {...POS.item} },
-    size: { furniture: {...SIZE.furniture}, walldeco: {...SIZE.walldeco}, item: {...SIZE.item} },
-    flip: { furniture: {...FLIP.furniture}, walldeco: {...FLIP.walldeco}, item: {...FLIP.item} },
-    layerOrder: { furniture: [...LAYER_ORDER.furniture], walldeco: [...LAYER_ORDER.walldeco], item: [...LAYER_ORDER.item] },
-  });
   // unavatar로 실제 pbs.twimg.com URL resolve → DB에 직접 이미지 URL 저장
   // 이후 맵/패널에서 unavatar 요청 없이 직접 트위터 서버에서 이미지 로드
   st.textContent='🖼 아바타 URL 확인 중...'; bar.style.width='80%';
@@ -3105,7 +3063,7 @@ async function registerRoom(){
   const zonePrice = 0; // 신규: create-room EF는 confirmTileBuy에서 이미 호출됨
   const dbPayload = {
     twitter_id: twitterId, occupied: 'Y', email,
-    design_json: designJson, avatar_url: twitterAvatar,
+    avatar_url: twitterAvatar,
     interest: SEL_INTEREST || '',
     interest_avatar_url: interestAvatarUrl,
   };
@@ -3526,7 +3484,7 @@ function drawMap(){
     if(cx<-s*2||cx>mW+s*2||cy<-s*2||cy>mH+s*2)return;
     const room=ROOMS[num];
     if(room && room.incomplete){
-      // 미완성 방 (occupied=Y, design_json=null) → 회색 타일로 표시
+      // 미완성 방 (occupied=Y, twitter_id 없음) → 회색 타일로 표시
       drawIncompleteGrid(cx,cy,s,num);
     } else if(room) {
       drawFilled(cx,cy,s,num,room);
@@ -3668,7 +3626,7 @@ async function loadRooms(){
   try {
     // rooms + room_balances 병렬 로드
     const [res, balRes] = await Promise.all([
-      fetch(`${SUPA_URL}/rest/v1/rooms?occupied=eq.Y&order=room_number.asc&select=*`,
+      fetch(`${SUPA_URL}/rest/v1/rooms?occupied=eq.Y&order=room_number.asc&select=room_number,twitter_id,avatar_url,interest,interest_avatar_url,reserved,email,updated_at`,
         { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }),
       fetch(`${SUPA_URL}/rest/v1/room_balances?select=room_number,balance`,
         { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } })
@@ -3686,8 +3644,8 @@ async function loadRooms(){
       const img = new Image();
       img.crossOrigin = 'anonymous';
       img.src = imgUrl;
-      // occupied=Y이지만 design_json=null → 방 꾸미기 미완성 상태
-      const isIncomplete = !row.design_json && !row.reserved;
+      // occupied=Y이지만 twitter_id 미등록 → 방 꾸미기 미완성 상태
+      const isIncomplete = !row.twitter_id && !row.reserved;
       img.onload = () => {
         ROOMS[row.room_number] = {
           img: isIncomplete ? null : img,  // 미완성이면 이미지 무시
@@ -3788,7 +3746,7 @@ async function loadOneRoom(row){
         interest:          row.interest            || '',
         interestAvatarUrl: row.interest_avatar_url || '',
         reserved:          row.reserved    || false,
-        incomplete:        !row.design_json && !row.reserved,
+        incomplete:        !row.twitter_id && !row.reserved,
         tileValue:         ROOM_BALANCES[row.room_number] || 0,
         ownerEmail:        row.email       || '',
         creatorEmail:      row.email       || ''
@@ -4897,7 +4855,7 @@ async function confirmMove(){
 let EMPTY_PANEL_NUM = null;
 
 function openIncompleteTilePanel(num){
-  // 미완성 방(occupied=Y, design_json=null) 클릭 시 구매 패널
+  // 미완성 방(occupied=Y, twitter_id 없음) 클릭 시 구매 패널
   const room = ROOMS[num];
   if(!room) return;
   EMPTY_PANEL_NUM = num;
