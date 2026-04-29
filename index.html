@@ -2196,19 +2196,47 @@ async function generateAIRoom() {
   genBtn.disabled = true;
   regenBtn.disabled = true;
 
-  // 경과 타이머
   const startTime = Date.now();
-  let timerInterval = setInterval(() => {
+  let statusMode = 'generating'; // 'generating' | 'queued'
+  let progressHigh = false;      // progress가 한 번이라도 높았는지
+
+  // 경과 타이머
+  const timerInterval = setInterval(() => {
     const sec = Math.floor((Date.now() - startTime) / 1000);
     const m = Math.floor(sec / 60), s = sec % 60;
-    status.textContent = `Generating... ${m}m:${String(s).padStart(2,'0')}s (estimated 1:30)`;
+    const t = `${m}m:${String(s).padStart(2,'0')}s`;
+    status.textContent = statusMode === 'queued'
+      ? `⏳ In queue... ${t}`
+      : `Generating... ${t} (estimated 1:30)`;
   }, 1000);
   status.textContent = 'Generating... 0m:00s (estimated 1:30)';
+
+  // 큐 감지: progress가 높았다가 0으로 리셋되면 다른 유저 작업 완료 → 내 차례 대기 중
+  const progressPoller = setInterval(async () => {
+    try {
+      const r = await fetch(`${AI_PROXY_URL}/sdapi/v1/progress`, {
+        signal: AbortSignal.timeout(3000)
+      });
+      if (!r.ok) return;
+      const d = await r.json();
+      const prog = d.progress || 0;
+      if (prog > 0.15) progressHigh = true;
+      if (progressHigh && prog < 0.05) {
+        statusMode = 'queued';  // 한 사이클 완료됐는데 아직 응답 없음 → 큐 대기 중
+        progressHigh = false;   // 다음 사이클 감지를 위해 초기화
+      }
+    } catch(_) {}
+  }, 2000);
 
   try {
     const ta = document.getElementById('ai-prompt-input');
     const userPart = ta ? ta.value.trim() : buildConsolePrompt();
     const prompt = AI_BASE_PROMPT + (userPart ? ' ' + userPart : '');
+
+    // 5분 타임아웃
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000);
+
     const res = await fetch(`${AI_PROXY_URL}/sdapi/v1/txt2img`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -2219,8 +2247,11 @@ async function generateAIRoom() {
         width: 640,
         height: 640,
         cfg_scale: 1
-      })
+      }),
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
+
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     const b64 = data.images?.[0];
@@ -2238,10 +2269,13 @@ async function generateAIRoom() {
       finBtn.classList.add('flash');
     }
   } catch(e) {
-    status.textContent = 'Error: ' + e.message;
+    status.textContent = e.name === 'AbortError'
+      ? 'Error: Timed out after 5 minutes'
+      : 'Error: ' + e.message;
     regenBtn.disabled = false;
   } finally {
     clearInterval(timerInterval);
+    clearInterval(progressPoller);
     genBtn.disabled = false;
   }
 }
