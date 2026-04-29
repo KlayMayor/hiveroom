@@ -183,10 +183,11 @@ header{
 .con-finish-btn.on{opacity:1;pointer-events:auto;}
 .con-finish-btn.on:hover{background:rgba(255,255,255,.3);}
 @keyframes finish-flash{
-  0%,100%{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.5);}
-  50%{background:rgba(255,220,50,.5);border-color:rgba(255,220,50,.9);box-shadow:0 0 16px rgba(255,220,50,.8);}
+  0%,100%{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.5);transform:scale(1);}
+  30%{background:rgba(255,220,50,.65);border-color:rgba(255,200,0,1);box-shadow:0 0 22px rgba(255,210,0,.9);transform:scale(1.13);}
+  60%{background:rgba(255,180,0,.4);border-color:rgba(255,220,50,.8);box-shadow:0 0 10px rgba(255,210,0,.5);transform:scale(0.97);}
 }
-.con-finish-btn.flash{animation:finish-flash .7s ease-in-out 4;}
+.con-finish-btn.flash{animation:finish-flash .65s ease-in-out 6;}
 /* AI gen section */
 /* AI 액션 섹션 (오른쪽 하단) */
 .ai-action-section{padding:10px 12px;background:#fff;border-top:2px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;gap:8px;}
@@ -1179,7 +1180,7 @@ header{
             <div class="con-help-drop-body" id="con-help-drop-body"></div>
           </div>
         </div>
-        <button class="con-finish-btn" id="finish-btn" onclick="showDone()"><span data-i18n="finish">Finish</span> ✦</button>
+        <button class="con-finish-btn" id="finish-btn" onclick="showDone()"><span data-i18n="finish">Upload to Map</span> ✦</button>
         <button class="con-close-btn" onclick="closeConsole()">✕</button>
       </div>
     </div>
@@ -5324,7 +5325,7 @@ const I18N = {
     create_room: 'Create Room',
     // 방 만들기 콘솔
     make_room: 'Make Room',
-    finish: 'Finish',
+    finish: 'Upload to Map',
     // 투자
     invest_btn: 'Invest',
     cancel: 'Cancel',
@@ -5338,9 +5339,9 @@ const I18N = {
     ctrl_deselect: 'Desel',
     ctrl_delete: 'Del',
     con_help: 'Help',
-    con_help_title: '🔧 Item Controls',
-    con_help_body: '<b>Click</b> a placed item to show the control overlay.<br>・<b>Size slider</b> — resize<br>・<b>⇄</b> — flip horizontally<br>・<b>↑↓</b> — change layer order<br>・<b>Desel</b> — keep item, hide overlay<br>・<b>Del</b> — remove from preview',
-    con_help_tip: '💡 Drag any item to freely reposition it!',
+    con_help_title: '🖼️ AI Room Generator',
+    con_help_body: '① Choose options from <b>Room type</b>, <b>Mood</b>, <b>Wall</b>, <b>Furniture</b> tabs<br>② Edit the prompt freely in the text area below<br>③ Click <b>Generate</b> to create your room image (~1m 30s)<br>④ Click <b>Regenerate</b> to try a new variation<br>⑤ When satisfied, click <b>Upload to Map</b> to save',
+    con_help_tip: '💡 The prompt is fully editable — add your own keywords!',
     invest_info: 'Your investment raises the tile value.',
     invest_label: 'Amount (HIVE)',
     invest_cur: 'Current Value',
