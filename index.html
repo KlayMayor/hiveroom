@@ -2094,7 +2094,7 @@ function switchTab(btn, cat) {
 // AI 이미지 생성
 // ══════════════════════════════════════
 const AI_PROXY_URL = 'https://oval-trombone-obedience.ngrok-free.dev';
-const AI_BASE_PROMPT = 'Cute kawaii isometric room illustration. Isometric 3D view of a room corner: a diamond-shaped floor at the bottom, a left wall and a right wall meeting at the top-center back corner. The scene forms a POINTY-TOP hexagonal silhouette — one sharp vertex at the very top, one sharp vertex at the very bottom, with the widest points at mid-height on the left and right sides. The hexagon is TALLER THAN WIDE (portrait orientation, vertical axis longer than horizontal axis). The hexagon fills the entire 640x640 image edge-to-edge with no white border or empty margin. No border frame, no outline stroke around the hexagon. The room walls and floor extend all the way to the hexagon boundary. No people. Vivid pastel colors, Japanese kawaii cute style,';
+const AI_BASE_PROMPT = 'Cute kawaii isometric view room illustration. Strict isometric projection of a room interior corner. The back corner where two walls meet is at the very top-center of the image, forming the top vertex of a pointy-top hexagon. The left wall spreads diagonally from top-center down to the left side. The right wall spreads diagonally from top-center down to the right side. The floor is a diamond shape at the bottom, with its lowest point at the very bottom-center of the image. The entire composition fits inside a pointy-top hexagon that is taller than wide. Left wall visible on upper-left, right wall visible on upper-right, floor diamond at the bottom. No ceiling. No people. Vivid pastel colors, Japanese kawaii cute style, highly detailed clean illustration,';
 
 function buildRoomTemplate() {
   // 640×640 이소메트릭 방 구도 템플릿 (pointy-top 육각형 3등분)
@@ -2211,18 +2211,16 @@ async function generateAIRoom() {
     const ta = document.getElementById('ai-prompt-input');
     const userPart = ta ? ta.value.trim() : buildConsolePrompt();
     const prompt = AI_BASE_PROMPT + (userPart ? ' ' + userPart : '');
-    const template = buildRoomTemplate();
-    const res = await fetch(`${AI_PROXY_URL}/sdapi/v1/img2img`, {
+    const res = await fetch(`${AI_PROXY_URL}/sdapi/v1/txt2img`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         prompt,
-        init_images: [template],
-        denoising_strength: 0.95,
-        steps: 12,
+        negative_prompt: 'flat-top hexagon, wide hexagon, landscape hexagon, rectangular, square, oval, circular, people, humans, text, watermark, border, frame, outline stroke',
+        steps: 9,
         width: 640,
         height: 640,
-        cfg_scale: 3
+        cfg_scale: 1
       })
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
