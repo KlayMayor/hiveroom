@@ -1243,16 +1243,6 @@ header{
             <button class="atab"     onclick="switchTab(this,'furnitures')">🪑 Furniture</button>
           </div>
 
-          <!-- AI 액션 섹션: 프롬프트 + 버튼 (탭 바로 아래) -->
-          <div class="ai-action-section">
-            <textarea id="ai-prompt-input" class="ai-prompt-ta" rows="3" placeholder="Selections auto-filled here — editable"></textarea>
-            <div class="ai-action-row">
-              <button class="ai-gen-btn" id="ai-gen-btn" onclick="generateAIRoom()">✨ Generate</button>
-              <button class="ai-regen-btn" id="ai-regen-btn" onclick="generateAIRoom()" disabled>🔄 Regenerate</button>
-            </div>
-            <div id="ai-gen-status"></div>
-          </div>
-
           <!-- Room Type (max 1) -->
           <div class="asset-pane on" id="pane-room">
             <div class="ai-pane-inner">
@@ -1331,6 +1321,16 @@ header{
                 <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="kitchen counter" onchange="limitConsoleChecks('con-furn',5)"> 🍳 Kitchen counter</label>
               </div>
             </div>
+          </div>
+
+          <!-- AI 액션 섹션: 프롬프트 + 버튼 (체크박스 아래) -->
+          <div class="ai-action-section">
+            <textarea id="ai-prompt-input" class="ai-prompt-ta" rows="3" placeholder="Selections auto-filled here — editable"></textarea>
+            <div class="ai-action-row">
+              <button class="ai-gen-btn" id="ai-gen-btn" onclick="generateAIRoom()">✨ Generate</button>
+              <button class="ai-regen-btn" id="ai-regen-btn" onclick="generateAIRoom()" disabled>🔄 Regenerate</button>
+            </div>
+            <div id="ai-gen-status"></div>
           </div>
 
         </div>
