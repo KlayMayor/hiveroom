@@ -1863,6 +1863,8 @@ async function startEditRoom(room){
       ctx.clearRect(0, 0, 700, 700);
       ctx.drawImage(img, 0, 0, 700, 700);
       aiCv.style.display = 'block';
+      const finBtn = document.getElementById('finish-btn');
+      if (finBtn) finBtn.classList.add('on');
     };
     img.onerror = () => { aiCv.style.display = 'none'; };
     img.src = roomImgUrl;
@@ -2015,6 +2017,9 @@ function closeConsole() {
   // AI 미리보기 오버레이 초기화
   const aiCv = document.getElementById('ai-preview-cv');
   if(aiCv) { aiCv.style.display = 'none'; aiCv.getContext('2d').clearRect(0,0,700,700); }
+  // Upload to Map 버튼 초기화
+  const finBtn = document.getElementById('finish-btn');
+  if(finBtn) finBtn.classList.remove('on', 'flash');
 }
 
 // ── 모바일 햄버거 메뉴 ──
@@ -2227,6 +2232,7 @@ async function generateAIRoom() {
     regenBtn.disabled = false;
     const finBtn = document.querySelector('.con-finish-btn');
     if (finBtn) {
+      finBtn.classList.add('on');
       finBtn.classList.remove('flash');
       void finBtn.offsetWidth;
       finBtn.classList.add('flash');
