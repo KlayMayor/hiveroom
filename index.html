@@ -2897,7 +2897,10 @@ function showDone(){
     SEL_INTEREST = '';
   }
   const dc=document.getElementById('done-cv');
-  dc.getContext('2d').drawImage(RCV,0,0,700,700,0,0,160,160);
+  const dctx=dc.getContext('2d');
+  dctx.drawImage(RCV,0,0,700,700,0,0,160,160);
+  const aiCv=document.getElementById('ai-preview-cv');
+  if(aiCv && aiCv.style.display!=='none') dctx.drawImage(aiCv,0,0,700,700,0,0,160,160);
   const wa=SEL.wall?ASSETS.wall.find(a=>a.id===SEL.wall)?.name:null;
   const fl=SEL.floor?ASSETS.floor.find(a=>a.id===SEL.floor)?.name:null;
   document.getElementById('done-desc').innerHTML = LANG==='ko'?'이대로 맵에 등록할까요?':'Ready to register on the map?';
@@ -2978,6 +2981,11 @@ async function registerRoom(){
   octx.imageSmoothingQuality = 'high';
   octx.fillStyle='#fff'; octx.fillRect(0,0,OUTPUT_SIZE,OUTPUT_SIZE);
   octx.drawImage(RCV, cropX, cropY, cropSize, cropSize, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+  // AI 생성 이미지가 있으면 위에 합성
+  const _aiCv = document.getElementById('ai-preview-cv');
+  if(_aiCv && _aiCv.style.display !== 'none') {
+    octx.drawImage(_aiCv, 0, 0, 700, 700, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+  }
   pngUrl = off.toDataURL('image/jpeg', 0.92);
   CTRL_SEL = _prevCtrl; // 원복
   bar.style.width='20%'; await sleep(100);
