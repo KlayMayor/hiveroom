@@ -1864,8 +1864,6 @@ async function startEditRoom(room){
       ctx.clearRect(0, 0, 700, 700);
       ctx.drawImage(img, 0, 0, 700, 700);
       aiCv.style.display = 'block';
-      const finBtn = document.getElementById('finish-btn');
-      if (finBtn) { finBtn.removeAttribute('disabled'); finBtn.classList.add('on'); }
     };
     img.onerror = () => { aiCv.style.display = 'none'; };
     img.src = roomImgUrl;
