@@ -10,7 +10,8 @@ dotenv.config();
 export default async function (hre: HardhatRuntimeEnvironment) {
   const provider = new Provider(hre.network.config.url);
   const wallet = new Wallet(process.env.PRIVATE_KEY!, provider);
-  const proxyAddress = process.env.HIVE_ROOM_TILE_ADDRESS!;
+  // Use the actual live proxy address (frontend ONCHAIN.TILE)
+  const proxyAddress = process.env.HIVE_ROOM_TILE_ADDRESS || '0x175D30A5027BFb3C28F6ACA47FA5B95f912ad162';
   const serverSigner = process.env.SERVER_SIGNER_ADDRESS!;
 
   if (!proxyAddress) throw new Error("HIVE_ROOM_TILE_ADDRESS not set in .env");
