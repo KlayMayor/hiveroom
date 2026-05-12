@@ -7,13 +7,11 @@ const CORS = {
 };
 
 const TILE_ADDRESS = '0xe02F5144303956dAe6eB42836D9Fc26A0Ca3277a';
-const CHAIN_ID     = 11124;
 const RPC_URL      = 'https://api.testnet.abs.xyz';
 
 const TILE_ABI = [
-  'function getMintNonce(address user) external view returns (uint256)',
-  'function minted(uint256 tokenId) external view returns (bool)',
-  'function mint(uint256 tileNumber, address recipient, bytes calldata signature) external',
+  'function ownerOf(uint256 tokenId) external view returns (address)',
+  'function unstake(uint256 tokenId, address to) external',
 ];
 
 Deno.serve(async (req) => {
@@ -35,7 +33,7 @@ Deno.serve(async (req) => {
     if (!wallet || tileNumber === undefined) return err(400, 'Missing wallet or tileNumber');
     if (!ethers.utils.isAddress(wallet)) return err(400, 'Invalid wallet address');
 
-    // Verify ownership in Supabase
+    // Verify ownership in Supabase (user must own the room in-app)
     const { data: roomRow } = await supabase
       .from('rooms')
       .select('email')
@@ -44,33 +42,19 @@ Deno.serve(async (req) => {
     if (!roomRow) return err(404, 'Room not found');
     if (roomRow.email.toLowerCase() !== user.email.toLowerCase()) return err(403, 'You do not own this tile');
 
-    // Check on-chain state
+    // Verify NFT is currently staked (owned by the contract itself)
     const signerKey = Deno.env.get('SERVER_SIGNER_PRIVATE_KEY')!;
     const provider  = new ethers.providers.JsonRpcProvider(RPC_URL);
     const serverWallet = new ethers.Wallet(signerKey, provider);
     const tile = new ethers.Contract(TILE_ADDRESS, TILE_ABI, serverWallet);
 
-    const [isMinted, nonce] = await Promise.all([
-      tile.minted(Number(tileNumber)),
-      tile.getMintNonce(wallet),
-    ]);
-    if (isMinted) return err(400, 'NFT already minted');
+    const currentOwner = await tile.ownerOf(Number(tileNumber));
+    if (currentOwner.toLowerCase() !== TILE_ADDRESS.toLowerCase()) {
+      return err(400, 'NFT is not staked (not held by contract)');
+    }
 
-    // EIP-712 sign
-    const signer = new ethers.Wallet(signerKey);
-    const signature = await signer._signTypedData(
-      { name: 'HiveRoomTile', version: '1', chainId: CHAIN_ID, verifyingContract: TILE_ADDRESS },
-      { Mint: [
-          { name: 'user',       type: 'address' },
-          { name: 'tileNumber', type: 'uint256' },
-          { name: 'nonce',      type: 'uint256' },
-        ]
-      },
-      { user: wallet, tileNumber: Number(tileNumber), nonce }
-    );
-
-    // Server sends the tx (server signer pays gas)
-    const tx = await tile.mint(Number(tileNumber), wallet, signature, { gasLimit: 500000 });
+    // Server calls unstake() — server must have STAKER_ROLE on-chain
+    const tx = await tile.unstake(Number(tileNumber), wallet, { gasLimit: 200000 });
     return json({ txHash: tx.hash });
   } catch (e) {
     console.error(e);

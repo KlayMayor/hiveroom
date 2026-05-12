@@ -17,7 +17,7 @@ import "@openzeppelin/contracts/utils/Strings.sol";
  * - tokenId = 타일 번호 (1:1 매핑, 타일 1번 = NFT #1)
  * - 타일 소유자만 민팅 가능 (서버 서명으로 소유권 검증)
  * - MARKET_ROLE을 가진 컨트랙트(HiveRoomMarket)만 강제 이전 가능
- * - 이미지/꾸미기 데이터는 Supabase에 저장, NFT에는 타일 번호·ZONE만 기록
+ * - stake/unstake: 인앱(스테이킹)↔온체인(출고) 이중 구조
  */
 contract HiveRoomTile is
     Initializable,
@@ -32,6 +32,7 @@ contract HiveRoomTile is
     // ─── Roles ───────────────────────────────────────────────────────────
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
     bytes32 public constant MARKET_ROLE   = keccak256("MARKET_ROLE");
+    bytes32 public constant STAKER_ROLE   = keccak256("STAKER_ROLE");
 
     // EIP-712 타입해시
     bytes32 private constant MINT_TYPEHASH = keccak256(
@@ -43,10 +44,13 @@ contract HiveRoomTile is
     string  public baseMetadataURI;                     // IPFS 기본 URI
     mapping(uint256 => bool)    public minted;          // 민팅 여부
     mapping(address => uint256) public mintNonce;       // 재사용 방지 nonce
+    mapping(uint256 => address) public stakedBy;        // 스테이킹한 원래 소유자
 
     // ─── 이벤트 ──────────────────────────────────────────────────────────
     event TileMinted(uint256 indexed tileNumber, address indexed owner);
     event TileForceTransferred(uint256 indexed tileNumber, address indexed from, address indexed to);
+    event TileStaked(uint256 indexed tokenId, address indexed staker);
+    event TileUnstaked(uint256 indexed tokenId, address indexed to);
     event ServerSignerUpdated(address indexed oldSigner, address indexed newSigner);
     event BaseURIUpdated(string newBaseURI);
 
@@ -74,13 +78,10 @@ contract HiveRoomTile is
     // ─── 핵심 기능 ────────────────────────────────────────────────────────
 
     /**
-     * @notice 타일 NFT 민팅
+     * @notice 타일 NFT 민팅 (서버가 서명 후 발급; recipient 지갑으로 바로 발행)
      * @param tileNumber 타일 번호 (= tokenId)
-     * @param signature 서버가 발급한 ECDSA 서명
-     *
-     * 호출 조건:
-     * - 해당 타일이 아직 민팅되지 않아야 함
-     * - 서버 서명 검증 통과 (Supabase에서 ownerEmail 확인 후 발급)
+     * @param recipient  NFT를 받을 지갑 주소
+     * @param signature  서버가 발급한 ECDSA 서명
      */
     function mint(uint256 tileNumber, address recipient, bytes calldata signature) external {
         require(tileNumber > 0, "HiveRoomTile: invalid tile number");
@@ -102,9 +103,35 @@ contract HiveRoomTile is
         minted[tileNumber] = true;
 
         // NFT 발행
-        _safeMint(user, tileNumber);
+        _safeMint(recipient, tileNumber);
 
-        emit TileMinted(tileNumber, user);
+        emit TileMinted(tileNumber, recipient);
+    }
+
+    /**
+     * @notice 타일 NFT 스테이킹 (온체인 → 인앱)
+     * @dev 유저가 직접 호출; NFT를 컨트랙트가 보관
+     * @param tokenId 스테이킹할 타일 번호
+     */
+    function stake(uint256 tokenId) external {
+        require(ownerOf(tokenId) == msg.sender, "HiveRoomTile: not owner");
+        stakedBy[tokenId] = msg.sender;
+        _transfer(msg.sender, address(this), tokenId);
+        emit TileStaked(tokenId, msg.sender);
+    }
+
+    /**
+     * @notice 타일 NFT 언스테이킹 (인앱 → 온체인)
+     * @dev STAKER_ROLE 보유자(서버)만 호출 가능
+     * @param tokenId 언스테이킹할 타일 번호
+     * @param to      NFT를 받을 지갑 주소
+     */
+    function unstake(uint256 tokenId, address to) external onlyRole(STAKER_ROLE) {
+        require(ownerOf(tokenId) == address(this), "HiveRoomTile: not staked");
+        require(to != address(0), "HiveRoomTile: zero address");
+        delete stakedBy[tokenId];
+        _transfer(address(this), to, tokenId);
+        emit TileUnstaked(tokenId, to);
     }
 
     /**
@@ -114,7 +141,6 @@ contract HiveRoomTile is
      * @param tokenId 타일 번호
      *
      * MARKET_ROLE을 가진 HiveRoomMarket 컨트랙트만 호출 가능.
-     * 표준 ERC-721 approve 없이 강제 이전.
      */
     function forceTransfer(
         address from,
@@ -130,9 +156,26 @@ contract HiveRoomTile is
     }
 
     /**
+     * @notice 타일 NFT 전체 상태 조회 (프론트엔드용)
+     * @param tokenId 타일 번호
+     * @return isMinted   민팅 여부
+     * @return isStaked   현재 스테이킹(컨트랙트 보관) 여부
+     * @return currentOwner 현재 소유자 (미민팅 시 address(0))
+     */
+    function tileNftStatus(uint256 tokenId) external view returns (
+        bool isMinted,
+        bool isStaked,
+        address currentOwner
+    ) {
+        isMinted = minted[tokenId];
+        if (isMinted) {
+            currentOwner = ownerOf(tokenId);
+            isStaked = (currentOwner == address(this));
+        }
+    }
+
+    /**
      * @notice 타일 NFT 존재 여부 및 소유자 확인 (프론트엔드용)
-     * @return exists NFT 민팅 여부
-     * @return owner  현재 소유자 (미민팅 시 address(0))
      */
     function tileInfo(uint256 tileNumber) external view returns (bool exists, address owner) {
         exists = minted[tileNumber];
@@ -141,11 +184,6 @@ contract HiveRoomTile is
 
     // ─── 메타데이터 ───────────────────────────────────────────────────────
 
-    /**
-     * @notice NFT 메타데이터 URI
-     * 예) ipfs://QmXxx.../1.json
-     * 메타데이터 내용: tileNumber, zone, name, image
-     */
     function tokenURI(uint256 tokenId)
         public
         view
