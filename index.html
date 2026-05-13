@@ -193,18 +193,24 @@ header{
   65%{transform:scale(0.985);box-shadow:0 0 10px rgba(242,184,48,.4);}
 }
 .con-finish-btn.flash{animation:finish-flash .7s ease-in-out infinite;}
-.ai-btn-col{flex:1;display:flex;flex-direction:column;gap:6px;}
-.ai-gen-btn{padding:8px;background:#F7A800;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .15s;}
+/* AI gen section */
+/* AI 액션 섹션 (오른쪽 하단) */
+.ai-action-section{padding:10px 12px;background:#fff;border-top:2px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;gap:8px;}
+.ai-prompt-ta{width:100%;box-sizing:border-box;resize:none;border:1.5px solid var(--border);border-radius:8px;font-size:12px;padding:7px 9px;font-family:'Noto Sans KR',sans-serif;line-height:1.5;color:#333;background:#fafaf8;}
+.ai-prompt-ta:focus{outline:none;border-color:var(--honey);}
+.ai-action-row{display:flex;gap:8px;align-items:center;}
+.ai-gen-btn{flex:1;padding:9px 8px;background:#F7A800;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .15s;}
 .ai-gen-btn:disabled{opacity:.5;cursor:not-allowed;}
-.ai-regen-btn{padding:6px;background:#f0ece4;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;}
+.ai-regen-btn{padding:9px 10px;background:#f0ece4;border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;white-space:nowrap;}
 .ai-regen-btn:disabled{opacity:.4;cursor:not-allowed;}
-#ai-gen-status{font-size:10px;color:#888;min-height:13px;}
+#ai-gen-status{font-size:11px;color:#888;min-height:14px;}
+/* AI pane */
 .ai-pane-inner{padding:10px 12px;}
 .ai-pane-inner .ai-sect{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.4px;text-transform:uppercase;margin:10px 0 4px;display:block;}
 .ai-pane-inner .ai-sect:first-child{margin-top:4px;}
 .ai-pane-inner select{width:100%;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:#fff;margin-bottom:2px;}
 .ai-chk-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 6px;}
-.ai-chk-lbl{display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;padding:2px 0;}
+.ai-chk-lbl{display:flex;align-items:center;gap:4px;font-size:14px;cursor:pointer;padding:2px 0;}
 .ai-chk-lbl input[type=checkbox]{width:14px;height:14px;accent-color:#F7A800;flex-shrink:0;}
 .con-close-btn{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;}
 .con-close-btn:hover{background:rgba(255,255,255,.35);}
@@ -227,26 +233,19 @@ header{
 
 /* ── 왼쪽: 미리보기 ── */
 .con-left{
-  width:340px;flex-shrink:0;
+  width:510px;flex-shrink:0;
   display:flex;flex-direction:column;
   background:#F8F5F0;
   border-right:1px solid var(--border);
   position:relative;
 }
-/* AI 전용 프리뷰 영역 */
-.ai-preview-wrap{
-  flex:1;display:flex;flex-direction:column;
+.preview-area{
+  flex:0 0 auto;display:flex;flex-direction:column;
   align-items:center;justify-content:flex-start;
-  padding:12px;gap:8px;overflow:hidden;
+  gap:0;padding:12px 12px 8px;width:100%;
+  position:relative;
 }
-#ai-room-canvas{
-  width:100%;max-width:300px;height:auto;
-  border-radius:12px;background:#f4f2ef;display:block;
-  box-shadow:0 2px 12px rgba(0,0,0,.08);
-}
-.ai-ctrl-row{display:flex;gap:8px;width:100%;max-width:300px;}
-.ai-ctrl-row .ai-gen-btn{flex:1;}
-.ai-ctrl-row .ai-regen-btn{flex:0 0 auto;}
+#ai-preview-cv{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:460px;height:460px;pointer-events:none;display:none;border-radius:4px;}
 /* ── 하단 광고 영역 (전체 너비) ── */
 .preview-ad{
   height:90px;flex-shrink:0;
@@ -270,11 +269,11 @@ header{
 /* 에셋 탭 */
 .asset-tabs{display:flex;background:#fff;border-bottom:2px solid var(--border);flex-shrink:0;}
 #mob-view-tabs{display:none;}
-.atab{flex:1;padding:9px 4px;font-size:11px;font-weight:600;border:none;background:transparent;cursor:pointer;color:var(--muted);font-family:'Noto Sans KR',sans-serif;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;}
+.atab{flex:1;padding:9px 4px;font-size:13px;font-weight:600;border:none;background:transparent;cursor:pointer;color:var(--muted);font-family:'Noto Sans KR',sans-serif;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;}
 .atab.on{color:var(--hdk);border-bottom-color:var(--honey);background:var(--hlt);}
 .atab:hover:not(.on){color:var(--text);background:#FAFAFA;}
 
-.asset-pane{flex:1;overflow-y:auto;display:none;flex-direction:column;}
+.asset-pane{flex:0 0 278px;overflow-y:auto;display:none;flex-direction:column;}
 .asset-pane.on{display:flex;}
 .asset-pane::-webkit-scrollbar{width:3px;}
 .asset-pane::-webkit-scrollbar-thumb{background:var(--border);}
@@ -688,7 +687,6 @@ header{
   .map-wrap{ height:calc(100vh - 46px - 22px); }
 
   /* 팝업 숨김 (패널은 허용) */
-  #done-ov{ display:none !important; }
   #buy-confirm-ov{ display:none !important; }
   #tile-confirm-ov{ display:none !important; }
   #buy-success-ov{ display:none !important; }
@@ -756,64 +754,81 @@ header{
   .h-dropdown{ right:0 !important; top:46px !important; position:fixed !important; }
   #ranking-ov .ranking-box{ width:96vw; }
 
-  /* ── 모바일 콘솔: 전체화면 오버레이 ── */
-  /* 기존 PC 콘솔은 opacity/transform으로 숨김 — 모바일도 동일 방식 유지 */
-  /* PC: position:absolute, right:14px, width:920px */
-  /* 모바일: position:fixed, inset:0, 아래서 위로 슬라이드 */
+  /* ── 모바일 콘솔: 전체화면 슬라이드업 팝업 ── */
   #console{
     position:fixed !important;
     top:0 !important; left:0 !important;
     right:0 !important; bottom:0 !important;
-    width:100% !important;
-    max-width:100% !important;
+    width:100% !important; max-width:100% !important;
     border-radius:0 !important;
     transform:translateY(100%) !important;
+    z-index:300 !important;
   }
-  #console.open{
-    transform:translateY(0) !important;
-    opacity:1 !important;
-    pointer-events:auto !important;
+  #console.open{ transform:translateY(0) !important; opacity:1 !important; pointer-events:auto !important; }
+
+  /* 전환 탭 바 */
+  #mob-view-tabs{
+    display:flex !important;
+    flex-shrink:0;
+    background:#fff;
+    border-bottom:2px solid var(--border);
   }
+  .mob-vtab{
+    flex:1; padding:13px 8px;
+    font-size:14px; font-weight:700;
+    font-family:'Noto Sans KR',sans-serif;
+    border:none; background:transparent; cursor:pointer;
+    color:var(--muted);
+    border-bottom:3px solid transparent; margin-bottom:-2px;
+    transition:all .15s;
+  }
+  .mob-vtab.on{ color:var(--hdk); border-bottom-color:var(--honey); background:#FFFBF0; }
 
-  /* 모바일 탭 전환 버튼 표시 */
-  #mob-view-tabs{ display:flex !important; }
+  /* con-body-top: 세로 스택, 탭 패널이 flex:1로 공간 채움 */
+  .con-body-top{ flex-direction:column !important; flex:1 !important; overflow:hidden !important; min-height:0 !important; }
 
-  /* con-body-top: 가로→세로 */
-  .con-body-top{ flex-direction:column !important; }
-
-  /* con-left: 기본 숨김, mob-active 시 표시 */
+  /* ── 미리보기 패널 (con-left) ── */
   .con-left{
-    width:100% !important;
-    border-right:none !important;
-    border-bottom:1px solid var(--border) !important;
-    display:none !important;
-    flex:1 !important;
+    width:100% !important; flex:1 !important;
+    border-right:none !important; border-bottom:none !important;
+    display:none !important; overflow-y:auto !important;
   }
-  .con-left.mob-active{ display:flex !important; }
+  .con-left.mob-active{ display:flex !important; flex-direction:column !important; align-items:center !important; }
 
-  /* AI 캔버스 모바일 크기 */
-  #ai-room-canvas{ max-width:min(280px,80vw) !important; }
-  .ai-ctrl-row{ max-width:min(280px,80vw) !important; }
-  .ai-gen-btn, .ai-regen-btn{ font-size:15px !important; padding:12px 10px !important; }
+  /* 캔버스 반응형 */
+  .preview-area{ padding:16px 12px 8px !important; justify-content:flex-start !important; align-items:center !important; }
+  #room-cv{ width:min(calc(100vw - 32px),380px) !important; height:min(calc(100vw - 32px),380px) !important; }
+  #ai-preview-cv{ width:min(calc(100vw - 32px),380px) !important; height:min(calc(100vw - 32px),380px) !important; top:16px !important; }
 
-  /* 컨트롤 버튼 터치 크기 확대 */
-  .ctrl-btn{ width:36px !important; height:36px !important; font-size:16px !important; }
-  .ctrl-size input[type=range]{ width:90px !important; }
+  /* Upload to Map 버튼 (모바일) */
+  .con-left .con-finish-btn{ width:calc(100% - 24px) !important; margin:8px 12px 20px !important; font-size:15px !important; padding:13px 16px !important; }
 
-  /* con-right: 기본 숨김, mob-active 시 표시 */
-  .con-right{
-    width:100% !important;
-    display:none !important;
-    flex:1 !important;
-  }
+  /* item-ctrl: AI 플로우에선 불필요 — 모바일 숨김 */
+  #item-ctrl{ display:none !important; }
+
+  /* ── 생성 패널 (con-right) ── */
+  .con-right{ width:100% !important; flex:1 !important; display:none !important; overflow:hidden !important; min-height:0 !important; }
   .con-right.mob-active{ display:flex !important; }
 
-  /* 에셋 탭/그리드 */
-  .atab{ font-size:10px !important; padding:10px 2px !important; }
+  /* asset-pane: 고정높이 해제, 남은 공간 차지 */
+  .asset-pane{ flex:1 !important; max-height:none !important; }
+
+  /* 탭 버튼 작게 */
+  .atab{ font-size:11px !important; padding:10px 2px !important; }
   .agrid{ grid-template-columns:repeat(4,1fr) !important; gap:6px !important; padding:8px !important; }
 
-  /* 광고 영역 숨김 */
+  /* AI 체크박스 터치 영역 확대 */
+  .ai-chk-lbl{ font-size:15px !important; padding:5px 0 !important; }
+  .ai-chk-lbl input[type=checkbox]{ width:18px !important; height:18px !important; }
+
+  /* 프롬프트+버튼 영역 */
+  .ai-action-section{ padding:10px 12px 20px !important; }
+  .ai-gen-btn, .ai-regen-btn{ font-size:15px !important; padding:12px 10px !important; }
+
+  /* 광고·제어 불필요 요소 숨김 */
   .preview-ad{ display:none !important; }
+  .ctrl-btn{ width:36px !important; height:36px !important; font-size:16px !important; }
+  .ctrl-size input[type=range]{ width:90px !important; }
 
   /* 줌 버튼 */
   .map-zoom{ bottom:16px;right:12px; }
@@ -868,7 +883,7 @@ header{
   <div class="h-sep"></div>
   <button class="h-badge" onclick="openHelp()" style="cursor:pointer;border:1px solid var(--honey);background:var(--hlt);color:var(--hdk);font-family:'Noto Sans KR',sans-serif;" data-i18n="help">❓ Help</button>
   <div class="h-sep"></div>
-  <button class="h-badge" onclick="openTips()" style="cursor:pointer;border:1px solid #F2B830;background:#FFF8E8;color:#A87800;font-family:'Noto Sans KR',sans-serif;">💡 Tips</button>
+  <button class="h-badge" onclick="openTips()" style="cursor:pointer;border:1px solid #5BBCCC;background:#EBF8F8;color:#1A7A8A;font-family:'Noto Sans KR',sans-serif;">💡 Tips</button>
   <div class="h-sep"></div>
   <button class="h-badge" onclick="openRanking()" style="cursor:pointer;border:1px solid #B8A0E8;background:#F5F0FF;color:#6040B0;font-family:'Noto Sans KR',sans-serif;" data-i18n="ranking">🏆 Ranking</button>
   <div class="h-sep"></div>
@@ -963,14 +978,14 @@ header{
     <div class="h-hive-badge" id="room-badge" onclick="openRoomModal()" style="cursor:pointer;display:none;background:linear-gradient(135deg,#EEF0FF,#E0E4FF);border-color:#5B6CF2;color:#3A4BD4;" title="Room NFTs">
       🏠 <span id="room-count">0</span> ROOM
     </div>
-    <!-- 지갑 연결 버튼 -->
-    <div id="wallet-wrap" style="position:relative;flex-shrink:0;display:none;">
-      <button id="wallet-btn" onclick="walletBtnClick()" style="padding:5px 10px;border-radius:20px;border:1.5px solid #F2B830;background:#FFF8E8;color:#A87800;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">🔗 Wallet</button>
-      <div id="wallet-drop" style="display:none;position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1.5px solid #E8E0D0;border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,.18);min-width:190px;overflow:hidden;z-index:2000;">
-        <div id="wdrop-addr" onclick="_copyWalletAddr()" style="padding:8px 14px 6px;font-size:12px;color:#555;font-family:monospace;white-space:nowrap;border-bottom:1px solid #f0f0f0;overflow:hidden;text-overflow:ellipsis;cursor:pointer;" title="Click to copy"></div>
-        <button onclick="disconnectWallet()" style="width:100%;padding:9px 14px;border:none;background:none;text-align:left;font-size:12px;font-weight:700;color:#E53935;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">🔌 Disconnect</button>
-        <button onclick="switchWallet()" style="width:100%;padding:9px 14px;border:none;background:none;text-align:left;font-size:12px;font-weight:700;color:#3A4BD4;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">🔄 Switch Wallet</button>
-      </div>
+  </div>
+  <!-- 지갑 연결 버튼 (로그인 후 표시, 모바일 포함) -->
+  <div id="wallet-wrap" style="position:relative;flex-shrink:0;display:none;">
+    <button id="wallet-btn" onclick="walletBtnClick()" style="padding:5px 10px;border-radius:20px;border:1.5px solid #F2B830;background:#FFF8E8;color:#A87800;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">🔗 Wallet</button>
+    <div id="wallet-drop" style="display:none;position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1.5px solid #E8E0D0;border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,.18);min-width:190px;overflow:hidden;z-index:2000;">
+      <div id="wdrop-addr" onclick="_copyWalletAddr()" style="padding:8px 14px 6px;font-size:12px;color:#555;font-family:monospace;white-space:nowrap;border-bottom:1px solid #f0f0f0;overflow:hidden;text-overflow:ellipsis;cursor:pointer;" title="Click to copy"></div>
+      <button onclick="disconnectWallet()" style="width:100%;padding:9px 14px;border:none;background:none;text-align:left;font-size:12px;font-weight:700;color:#E53935;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">🔌 Disconnect</button>
+      <button onclick="switchWallet()" style="width:100%;padding:9px 14px;border:none;background:none;text-align:left;font-size:12px;font-weight:700;color:#3A4BD4;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">🔄 Switch Wallet</button>
     </div>
   </div>
   <div class="h-profile-wrap" id="profile-wrap" style="display:none;">
@@ -1053,7 +1068,7 @@ header{
 </div>
 
 <!-- Tips 팝업 (페이지 로드 시 표시) -->
-<div id="tips-ov" class="hidden">
+<div id="tips-ov">
   <div class="tips-wrap">
     <div class="tips-box">
     <div class="tips-viewport">
@@ -1190,7 +1205,6 @@ header{
             <div class="con-help-drop-body" id="con-help-drop-body"></div>
           </div>
         </div>
-        <button class="con-finish-btn" id="finish-btn" onclick="showDone()"><span data-i18n="finish">Finish</span> ✦</button>
         <button class="con-close-btn" onclick="closeConsole()">✕</button>
       </div>
     </div>
@@ -1200,99 +1214,147 @@ header{
 
       <!-- 모바일 전용: 미리보기 ↔ 에셋 탭 전환 버튼 (PC에서는 #mob-view-tabs가 display:none) -->
       <div id="mob-view-tabs">
-        <button class="mob-vtab on" id="mob-tab-preview" onclick="mobSwitchView('preview')">🖼 <span data-i18n="mob_tab_preview">Preview</span></button>
-        <button class="mob-vtab" id="mob-tab-assets" onclick="mobSwitchView('assets')">🛋 <span data-i18n="mob_tab_assets">Assets</span></button>
+        <button class="mob-vtab on" id="mob-tab-preview" onclick="mobSwitchView('preview')">🖼 Preview</button>
+        <button class="mob-vtab" id="mob-tab-assets" onclick="mobSwitchView('assets')">✨ Generate</button>
       </div>
 
       <!-- 상단: 미리보기 + 아이템선택 -->
       <div class="con-body-top">
 
-        <!-- 왼쪽: AI 이미지 프리뷰 -->
+        <!-- 왼쪽: 미리보기 -->
         <div class="con-left mob-active" id="con-left">
-          <div class="ai-preview-wrap">
-            <canvas id="ai-room-canvas" width="640" height="640"></canvas>
-            <div id="ai-gen-status"></div>
-            <div class="ai-ctrl-row">
-              <button class="ai-gen-btn" id="ai-gen-btn" onclick="generateAIRoom()">✨ Generate</button>
-              <button class="ai-regen-btn" id="ai-regen-btn" onclick="generateAIRoom()" disabled>🔄</button>
+          <div class="preview-area">
+            <div style="display:flex;flex-direction:column;align-items:center;">
+              <canvas id="room-cv" width="700" height="700" style="width:460px;height:460px;display:block;"></canvas>
             </div>
+            <!-- AI 이미지 미리보기 오버레이 (생성 후 덮어씌움) -->
+            <canvas id="ai-preview-cv" width="700" height="700"></canvas>
           </div>
-          <!-- room-cv: JS 참조용 (숨김) -->
-          <canvas id="room-cv" width="700" height="700" style="display:none;"></canvas>
+          <!-- Upload to Map 버튼 (미리보기 바로 아래) -->
+          <button class="con-finish-btn" id="finish-btn" disabled onclick="showDone()"><span data-i18n="finish">Upload to Map</span> ✦</button>
+
+          <!-- 컨트롤 핸들 -->
+          <div id="item-ctrl">
+            <div class="ctrl-size">
+              <span data-i18n="ctrl_size">Size</span>
+              <input type="range" id="ctrl-size-range" min="30" max="200" value="100"
+                oninput="onSizeChange(this.value)">
+              <span id="ctrl-size-val">100%</span>
+            </div>
+            <div class="ctrl-sep"></div>
+            <button class="ctrl-btn" id="ctrl-flip-btn" id="ctrl-flip-title" title="Flip" onclick="onCtrlFlip()">⇄</button>
+            <button class="ctrl-btn" id="ctrl-layer-up" id="ctrl-up-title" title="Forward" onclick="onCtrlLayerUp()">↑</button>
+            <button class="ctrl-btn" id="ctrl-layer-dn" id="ctrl-dn-title" title="Backward" onclick="onCtrlLayerDn()">↓</button>
+            <div class="ctrl-sep"></div>
+            <button class="ctrl-btn" title="Deselect" onclick="onCtrlDeselect()" style="font-size:10px;width:44px;color:#666;" data-i18n="ctrl_deselect">Desel</button>
+            <button class="ctrl-btn" title="Delete" onclick="onCtrlDelete()" style="font-size:10px;width:36px;color:#C44;background:#FFF0F0;" data-i18n="ctrl_delete">Del</button>
+          </div>
         </div>
 
-        <!-- 오른쪽: AI 생성 옵션 -->
+        <!-- 오른쪽: 에셋 선택 -->
         <div class="con-right" id="con-right">
-          <div class="ai-pane-inner" style="overflow-y:auto;flex:1;">
-            <span class="ai-sect">🏠 Room Type</span>
-            <select id="con-sel-room" onchange="buildConsolePrompt()">
-              <option value="">-- Select --</option>
-              <option value="bedroom">🛏️ Bedroom</option>
-              <option value="living room">🛋️ Living room</option>
-              <option value="game room">🎮 Game room</option>
-              <option value="library room">📚 Library room</option>
-              <option value="study room">💻 Study room</option>
-              <option value="kitchen">🍳 Kitchen</option>
-              <option value="dining room">🍽️ Dining room</option>
-              <option value="music room">🎵 Music room</option>
-              <option value="art studio">🎨 Art studio</option>
-              <option value="kids room">🧸 Kids room</option>
-              <option value="walk-in closet">👗 Walk-in closet</option>
-            </select>
-            <span class="ai-sect">🌈 Mood</span>
-            <select id="con-sel-mood" onchange="buildConsolePrompt()">
-              <option value="">-- Select --</option>
-              <option value="cozy">🏡 Cozy</option>
-              <option value="delighted">😊 Delighted</option>
-              <option value="light and airy">☀️ Light &amp; Airy</option>
-              <option value="dark and moody">🌑 Dark &amp; Moody</option>
-              <option value="colorful and vivid">🌈 Colorful &amp; Vivid</option>
-              <option value="clean and minimal">✨ Clean &amp; Minimal</option>
-              <option value="romantic">💕 Romantic</option>
-              <option value="retro">📺 Retro</option>
-              <option value="futuristic">🚀 Futuristic</option>
-              <option value="nature-inspired">🌿 Nature-inspired</option>
-            </select>
-            <span class="ai-sect">🖼️ Wall Deco <small style="text-transform:none;font-weight:400;">(max 2)</small></span>
-            <div class="ai-chk-grid">
-              <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="bright lights"  onchange="limitConsoleChecks('con-wall',2);buildConsolePrompt()"> 💡 Bright lights</label>
-              <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="paintings"      onchange="limitConsoleChecks('con-wall',2);buildConsolePrompt()"> 🖼️ Paintings</label>
-              <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="neon signs"     onchange="limitConsoleChecks('con-wall',2);buildConsolePrompt()"> 🪩 Neon signs</label>
-              <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="large windows"  onchange="limitConsoleChecks('con-wall',2);buildConsolePrompt()"> 🪟 Large windows</label>
-              <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="glass panels"   onchange="limitConsoleChecks('con-wall',2);buildConsolePrompt()"> 🔲 Glass panels</label>
-              <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="fairy lights"   onchange="limitConsoleChecks('con-wall',2);buildConsolePrompt()"> ✨ Fairy lights</label>
-              <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="photo frames"   onchange="limitConsoleChecks('con-wall',2);buildConsolePrompt()"> 🖼️ Photo frames</label>
-              <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="mirrors"        onchange="limitConsoleChecks('con-wall',2);buildConsolePrompt()"> 🪞 Mirrors</label>
-              <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="hanging plants" onchange="limitConsoleChecks('con-wall',2);buildConsolePrompt()"> 🌿 Hanging plants</label>
-              <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="tapestry"       onchange="limitConsoleChecks('con-wall',2);buildConsolePrompt()"> 🎨 Tapestry</label>
-              <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="bookshelves"    onchange="limitConsoleChecks('con-wall',2);buildConsolePrompt()"> 📚 Bookshelves</label>
-            </div>
-            <span class="ai-sect">🪑 Furniture <small style="text-transform:none;font-weight:400;">(max 5)</small></span>
-            <div class="ai-chk-grid">
-              <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="sofa"            onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 🛋️ Sofa</label>
-              <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="coffee table"    onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> ☕ Coffee table</label>
-              <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="bed"             onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 🛏️ Bed</label>
-              <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="nightstand"      onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 🌙 Nightstand</label>
-              <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="computer desk"   onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 💻 Computer desk</label>
-              <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="office chair"    onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 🪑 Office chair</label>
-              <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="dining table"    onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 🍽️ Dining table</label>
-              <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="bookshelf"       onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 📚 Bookshelf</label>
-              <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="armchair"        onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 💺 Armchair</label>
-              <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="gaming setup"    onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 🎮 Gaming setup</label>
-              <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="wardrobe"        onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 👗 Wardrobe</label>
-              <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="dresser"         onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 🪞 Dresser</label>
-              <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="study desk"      onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 📖 Study desk</label>
-              <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="floor lamp"      onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 💡 Floor lamp</label>
-              <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="piano"           onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 🎹 Piano</label>
-              <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="music stand"     onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 🎵 Music stand</label>
-              <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="indoor plant"    onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 🪴 Indoor plant</label>
-              <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="kitchen counter" onchange="limitConsoleChecks('con-furn',5);buildConsolePrompt()"> 🍳 Kitchen counter</label>
-            </div>
-            <span class="ai-sect">✏️ Custom prompt <small style="text-transform:none;font-weight:400;">(optional)</small></span>
-            <input type="text" id="ai-prompt-input" placeholder="e.g. sunrise light, pet dog..." style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:'Noto Sans KR',sans-serif;background:#fff;outline:none;" oninput="buildConsolePrompt()">
+
+          <!-- AI 선택 탭 -->
+          <div class="asset-tabs">
+            <button class="atab on"  onclick="switchTab(this,'room')">🏠 Room type</button>
+            <button class="atab"     onclick="switchTab(this,'mood')">🌈 Mood</button>
+            <button class="atab"     onclick="switchTab(this,'walldeco')">🖼️ Wall</button>
+            <button class="atab"     onclick="switchTab(this,'furnitures')">🪑 Furniture</button>
           </div>
+
+          <!-- Room Type (max 1) -->
+          <div class="asset-pane on" id="pane-room">
+            <div class="ai-pane-inner">
+              <div class="ai-chk-grid">
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-room" value="bedroom"       onchange="limitConsoleChecks('con-room',1)"> 🛏️ Bedroom</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-room" value="living room"   onchange="limitConsoleChecks('con-room',1)"> 🛋️ Living room</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-room" value="game room"     onchange="limitConsoleChecks('con-room',1)"> 🎮 Game room</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-room" value="library room"  onchange="limitConsoleChecks('con-room',1)"> 📚 Library room</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-room" value="study room"    onchange="limitConsoleChecks('con-room',1)"> 💻 Study room</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-room" value="kitchen"       onchange="limitConsoleChecks('con-room',1)"> 🍳 Kitchen</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-room" value="music room"    onchange="limitConsoleChecks('con-room',1)"> 🎵 Music room</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-room" value="art studio"    onchange="limitConsoleChecks('con-room',1)"> 🎨 Art studio</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-room" value="kids room"     onchange="limitConsoleChecks('con-room',1)"> 🧸 Kids room</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-room" value="walk-in closet" onchange="limitConsoleChecks('con-room',1)"> 👗 Walk-in closet</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mood (max 1) -->
+          <div class="asset-pane" id="pane-mood">
+            <div class="ai-pane-inner">
+              <div class="ai-chk-grid">
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-mood" value="cozy"              onchange="limitConsoleChecks('con-mood',1)"> 🏡 Cozy</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-mood" value="delighted"         onchange="limitConsoleChecks('con-mood',1)"> 😊 Delighted</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-mood" value="light and airy"    onchange="limitConsoleChecks('con-mood',1)"> ☀️ Light &amp; Airy</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-mood" value="dark and moody"    onchange="limitConsoleChecks('con-mood',1)"> 🌑 Dark &amp; Moody</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-mood" value="colorful and vivid" onchange="limitConsoleChecks('con-mood',1)"> 🌈 Colorful &amp; Vivid</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-mood" value="clean and minimal" onchange="limitConsoleChecks('con-mood',1)"> ✨ Clean &amp; Minimal</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-mood" value="romantic"          onchange="limitConsoleChecks('con-mood',1)"> 💕 Romantic</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-mood" value="retro"             onchange="limitConsoleChecks('con-mood',1)"> 📺 Retro</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-mood" value="futuristic"        onchange="limitConsoleChecks('con-mood',1)"> 🚀 Futuristic</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-mood" value="nature-inspired"   onchange="limitConsoleChecks('con-mood',1)"> 🌿 Nature-inspired</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Wall Deco (max 2) -->
+          <div class="asset-pane" id="pane-walldeco">
+            <div class="ai-pane-inner">
+              <div class="ai-chk-grid">
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="bright lights"  onchange="limitConsoleChecks('con-wall',3)"> 💡 Bright lights</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="paintings"      onchange="limitConsoleChecks('con-wall',3)"> 🖼️ Paintings</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="neon signs"     onchange="limitConsoleChecks('con-wall',3)"> 🪩 Neon signs</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="large windows"  onchange="limitConsoleChecks('con-wall',3)"> 🪟 Large windows</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="fairy lights"   onchange="limitConsoleChecks('con-wall',3)"> ✨ Fairy lights</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="photo frames"   onchange="limitConsoleChecks('con-wall',3)"> 🖼️ Photo frames</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="mirrors"        onchange="limitConsoleChecks('con-wall',3)"> 🪞 Mirrors</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="hanging plants" onchange="limitConsoleChecks('con-wall',3)"> 🌿 Hanging plants</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="tapestry"       onchange="limitConsoleChecks('con-wall',3)"> 🎨 Tapestry</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-wall" value="bookshelves"    onchange="limitConsoleChecks('con-wall',3)"> 📚 Bookshelves</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Furnitures (max 5) -->
+          <div class="asset-pane" id="pane-furnitures">
+            <div class="ai-pane-inner">
+              <div class="ai-chk-grid">
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="sofa"            onchange="limitConsoleChecks('con-furn',5)"> 🛋️ Sofa</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="coffee table"    onchange="limitConsoleChecks('con-furn',5)"> ☕ Coffee table</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="bed"             onchange="limitConsoleChecks('con-furn',5)"> 🛏️ Bed</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="nightstand"      onchange="limitConsoleChecks('con-furn',5)"> 🌙 Nightstand</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="computer desk"   onchange="limitConsoleChecks('con-furn',5)"> 💻 Computer desk</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="office chair"    onchange="limitConsoleChecks('con-furn',5)"> 🪑 Office chair</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="dining table"    onchange="limitConsoleChecks('con-furn',5)"> 🍽️ Dining table</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="bookshelf"       onchange="limitConsoleChecks('con-furn',5)"> 📚 Bookshelf</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="armchair"        onchange="limitConsoleChecks('con-furn',5)"> 💺 Armchair</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="gaming setup"    onchange="limitConsoleChecks('con-furn',5)"> 🎮 Gaming setup</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="wardrobe"        onchange="limitConsoleChecks('con-furn',5)"> 👗 Wardrobe</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="dresser"         onchange="limitConsoleChecks('con-furn',5)"> 🪞 Dresser</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="study desk"      onchange="limitConsoleChecks('con-furn',5)"> 📖 Study desk</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="floor lamp"      onchange="limitConsoleChecks('con-furn',5)"> 💡 Floor lamp</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="piano"           onchange="limitConsoleChecks('con-furn',5)"> 🎹 Piano</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="music stand"     onchange="limitConsoleChecks('con-furn',5)"> 🎵 Music stand</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="indoor plant"    onchange="limitConsoleChecks('con-furn',5)"> 🪴 Indoor plant</label>
+                <label class="ai-chk-lbl"><input type="checkbox" name="con-furn" value="kitchen counter" onchange="limitConsoleChecks('con-furn',5)"> 🍳 Kitchen counter</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- AI 액션 섹션: 프롬프트 + 버튼 (체크박스 아래) -->
+          <div class="ai-action-section">
+            <textarea id="ai-prompt-input" class="ai-prompt-ta" rows="3" placeholder="Selections auto-filled here — editable"></textarea>
+            <div class="ai-action-row">
+              <button class="ai-gen-btn" id="ai-gen-btn" onclick="generateAIRoom()">✨ Generate</button>
+              <button class="ai-regen-btn" id="ai-regen-btn" onclick="generateAIRoom()" disabled>🔄 Regenerate</button>
+            </div>
+            <div id="ai-gen-status"></div>
+          </div>
+
         </div>
       </div><!-- /con-body-top -->
+
 
     </div>
   </div><!-- /#console -->
@@ -1378,6 +1440,14 @@ header{
     <button class="rp-move-btn" id="rp-invest-btn" onclick="openInvestFromPanel()" style="display:none;margin-top:6px;background:#FFF0E8;border-color:#E07820;color:#C05010;">📈 <span data-i18n="invest">Invest</span></button>
     <button class="rp-move-btn" id="rp-move-btn" onclick="openMoveOv()" style="display:none">🚚 <span data-i18n="move">Move</span></button>
     <button class="rp-buy-btn" id="rp-attend-btn" onclick="openAttendanceQuiz()" style="display:none;background:linear-gradient(135deg,#4A8A50,#2E6B35);margin-top:8px;">📅 <span data-i18n="checkin_btn">Check-in (+5 HIVE)</span></button>
+    <button class="rp-move-btn" id="rp-nft-btn" onclick="openRoomModal()" style="display:none;margin-top:8px;background:#EEF0FF;border-color:#5B6CF2;color:#3A4BD4;">🏠 Room NFT</button>
+    <div id="rp-nft-owner" style="display:none;margin-top:8px;padding:7px 10px;background:#F4F6FF;border-radius:10px;border:1px solid #C8CEFF;">
+      <div style="font-size:10px;color:#888;margin-bottom:3px;">⬡ NFT Owner</div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span id="rp-nft-owner-addr" style="font-family:monospace;font-size:11px;color:#3A4BD4;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+        <button onclick="_copyNftOwner()" style="border:none;background:none;cursor:pointer;font-size:13px;padding:0;line-height:1;" title="Copy">📋</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1717,7 +1787,7 @@ function setLoggedIn(user){
   document.getElementById('dd-email').textContent = user.email;
   document.getElementById('h-timers').classList.add('show');
   document.getElementById('wallet-wrap').style.display='block';
-  _tryRestoreAGWWallet();
+  _tryRestoreAGWWallet(); // restore wallet connection after page refresh
   loadMyBalance();
   loadMyRooms();
   startTimers();
@@ -1732,8 +1802,6 @@ function setLoggedOut(){
   MY_ROOM_LIST = [];
   const rb = document.getElementById('room-badge');
   if (rb) rb.style.display = 'none';
-  WALLET_ADDRESS = null;
-  WALLET_SIGNER  = null;
   stopTimers();
   closeMenu();
 }
@@ -1747,6 +1815,8 @@ function closeMenu(){
 document.addEventListener('click', e=>{
   const wrap = document.getElementById('profile-wrap');
   if(wrap && !wrap.contains(e.target)) closeMenu();
+  const wWrap = document.getElementById('wallet-wrap');
+  if(wWrap && !wWrap.contains(e.target)) _closeWalletDrop();
 });
 
 // ── 방 만들기 (새 방) ──
@@ -1786,40 +1856,6 @@ async function startEditRoom(room){
   });
   CTRL_SEL={cat:null,id:null};
 
-  // 2. design_json으로 SEL/POS/SIZE/FLIP/LAYER 복원
-  if(room.design_json){
-    try{
-      const d = typeof room.design_json === 'string' ? JSON.parse(room.design_json) : room.design_json;
-      if(d.sel){
-        SEL.wall  = d.sel.wall  || null;
-        SEL.floor = d.sel.floor || null;
-        SEL.furniture = new Set(d.sel.furniture || []);
-        SEL.walldeco  = new Set(d.sel.walldeco  || []);
-        SEL.item      = new Set(d.sel.item      || []);
-      }
-      if(d.pos){
-        Object.assign(POS.furniture, d.pos.furniture || {});
-        Object.assign(POS.walldeco,  d.pos.walldeco  || {});
-        Object.assign(POS.item,      d.pos.item      || {});
-      }
-      if(d.size){
-        Object.assign(SIZE.furniture, d.size.furniture || {});
-        Object.assign(SIZE.walldeco,  d.size.walldeco  || {});
-        Object.assign(SIZE.item,      d.size.item      || {});
-      }
-      if(d.flip){
-        Object.assign(FLIP.furniture, d.flip.furniture || {});
-        Object.assign(FLIP.walldeco,  d.flip.walldeco  || {});
-        Object.assign(FLIP.item,      d.flip.item      || {});
-      }
-      if(d.layerOrder){
-        LAYER_ORDER.furniture = [...(d.layerOrder.furniture || [])];
-        LAYER_ORDER.walldeco  = [...(d.layerOrder.walldeco  || [])];
-        LAYER_ORDER.item      = [...(d.layerOrder.item      || [])];
-      }
-    }catch(e){ console.warn('design_json 복원 실패', e); }
-  }
-
   // 3. Twitter ID 미리 채우기
   const twEl = document.getElementById('tw-id');
   if(twEl) twEl.value = room.twitter_id || '';
@@ -1830,17 +1866,29 @@ async function startEditRoom(room){
   document.getElementById('console').classList.add('open');
   document.querySelector('.con-title').textContent = t('room_edit_fmt', room.room_number);
 
-  // 5. 기존 room.jpg를 AI 캔버스에 표시
-  const aiCv = document.getElementById('ai-room-canvas');
+  // 5. SEL 상태가 설정된 상태에서 buildGrids (sel 클래스 포함)
+  buildGrids();
+
+  // 6. label 및 진행도 갱신
+  ['wall','floor','furniture','walldeco','item'].forEach(cat => refreshLabel(cat));
+  updateProg();
+
+  // 7. renderRoom (벽지/바닥/가구/장식 모두 표시)
+  await renderRoom();
+
+  // 8. 저장된 room.jpg를 미리보기 오버레이에 표시
+  const aiCv = document.getElementById('ai-preview-cv');
   if(aiCv) {
     const roomImgUrl = `${SUPA_URL}/storage/v1/object/public/room-pic/${EDIT_ROOM_NUM}/room.jpg?t=${Date.now()}`;
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
       const ctx = aiCv.getContext('2d');
-      ctx.clearRect(0, 0, 640, 640);
-      ctx.drawImage(img, 0, 0, 640, 640);
+      ctx.clearRect(0, 0, 700, 700);
+      ctx.drawImage(img, 0, 0, 700, 700);
+      aiCv.style.display = 'block';
     };
+    img.onerror = () => { aiCv.style.display = 'none'; };
     img.src = roomImgUrl;
   }
 }
@@ -1856,7 +1904,7 @@ function showRoomSelect(rooms, mode){
   rooms.forEach(room => {
     const item = document.createElement('div');
     item.className = 'rs-item';
-    const imgUrl = `${SUPA_URL}/storage/v1/object/public/room-pic/${room.room_number}/room.jpg`;
+    const imgUrl = `${SUPA_URL}/storage/v1/object/public/room-pic/${room.room_number}/room.jpg?t=${Date.now()}`;
     item.innerHTML = `
       <img src="${imgUrl}" alt="${room.room_number}번" onerror="this.style.background='#F0EBE0';this.removeAttribute('src')">
       <div class="rs-item-num">${t('room_num_fmt', room.room_number)}</div>
@@ -1988,6 +2036,12 @@ function closeConsole() {
     makeBtn.textContent = LANG==='ko'?'🏠 방 만들기':'🏠 Make Room';
     makeBtn.onclick = openConsole;
   }
+  // AI 미리보기 오버레이 초기화
+  const aiCv = document.getElementById('ai-preview-cv');
+  if(aiCv) { aiCv.style.display = 'none'; aiCv.getContext('2d').clearRect(0,0,700,700); }
+  // Upload to Map 버튼 초기화
+  const finBtn = document.getElementById('finish-btn');
+  if(finBtn) { finBtn.setAttribute('disabled', ''); finBtn.classList.remove('on', 'flash'); }
 }
 
 // ── 모바일 햄버거 메뉴 ──
@@ -2062,35 +2116,6 @@ function switchTab(btn, cat) {
 // ══════════════════════════════════════
 const AI_PROXY_URL = 'https://oval-trombone-obedience.ngrok-free.dev';
 const AI_BASE_PROMPT = 'Cute isometric illustration, fit inside a pointy-top regular hexagon, The hexagon proportions are width:height = √3:2 (approximately 0.87:1), meaning it is taller than it is wide. Design the isometric interior so it fills this vertically-oriented hexagonal boundary — wider in the middle, narrowing toward the top and bottom points. the hexagon centered and occupying about 87% of the canvas width. diamond shaped floor area. No ceiling. No people. Pure white background outside the hexagon. Vivid pastel colors, Japanese kawaii cute 2D cel-shading style, highly detailed clean illustration,';
-const PENDING_JOB_KEY = 'hiveroom_pending_job';
-let _pollingActive = false;
-
-function limitConsoleChecks(name, max) {
-  const boxes = document.querySelectorAll(`input[name="${name}"]`);
-  const checked = Array.from(boxes).filter(b => b.checked);
-  if (checked.length >= max) {
-    boxes.forEach(b => { if (!b.checked) b.disabled = true; });
-  } else {
-    boxes.forEach(b => b.disabled = false);
-  }
-  buildConsolePrompt();
-}
-
-function buildConsolePrompt() {
-  const roomChk = document.querySelector('input[name="con-room"]:checked');
-  const moodChk = document.querySelector('input[name="con-mood"]:checked');
-  const walls = Array.from(document.querySelectorAll('input[name="con-wall"]:checked')).map(b => b.value);
-  const furns = Array.from(document.querySelectorAll('input[name="con-furn"]:checked')).map(b => b.value);
-  const parts = [];
-  if (roomChk) parts.push(roomChk.value);
-  if (moodChk) parts.push(moodChk.value + ' mood');
-  if (walls.length) parts.push('wall decorations: ' + walls.join(', '));
-  if (furns.length) parts.push('furniture: ' + furns.join(', '));
-  const userPart = parts.join(', ');
-  const ta = document.getElementById('ai-prompt-input');
-  if (ta) ta.value = userPart;
-  return userPart;
-}
 
 function buildRoomTemplate() {
   // 640×640 이소메트릭 방 구도 템플릿 (pointy-top 육각형 3등분)
@@ -2160,18 +2185,80 @@ function buildRoomTemplate() {
   return canvas.toDataURL('image/png').split(',')[1];
 }
 
+function limitConsoleChecks(name, max) {
+  const boxes = document.querySelectorAll(`input[name="${name}"]`);
+  const checked = Array.from(boxes).filter(b => b.checked);
+  if (checked.length >= max) {
+    boxes.forEach(b => { if (!b.checked) b.disabled = true; });
+  } else {
+    boxes.forEach(b => b.disabled = false);
+  }
+  buildConsolePrompt();
+}
+
+function buildConsolePrompt() {
+  const roomChk = document.querySelector('input[name="con-room"]:checked');
+  const moodChk = document.querySelector('input[name="con-mood"]:checked');
+  const walls = Array.from(document.querySelectorAll('input[name="con-wall"]:checked')).map(b => b.value);
+  const furns = Array.from(document.querySelectorAll('input[name="con-furn"]:checked')).map(b => b.value);
+  const parts = [];
+  if (roomChk) parts.push(roomChk.value);
+  if (moodChk) parts.push(moodChk.value + ' mood');
+  if (walls.length) parts.push('wall decorations: ' + walls.join(', '));
+  if (furns.length) parts.push('furniture: ' + furns.join(', '));
+  const userPart = parts.join(', ');
+  const ta = document.getElementById('ai-prompt-input');
+  if (ta) ta.value = userPart;
+  return userPart;
+}
+
 async function generateAIRoom() {
   const genBtn = document.getElementById('ai-gen-btn');
   const regenBtn = document.getElementById('ai-regen-btn');
   const status = document.getElementById('ai-gen-status');
   genBtn.disabled = true;
   regenBtn.disabled = true;
-  status.textContent = 'Submitting...';
+
+  const startTime = Date.now();
+  let statusMode = 'generating'; // 'generating' | 'queued'
+  let progressHigh = false;      // progress가 한 번이라도 높았는지
+
+  // 경과 타이머
+  const timerInterval = setInterval(() => {
+    const sec = Math.floor((Date.now() - startTime) / 1000);
+    const m = Math.floor(sec / 60), s = sec % 60;
+    const t = `${m}m:${String(s).padStart(2,'0')}s`;
+    status.textContent = statusMode === 'queued'
+      ? `⏳ In queue... ${t}`
+      : `Generating... ${t} (estimated 1:30)`;
+  }, 1000);
+  status.textContent = 'Generating... 0m:00s (estimated 1:30)';
+
+  // 큐 감지: progress가 높았다가 0으로 리셋되면 다른 유저 작업 완료 → 내 차례 대기 중
+  const progressPoller = setInterval(async () => {
+    try {
+      const r = await fetch(`${AI_PROXY_URL}/sdapi/v1/progress`, {
+        signal: AbortSignal.timeout(3000)
+      });
+      if (!r.ok) return;
+      const d = await r.json();
+      const prog = d.progress || 0;
+      if (prog > 0.15) progressHigh = true;
+      if (progressHigh && prog < 0.05) {
+        statusMode = 'queued';  // 한 사이클 완료됐는데 아직 응답 없음 → 큐 대기 중
+        progressHigh = false;   // 다음 사이클 감지를 위해 초기화
+      }
+    } catch(_) {}
+  }, 2000);
 
   try {
     const ta = document.getElementById('ai-prompt-input');
     const userPart = ta ? ta.value.trim() : buildConsolePrompt();
     const prompt = AI_BASE_PROMPT + (userPart ? ' ' + userPart : '');
+
+    // 5분 타임아웃
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000);
 
     const res = await fetch(`${AI_PROXY_URL}/sdapi/v1/txt2img`, {
       method: 'POST',
@@ -2184,150 +2271,39 @@ async function generateAIRoom() {
         height: 640,
         cfg_scale: 1
       }),
-      signal: AbortSignal.timeout(15000)
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
+
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    const jobId = data.job_id;
-    if (!jobId) throw new Error('No job_id returned');
-
-    const startTime = Date.now();
-    localStorage.setItem(PENDING_JOB_KEY, JSON.stringify({ jobId, startTime }));
-    await pollJobResult(jobId, startTime, status);
-    localStorage.removeItem(PENDING_JOB_KEY);
+    const b64 = data.images?.[0];
+    if (!b64) throw new Error('No image returned');
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    await applyAICanvas('data:image/png;base64,' + b64);
+    status.textContent = `Done ✓ (${elapsed}s)`;
+    // 모바일: 생성 완료 후 Preview 탭으로 자동 전환
+    if (window.innerWidth <= 768) mobSwitchView('preview');
+    regenBtn.disabled = false;
+    const finBtn = document.querySelector('.con-finish-btn');
+    if (finBtn) {
+      finBtn.removeAttribute('disabled');
+      finBtn.classList.add('on');
+      finBtn.classList.remove('flash');
+      void finBtn.offsetWidth;
+      finBtn.classList.add('flash');
+    }
   } catch(e) {
-    const status2 = document.getElementById('ai-gen-status');
-    if (status2) status2.textContent = 'Error: ' + e.message;
-    const g = document.getElementById('ai-gen-btn');
-    const r = document.getElementById('ai-regen-btn');
-    if (g) g.disabled = false;
-    if (r) r.disabled = false;
+    status.textContent = e.name === 'AbortError'
+      ? 'Error: Timed out after 5 minutes'
+      : 'Error: ' + e.message;
+    regenBtn.disabled = false;
+  } finally {
+    clearInterval(timerInterval);
+    clearInterval(progressPoller);
+    genBtn.disabled = false;
   }
 }
-
-async function pollJobResult(jobId, startTime, statusEl) {
-  if (_pollingActive) return;
-  _pollingActive = true;
-
-  const getEl = () => statusEl || document.getElementById('ai-gen-status');
-  let statusMode = 'generating';
-  let progressHigh = false;
-
-  const timerInterval = setInterval(() => {
-    const sec = Math.floor((Date.now() - startTime) / 1000);
-    const m = Math.floor(sec / 60), s = sec % 60;
-    const t = `${m}m:${String(s).padStart(2,'0')}s`;
-    const el = getEl();
-    if (el) el.textContent = statusMode === 'queued'
-      ? `⏳ In queue... ${t}`
-      : `Generating... ${t} (estimated 1:30)`;
-  }, 1000);
-  const el0 = getEl();
-  if (el0) el0.textContent = 'Generating... 0m:00s (estimated 1:30)';
-
-  const progressPoller = setInterval(async () => {
-    try {
-      const r = await fetch(`${AI_PROXY_URL}/sdapi/v1/progress`, { signal: AbortSignal.timeout(3000) });
-      if (!r.ok) return;
-      const d = await r.json();
-      const prog = d.progress || 0;
-      if (prog > 0.15) progressHigh = true;
-      if (progressHigh && prog < 0.05) { statusMode = 'queued'; progressHigh = false; }
-    } catch(_) {}
-  }, 2000);
-
-  return new Promise((resolve, reject) => {
-    const DEADLINE = 5 * 60 * 1000;
-    const poll = setInterval(async () => {
-      try {
-        if (Date.now() - startTime > DEADLINE) {
-          clearInterval(poll); clearInterval(timerInterval); clearInterval(progressPoller);
-          _pollingActive = false;
-          const genBtn = document.getElementById('ai-gen-btn');
-          const regenBtn = document.getElementById('ai-regen-btn');
-          if (genBtn) genBtn.disabled = false;
-          if (regenBtn) regenBtn.disabled = false;
-          reject(new Error('Timed out after 5 minutes')); return;
-        }
-        const r = await fetch(`${AI_PROXY_URL}/job/${jobId}`, { signal: AbortSignal.timeout(5000) });
-        if (r.status === 404) {
-          clearInterval(poll); clearInterval(timerInterval); clearInterval(progressPoller);
-          _pollingActive = false;
-          const genBtn = document.getElementById('ai-gen-btn');
-          const regenBtn = document.getElementById('ai-regen-btn');
-          if (genBtn) genBtn.disabled = false;
-          if (regenBtn) regenBtn.disabled = false;
-          reject(new Error('Job expired or not found')); return;
-        }
-        if (!r.ok) return;
-        const d = await r.json();
-        if (d.status === 'done') {
-          clearInterval(poll); clearInterval(timerInterval); clearInterval(progressPoller);
-          _pollingActive = false;
-          const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-          await applyAICanvas('data:image/png;base64,' + d.image);
-          const el = getEl();
-          if (el) el.textContent = `Done ✓ (${elapsed}s)`;
-          if (window.innerWidth <= 768) mobSwitchView('preview');
-          const genBtn = document.getElementById('ai-gen-btn');
-          const regenBtn = document.getElementById('ai-regen-btn');
-          if (genBtn) genBtn.disabled = false;
-          if (regenBtn) regenBtn.disabled = false;
-          const finBtn = document.querySelector('.con-finish-btn');
-          if (finBtn) {
-            finBtn.removeAttribute('disabled');
-            finBtn.classList.add('on');
-            finBtn.classList.remove('flash');
-            void finBtn.offsetWidth;
-            finBtn.classList.add('flash');
-          }
-          resolve();
-        } else if (d.status === 'error') {
-          clearInterval(poll); clearInterval(timerInterval); clearInterval(progressPoller);
-          _pollingActive = false;
-          const genBtn = document.getElementById('ai-gen-btn');
-          const regenBtn = document.getElementById('ai-regen-btn');
-          if (genBtn) genBtn.disabled = false;
-          if (regenBtn) regenBtn.disabled = false;
-          reject(new Error(d.error || 'Generation failed'));
-        }
-      } catch(_) {}
-    }, 2500);
-  });
-}
-
-async function checkPendingJob() {
-  if (_pollingActive) return;
-  const raw = localStorage.getItem(PENDING_JOB_KEY);
-  if (!raw) return;
-  let saved;
-  try { saved = JSON.parse(raw); } catch(_) { localStorage.removeItem(PENDING_JOB_KEY); return; }
-  const { jobId, startTime } = saved;
-  if (!jobId || Date.now() - startTime > 10 * 60 * 1000) {
-    localStorage.removeItem(PENDING_JOB_KEY); return;
-  }
-  const consoleEl = document.getElementById('console');
-  if (!consoleEl || !consoleEl.classList.contains('open')) return;
-
-  const genBtn = document.getElementById('ai-gen-btn');
-  const regenBtn = document.getElementById('ai-regen-btn');
-  const status = document.getElementById('ai-gen-status');
-  if (genBtn) genBtn.disabled = true;
-  if (regenBtn) regenBtn.disabled = true;
-  try {
-    await pollJobResult(jobId, startTime, status);
-    localStorage.removeItem(PENDING_JOB_KEY);
-  } catch(e) {
-    if (status) status.textContent = 'Error: ' + e.message;
-    localStorage.removeItem(PENDING_JOB_KEY);
-    if (genBtn) genBtn.disabled = false;
-    if (regenBtn) regenBtn.disabled = false;
-  }
-}
-
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') checkPendingJob();
-});
 
 function detectHexVertices(imgEl, size) {
   // 임시 캔버스에 이미지 그리고 픽셀 스캔
@@ -2366,16 +2342,21 @@ function detectHexVertices(imgEl, size) {
 
 function applyAICanvas(src) {
   return new Promise((resolve, reject) => {
-    const canvas = document.getElementById('ai-room-canvas');
+    const canvas = document.getElementById('ai-preview-cv');
     if (!canvas) return reject('canvas not found');
     const ctx = canvas.getContext('2d');
-    const size = 640;
+    const size = 700;
     const img = new Image();
     img.onload = () => {
+      // 생성 이미지에서 육각형 상·하단 꼭지점 자동 감지
+      const { cx, cy, r } = detectHexVertices(img, size);
+      // 저장 시 크롭에 사용할 수 있도록 canvas에 보존
+      canvas.dataset.hexCx = cx;
+      canvas.dataset.hexCy = cy;
+      canvas.dataset.hexR  = r;
       ctx.clearRect(0, 0, size, size);
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, size, size);
-      const { cx, cy, r } = detectHexVertices(img, size);
       ctx.save();
       ctx.beginPath();
       for (let i = 0; i < 6; i++) {
@@ -2388,6 +2369,7 @@ function applyAICanvas(src) {
       ctx.clip();
       ctx.drawImage(img, 0, 0, size, size);
       ctx.restore();
+      canvas.style.display = 'block';
       resolve();
     };
     img.onerror = reject;
@@ -2407,6 +2389,7 @@ function buildGrids() {
 }
 function buildG(gid, list, cat, multi) {
   const g = document.getElementById(gid);
+  if (!g) return;
   g.innerHTML = list.length === 0
     ? `<div style="padding:20px;color:#CCC;font-size:12px;">로딩 중...</div>`
     : '';
@@ -3011,8 +2994,10 @@ function showDone(){
     SEL_INTEREST = '';
   }
   const dc=document.getElementById('done-cv');
-  const _aiCv=document.getElementById('ai-room-canvas');
-  if(_aiCv) dc.getContext('2d').drawImage(_aiCv,0,0,640,640,0,0,160,160);
+  const dctx=dc.getContext('2d');
+  dctx.drawImage(RCV,0,0,700,700,0,0,160,160);
+  const aiCv=document.getElementById('ai-preview-cv');
+  if(aiCv && aiCv.style.display!=='none') dctx.drawImage(aiCv,0,0,700,700,0,0,160,160);
   const wa=SEL.wall?ASSETS.wall.find(a=>a.id===SEL.wall)?.name:null;
   const fl=SEL.floor?ASSETS.floor.find(a=>a.id===SEL.floor)?.name:null;
   document.getElementById('done-desc').innerHTML = LANG==='ko'?'이대로 맵에 등록할까요?':'Ready to register on the map?';
@@ -3079,19 +3064,29 @@ async function registerRoom(){
   pg.classList.add('show'); st.textContent='📦 JPEG 생성 중...'; bar.style.width='0%';
   await sleep(100);
 
-  // 1. JPEG 생성 — AI 캔버스에서 직접 크롭
-  const _aiCanvas = document.getElementById('ai-room-canvas');
-  if(!_aiCanvas || _aiCanvas.getContext('2d').getImageData(0,0,1,1).data[3] === 0){
-    alert(LANG==='ko' ? '먼저 AI 이미지를 생성해주세요.' : 'Please generate an AI image first.');
-    rb.disabled=false; rb.textContent=t('reg_btn'); pg.classList.remove('show'); return;
-  }
-  const OUTPUT_SIZE = 640;
+  // 1. JPEG 생성 — 선택 테두리 숨기고 렌더 후 크롭 (1400×1400 고해상도)
+  const _prevCtrl = {...CTRL_SEL};
+  CTRL_SEL = {cat:null, id:null}; // 주황 테두리 제거
+  await renderRoom();              // 테두리 없이 재렌더
+  const cropSize = RS * 2;
+  const cropX = RCX - cropSize / 2;
+  const cropY = RCY - cropSize / 2;
+  const OUTPUT_SIZE = 700; // 저장 해상도
   const off=document.createElement('canvas'); off.width=OUTPUT_SIZE; off.height=OUTPUT_SIZE;
   const octx=off.getContext('2d');
   octx.imageSmoothingEnabled = true;
   octx.imageSmoothingQuality = 'high';
   octx.fillStyle='#fff'; octx.fillRect(0,0,OUTPUT_SIZE,OUTPUT_SIZE);
-  octx.drawImage(_aiCanvas, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+  octx.drawImage(RCV, cropX, cropY, cropSize, cropSize, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+  // AI 생성 이미지가 있으면 위에 합성 — 감지된 hex 범위만 크롭해서 저장
+  const _aiCv = document.getElementById('ai-preview-cv');
+  if(_aiCv && _aiCv.style.display !== 'none') {
+    const hcx = parseFloat(_aiCv.dataset.hexCx || 350);
+    const hcy = parseFloat(_aiCv.dataset.hexCy || 350);
+    const hr  = parseFloat(_aiCv.dataset.hexR  || 350);
+    // 육각형의 세로 크기(2r)를 기준으로 정사각형 크롭
+    octx.drawImage(_aiCv, hcx - hr, hcy - hr, hr * 2, hr * 2, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+  }
   pngUrl = off.toDataURL('image/jpeg', 0.92);
   CTRL_SEL = _prevCtrl; // 원복
   bar.style.width='20%'; await sleep(100);
@@ -3133,14 +3128,6 @@ async function registerRoom(){
   // 4. DB 저장 (신규: INSERT / 수정: PATCH)
   st.textContent='🗃 DB 저장 중...'; bar.style.width='85%';
   const email = CURRENT_USER?.email || '';
-  const designJson = JSON.stringify({
-    sel: { wall: SEL.wall, floor: SEL.floor,
-           furniture: [...SEL.furniture], walldeco: [...SEL.walldeco], item: [...SEL.item] },
-    pos: { furniture: {...POS.furniture}, walldeco: {...POS.walldeco}, item: {...POS.item} },
-    size: { furniture: {...SIZE.furniture}, walldeco: {...SIZE.walldeco}, item: {...SIZE.item} },
-    flip: { furniture: {...FLIP.furniture}, walldeco: {...FLIP.walldeco}, item: {...FLIP.item} },
-    layerOrder: { furniture: [...LAYER_ORDER.furniture], walldeco: [...LAYER_ORDER.walldeco], item: [...LAYER_ORDER.item] },
-  });
   // unavatar로 실제 pbs.twimg.com URL resolve → DB에 직접 이미지 URL 저장
   // 이후 맵/패널에서 unavatar 요청 없이 직접 트위터 서버에서 이미지 로드
   st.textContent='🖼 아바타 URL 확인 중...'; bar.style.width='80%';
@@ -3149,7 +3136,7 @@ async function registerRoom(){
   const zonePrice = 0; // 신규: create-room EF는 confirmTileBuy에서 이미 호출됨
   const dbPayload = {
     twitter_id: twitterId, occupied: 'Y', email,
-    design_json: designJson, avatar_url: twitterAvatar,
+    avatar_url: twitterAvatar,
     interest: SEL_INTEREST || '',
     interest_avatar_url: interestAvatarUrl,
   };
@@ -3570,7 +3557,7 @@ function drawMap(){
     if(cx<-s*2||cx>mW+s*2||cy<-s*2||cy>mH+s*2)return;
     const room=ROOMS[num];
     if(room && room.incomplete){
-      // 미완성 방 (occupied=Y, design_json=null) → 회색 타일로 표시
+      // 미완성 방 (occupied=Y, twitter_id 없음) → 회색 타일로 표시
       drawIncompleteGrid(cx,cy,s,num);
     } else if(room) {
       drawFilled(cx,cy,s,num,room);
@@ -3712,7 +3699,7 @@ async function loadRooms(){
   try {
     // rooms + room_balances 병렬 로드
     const [res, balRes] = await Promise.all([
-      fetch(`${SUPA_URL}/rest/v1/rooms?occupied=eq.Y&order=room_number.asc&select=*`,
+      fetch(`${SUPA_URL}/rest/v1/rooms?occupied=eq.Y&order=room_number.asc&select=room_number,twitter_id,avatar_url,interest,interest_avatar_url,reserved,email,updated_at`,
         { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }),
       fetch(`${SUPA_URL}/rest/v1/room_balances?select=room_number,balance`,
         { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } })
@@ -3730,8 +3717,8 @@ async function loadRooms(){
       const img = new Image();
       img.crossOrigin = 'anonymous';
       img.src = imgUrl;
-      // occupied=Y이지만 design_json=null → 방 꾸미기 미완성 상태
-      const isIncomplete = !row.design_json && !row.reserved;
+      // occupied=Y이지만 twitter_id 미등록 → 방 꾸미기 미완성 상태
+      const isIncomplete = !row.twitter_id && !row.reserved;
       img.onload = () => {
         ROOMS[row.room_number] = {
           img: isIncomplete ? null : img,  // 미완성이면 이미지 무시
@@ -3832,7 +3819,7 @@ async function loadOneRoom(row){
         interest:          row.interest            || '',
         interestAvatarUrl: row.interest_avatar_url || '',
         reserved:          row.reserved    || false,
-        incomplete:        !row.design_json && !row.reserved,
+        incomplete:        !row.twitter_id && !row.reserved,
         tileValue:         ROOM_BALANCES[row.room_number] || 0,
         ownerEmail:        row.email       || '',
         creatorEmail:      row.email       || ''
@@ -4115,6 +4102,29 @@ async function loadMyBalance(){
   } catch(e){ console.warn('잔액 로드 실패:', e); }
 }
 
+async function loadMyRooms(){
+  if(!CURRENT_USER) return;
+  try {
+    const res = await fetch(
+      `${SUPA_URL}/rest/v1/rooms?email=eq.${encodeURIComponent(CURRENT_USER.email)}&order=room_number.asc&select=room_number`,
+      { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${await getValidToken()}` } }
+    );
+    if(!res.ok) return;
+    const data = await res.json();
+    MY_ROOM_LIST  = data || [];
+    MY_ROOM_COUNT = MY_ROOM_LIST.length;
+    _updateRoomBadge();
+  } catch(e){ console.warn('loadMyRooms:', e); }
+}
+
+function _updateRoomBadge(){
+  const badge = document.getElementById('room-badge');
+  const cnt   = document.getElementById('room-count');
+  if(!badge || !cnt) return;
+  cnt.textContent = MY_ROOM_COUNT;
+  badge.style.display = CURRENT_USER && MY_ROOM_COUNT > 0 ? 'flex' : 'none';
+}
+
 async function initUserBalance(){
   if(!CURRENT_USER) return;
   const res = await fetch(`${SUPA_URL}/rest/v1/user_balances`, {
@@ -4137,29 +4147,6 @@ async function initUserBalance(){
 function updateBalanceUI(){
   const el = document.getElementById('hive-bal');
   if(el) el.textContent = MY_BALANCE !== null ? MY_BALANCE.toLocaleString() : '—';
-}
-
-async function loadMyRooms(){
-  if(!CURRENT_USER) return;
-  try {
-    const res = await fetch(
-      `${SUPA_URL}/rest/v1/rooms?email=eq.${encodeURIComponent(CURRENT_USER.email)}&order=room_number.asc&select=room_number`,
-      { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${await getValidToken()}` } }
-    );
-    if(!res.ok) return;
-    const data = await res.json();
-    MY_ROOM_LIST  = data || [];
-    MY_ROOM_COUNT = MY_ROOM_LIST.length;
-    _updateRoomBadge();
-  } catch(e){ console.warn('loadMyRooms:', e); }
-}
-
-function _updateRoomBadge(){
-  const badge = document.getElementById('room-badge');
-  const cnt   = document.getElementById('room-count');
-  if(!badge || !cnt) return;
-  cnt.textContent = MY_ROOM_COUNT;
-  badge.style.display = CURRENT_USER && MY_ROOM_COUNT > 0 ? 'flex' : 'none';
 }
 
 // ══════════════════════════════════════
@@ -4330,6 +4317,7 @@ function openRoomPanel(num){
   }
 
   const myBal = MY_BALANCE !== null ? MY_BALANCE : 0;
+  _hideNftOwner();
   const isOwnFinal = !!(
     CURRENT_USER &&
     CURRENT_USER.email &&
@@ -4349,6 +4337,8 @@ function openRoomPanel(num){
     document.getElementById('rp-invest-btn').style.display = 'block';
     document.getElementById('rp-move-btn').style.display = 'block';
     document.getElementById('rp-attend-btn').style.display = 'none';
+    document.getElementById('rp-nft-btn').style.display = 'none';
+    checkAndShowNftBtn(num);
   } else if(room.reserved){
     buyBtn.style.display = 'none';
     insuf.style.display = 'none';
@@ -4961,7 +4951,7 @@ async function confirmMove(){
 let EMPTY_PANEL_NUM = null;
 
 function openIncompleteTilePanel(num){
-  // 미완성 방(occupied=Y, design_json=null) 클릭 시 구매 패널
+  // 미완성 방(occupied=Y, twitter_id 없음) 클릭 시 구매 패널
   const room = ROOMS[num];
   if(!room) return;
   EMPTY_PANEL_NUM = num;
@@ -5323,7 +5313,7 @@ function _tipsUpdateContent(){
 }
 function closeTips(){
   document.getElementById('tips-ov').classList.add('hidden');
-  localStorage.setItem('tips_seen', '1');
+  localStorage.setItem('tips_seen','1');
 }
 function openTips(){
   _tipsPage = 0;
@@ -5331,11 +5321,12 @@ function openTips(){
   document.getElementById('tips-ov').classList.remove('hidden');
 }
 function initTips(){
+  if(localStorage.getItem('tips_seen')){
+    document.getElementById('tips-ov').classList.add('hidden');
+    return;
+  }
   _tipsPage = 0;
   _tipsUpdateUI();
-  if(!localStorage.getItem('tips_seen')){
-    document.getElementById('tips-ov').classList.remove('hidden');
-  }
 }
 
 // 도움말
@@ -5407,9 +5398,9 @@ const I18N = {
     ctrl_deselect: 'Desel',
     ctrl_delete: 'Del',
     con_help: 'Help',
-    con_help_title: '🔧 Item Controls',
+    con_help_title: '🖼️ AI Room Generator',
     con_help_body: '① Choose options from <b>Room type</b>, <b>Mood</b>, <b>Wall</b>, <b>Furniture</b> tabs<br>② Edit the prompt freely in the text area below<br>③ Click <b>Generate</b> to create your room image (~1m 30s)<br>④ Click <b>Regenerate</b> to try a new variation<br>⑤ When satisfied, click <b>Upload to Map</b> to save',
-    con_help_tip: '💡 Drag any item to freely reposition it!',
+    con_help_tip: '💡 The prompt is fully editable — add your own keywords!',
     invest_info: 'Your investment raises the tile value.',
     invest_label: 'Amount (HIVE)',
     invest_cur: 'Current Value',
@@ -6188,6 +6179,7 @@ const ONCHAIN = {
   MARKET:    '0x49386B0d73Ac64BfD302ADd525712E2c5C0801A4',
   PAYMASTER: '0x8BCa39d4413AacaF5aE1FCEF499a7dB7045b22cB',
 };
+// general(bytes) selector + abi.encode(bytes("")) — for HiveRoomPaymaster general flow
 const PAYMASTER_INPUT = '0x8c5a344500000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000';
 
 const HIVE_ABI = [
@@ -6247,37 +6239,45 @@ async function connectMetaMask() {
     WALLET_SIGNER  = provider.getSigner();
     WALLET_ADDRESS = await WALLET_SIGNER.getAddress();
     _updateWalletBtn();
-    _saveWalletToSupabase(WALLET_ADDRESS);
     _resolveWallet(true);
     return true;
   } catch(e) { console.error('connectMetaMask', e); _resolveWallet(false); return false; }
 }
 
 // ── Abstract Global Wallet ────────────────────────────────────────────────────
-const AGW_APP_ID = 'cm04asygd041fmry9zmcyn5o5';
+// Uses @privy-io/cross-app-connect ECDH protocol (not OAuth PKCE)
+const AGW_APP_ID = 'cm04asygd041fmry9zmcyn5o5'; // AGW's Privy App ID (fixed constant)
 
 async function connectAbstractWallet() {
   _closeWalletSelector();
   try {
+    // ① Import secp256k1 for ECDH key pair (Privy cross-app-connect protocol)
     const { secp256k1 } = await import('https://esm.sh/@noble/curves@1.4.2/secp256k1');
     const b64enc = b => btoa(String.fromCharCode(...b));
     const b64dec = s => new Uint8Array([...atob(s)].map(c => c.charCodeAt(0)));
 
+    // ② Generate ephemeral ECDH key pair
     const privKeyBytes = secp256k1.utils.randomPrivateKey();
-    const pubKeyBytes  = secp256k1.getPublicKey(privKeyBytes);
+    const pubKeyBytes  = secp256k1.getPublicKey(privKeyBytes); // 33-byte compressed
     const pubKeyB64    = b64enc(pubKeyBytes);
 
-    let connectUrl = 'https://privy.abs.xyz/cross-app/connect';
+    // ③ Fetch AGW's cross-app connect URL from Privy
+    let connectUrl = 'https://privy.abs.xyz/cross-app/connect'; // fallback
     try {
       const details = await fetch(
         'https://auth.privy.io/api/v1/apps/' + AGW_APP_ID + '/cross-app/details'
       ).then(r => r.json());
+      console.log('[AGW] provider details:', details);
       const base = details.custom_api_url || 'https://privy.abs.xyz';
       connectUrl  = details.custom_connect_url || (base + '/cross-app/connect');
+      const transactUrlFromDetails = details.custom_transact_url || (base + '/cross-app/transact');
       localStorage.setItem('agw_connect_base',   base);
-      localStorage.setItem('agw_transact_url_d', details.custom_transact_url || (base + '/cross-app/transact'));
-    } catch(e) { console.warn('[AGW] provider details fetch failed:', e.message); }
+      localStorage.setItem('agw_transact_url_d', transactUrlFromDetails);
+    } catch(e) {
+      console.warn('[AGW] provider details fetch failed, using fallback:', e.message);
+    }
 
+    // ④ Open popup with ECDH public key
     const u = new URL(connectUrl);
     u.searchParams.set('requester_public_key', pubKeyB64);
     u.searchParams.set('connect',              'true');
@@ -6290,7 +6290,9 @@ async function connectAbstractWallet() {
       `width=460,height=640,popup=yes,left=${(screen.width-460)/2|0},top=${(screen.height-640)/2|0}`
     );
     if (!popup) { alert('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.'); _resolveWallet(false); return; }
+    console.log('[AGW] popup opened:', u.href);
 
+    // ⑤ Wait for PRIVY_CROSS_APP_CONNECT_RESPONSE via postMessage or BroadcastChannel
     const resp = await new Promise((resolve, reject) => {
       let bc = null;
       const tid = setTimeout(() => { cleanup(); reject(new Error('Login timeout (5min)')); }, 5*60*1000);
@@ -6315,9 +6317,11 @@ async function connectAbstractWallet() {
       window.addEventListener('message', h);
     });
 
+    console.log('[AGW] connected, full resp:', JSON.stringify(resp));
     const eoaAddress = resp.address;
     if (!eoaAddress) throw new Error('No address in response: ' + JSON.stringify(resp));
 
+    // ⑥ Compute ECDH shared secret + store transact URL
     try {
       const provPub   = b64dec(resp.providerPublicKey);
       const sharedRaw = secp256k1.getSharedSecret(privKeyBytes, provPub).slice(1);
@@ -6327,7 +6331,8 @@ async function connectAbstractWallet() {
     const transactUrl = (localStorage.getItem('agw_connect_base') || 'https://privy.abs.xyz') + '/cross-app/transact';
     localStorage.setItem('agw_transact_url', transactUrl);
 
-    WALLET_ADDRESS = resp.smartWalletAddress || eoaAddress;
+    // ⑦ Derive AGW smart wallet address from EOA via factory contract
+    WALLET_ADDRESS = resp.smartWalletAddress || eoaAddress; // try field first
     try {
       const agwMod = await import('https://esm.sh/@abstract-foundation/agw-client');
       if (agwMod.getSmartAccountAddressFromInitialSigner) {
@@ -6338,19 +6343,27 @@ async function connectAbstractWallet() {
             new ethers.Contract(address, abi, rpc)[functionName](...(args || [])),
         };
         const smartAddr = await agwMod.getSmartAccountAddressFromInitialSigner(eoaAddress, viemClient);
-        if (smartAddr && ethers.utils.isAddress(smartAddr)) WALLET_ADDRESS = smartAddr;
+        if (smartAddr && ethers.utils.isAddress(smartAddr)) {
+          WALLET_ADDRESS = smartAddr;
+          console.log('[AGW] EOA:', eoaAddress, '→ Smart Wallet:', smartAddr);
+        }
       }
     } catch(e) { console.warn('[AGW] smart wallet derivation failed:', e.message); }
     localStorage.setItem('agw_addr', WALLET_ADDRESS);
     localStorage.setItem('agw_eoa',  eoaAddress);
 
+    // ⑧ EIP-1193 bridge — sends txs through AGW cross-app transact popup
     const eip1193 = {
       request: async ({ method, params }) => {
         if (method === 'eth_requestAccounts' || method === 'eth_accounts') return [WALLET_ADDRESS];
         if (method === 'eth_chainId') return '0x2B74';
         if (method === 'eth_estimateGas') return '0x493E0';
-        if (method === 'eth_sendTransaction') return _agwRequest(method, [_injectPaymaster(params && params[0])]);
-        if (method === 'eth_signTypedData_v4' || method === 'eth_sign') return _agwRequest(method, params);
+        if (method === 'eth_sendTransaction') {
+          return _agwRequest(method, [_injectPaymaster(params && params[0])]);
+        }
+        if (method === 'eth_signTypedData_v4' || method === 'eth_sign') {
+          return _agwRequest(method, params);
+        }
         return new ethers.providers.JsonRpcProvider('https://api.testnet.abs.xyz').send(method, params || []);
       },
       on: () => {}, removeListener: () => {},
@@ -6358,7 +6371,6 @@ async function connectAbstractWallet() {
     const provider = new ethers.providers.Web3Provider(eip1193);
     WALLET_SIGNER  = provider.getSigner();
     _updateWalletBtn();
-    _saveWalletToSupabase(WALLET_ADDRESS);
     _resolveWallet(true);
   } catch(e) {
     if (e.message === 'popup_closed') { _resolveWallet(false); return; }
@@ -6368,41 +6380,59 @@ async function connectAbstractWallet() {
   }
 }
 
+// Injects HiveRoomPaymaster customData into any tx targeting our whitelisted contracts.
 function _injectPaymaster(tx) {
   if (!tx) return tx;
   const whitelist = [ONCHAIN.HIVE, ONCHAIN.TILE, ONCHAIN.MARKET].map(a => a.toLowerCase());
   if (tx.to && whitelist.includes(tx.to.toLowerCase())) {
-    return { ...tx, customData: { paymasterParams: { paymaster: ONCHAIN.PAYMASTER, paymasterInput: PAYMASTER_INPUT } } };
+    return {
+      ...tx,
+      customData: {
+        paymasterParams: { paymaster: ONCHAIN.PAYMASTER, paymasterInput: PAYMASTER_INPUT },
+      },
+    };
   }
   return tx;
 }
 
+// ── AGW cross-app encrypted transaction request ───────────────────────────────
+// Delegates to @privy-io/cross-app-connect to ensure exact protocol compliance.
 async function _agwRequest(method, params) {
   const sharedB64 = localStorage.getItem('agw_shared');
   const pubKeyB64 = localStorage.getItem('agw_pub');
   if (!sharedB64 || !pubKeyB64) throw new Error('AGW not connected');
+
+  // Write our stored connection into the library's localStorage key so it can
+  // reload it. Format: {address, sharedSecret, publicKey, exp}
   const CONN_KEY  = `privy-caw:${AGW_APP_ID}:connection:smart-wallet`;
   const CHAIN_KEY = `privy-caw:${AGW_APP_ID}:connection_chain_id:smart-wallet`;
   try {
-    localStorage.setItem(CONN_KEY,  JSON.stringify({ address: WALLET_ADDRESS, sharedSecret: sharedB64, publicKey: pubKeyB64, exp: Date.now() + 2*60*60*1000 }));
+    localStorage.setItem(CONN_KEY,  JSON.stringify({
+      address: WALLET_ADDRESS, sharedSecret: sharedB64, publicKey: pubKeyB64,
+      exp: Date.now() + 2 * 60 * 60 * 1000,
+    }));
     localStorage.setItem(CHAIN_KEY, JSON.stringify(11124));
   } catch(_) {}
+
+  // Import the library (handles all encryption + popup internally)
   const { createPrivyCrossAppClient } = await import('https://esm.sh/@privy-io/cross-app-connect@0.5.7');
-  const abstractTestnet = { id: 11124, name: 'Abstract Testnet', nativeCurrency: { decimals: 18, name: 'Ether', symbol: 'ETH' }, rpcUrls: { default: { http: ['https://api.testnet.abs.xyz'] } } };
-  const client = createPrivyCrossAppClient({ providerAppId: AGW_APP_ID, chains: [abstractTestnet], connectionOpts: { smartWalletMode: true } });
+  const abstractTestnet = {
+    id: 11124, name: 'Abstract Testnet',
+    nativeCurrency: { decimals: 18, name: 'Ether', symbol: 'ETH' },
+    rpcUrls: { default: { http: ['https://api.testnet.abs.xyz'] } },
+  };
+  const client = createPrivyCrossAppClient({
+    providerAppId:  AGW_APP_ID,
+    chains:         [abstractTestnet],
+    connectionOpts: { smartWalletMode: true },
+  });
+  // client constructor loaded connection state from localStorage above
   return client.sendRequest(method, params);
 }
 
-async function _saveWalletToSupabase(addr) {
-  if (!CURRENT_USER || !addr) return;
-  try {
-    const token = await getValidToken();
-    await fetch(`${SUPA_URL}/rest/v1/user_balances?user_email=eq.${encodeURIComponent(CURRENT_USER.email)}`, {
-      method: 'PATCH',
-      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ wallet_address: addr })
-    });
-  } catch(e) { console.warn('_saveWalletToSupabase', e); }
+function _showWspMain() {
+  document.getElementById('wsp-main').style.display = 'block';
+  document.getElementById('wsp-agw').style.display = 'none';
 }
 
 function _updateWalletBtn() {
@@ -6429,7 +6459,6 @@ function walletBtnClick() {
     el.dataset.full = WALLET_ADDRESS;
   }
 }
-
 function _copyWalletAddr() {
   const addr = document.getElementById('wdrop-addr')?.dataset.full;
   if (!addr) return;
@@ -6451,35 +6480,38 @@ function disconnectWallet() {
 }
 
 async function switchWallet() {
+  // Save current connection so we can restore it if user cancels
   const prevAddress = WALLET_ADDRESS;
   const prevSigner  = WALLET_SIGNER;
   _closeWalletDrop();
   const connected = await showWalletSelector();
   if (!connected && prevAddress) {
+    // User closed the selector without connecting — restore previous wallet
     WALLET_ADDRESS = prevAddress;
     WALLET_SIGNER  = prevSigner;
     _updateWalletBtn();
   }
 }
 
-function _showWspMain() {
-  document.getElementById('wsp-main').style.display = 'block';
-  document.getElementById('wsp-agw').style.display = 'none';
-}
-
 function _tryRestoreAGWWallet() {
-  const addr   = localStorage.getItem('agw_addr');
-  const shared = localStorage.getItem('agw_shared');
-  const pub    = localStorage.getItem('agw_pub');
+  const addr    = localStorage.getItem('agw_addr');
+  const shared  = localStorage.getItem('agw_shared');
+  const pub     = localStorage.getItem('agw_pub');
   if (!addr || !shared || !pub) return;
+
   WALLET_ADDRESS = addr;
+
   const eip1193 = {
     request: async ({ method, params }) => {
       if (method === 'eth_requestAccounts' || method === 'eth_accounts') return [WALLET_ADDRESS];
       if (method === 'eth_chainId') return '0x2B74';
       if (method === 'eth_estimateGas') return '0x493E0';
-      if (method === 'eth_sendTransaction') return _agwRequest(method, [_injectPaymaster(params && params[0])]);
-      if (method === 'eth_signTypedData_v4' || method === 'eth_sign') return _agwRequest(method, params);
+      if (method === 'eth_sendTransaction') {
+        return _agwRequest(method, [_injectPaymaster(params && params[0])]);
+      }
+      if (method === 'eth_signTypedData_v4' || method === 'eth_sign') {
+        return _agwRequest(method, params);
+      }
       return new ethers.providers.JsonRpcProvider('https://api.testnet.abs.xyz').send(method, params || []);
     },
     on: () => {}, removeListener: () => {},
@@ -6590,6 +6622,26 @@ async function executeBurn() {
   } finally { btn.disabled = false; btn.textContent = '🔥 Burn → In-App'; }
 }
 
+// ── NFT Mint ─────────────────────────────────────────────────────────────────
+
+function _showNftOwner(addr) {
+  const el = document.getElementById('rp-nft-owner');
+  const addrEl = document.getElementById('rp-nft-owner-addr');
+  if (!el || !addrEl) return;
+  addrEl.textContent = addr.slice(0,10) + '…' + addr.slice(-6);
+  addrEl.dataset.full = addr;
+  el.style.display = 'block';
+}
+function _hideNftOwner() {
+  const el = document.getElementById('rp-nft-owner');
+  if (el) el.style.display = 'none';
+}
+function _copyNftOwner() {
+  const addr = document.getElementById('rp-nft-owner-addr')?.dataset.full;
+  if (!addr) return;
+  navigator.clipboard.writeText(addr).then(() => showToast('Copied!'));
+}
+
 // ── Room NFT Modal ────────────────────────────────────────────────────────────
 
 function openRoomModal() {
@@ -6612,14 +6664,12 @@ async function _refreshRoomModal() {
   mainSec.style.display   = 'block';
   listEl.innerHTML = '<div style="color:#aaa;font-size:12px;text-align:center;padding:12px">Loading…</div>';
 
-  // Refresh room list from Supabase
   await loadMyRooms();
   if (!MY_ROOM_LIST.length) {
     listEl.innerHTML = '<div style="color:#aaa;font-size:12px;text-align:center;padding:12px">You have no rooms.</div>';
     return;
   }
 
-  // Fetch NFT status for all rooms from chain
   const provider = new ethers.providers.JsonRpcProvider(ABSTRACT_CHAIN.rpcUrls[0]);
   const tileContract = new ethers.Contract(ONCHAIN.TILE, TILE_ABI, provider);
 
@@ -6672,7 +6722,6 @@ async function executeWithdrawRoom(tileNum, btn) {
 
     const token = await getValidToken();
     if (!isMinted) {
-      // Server mints directly to user wallet
       const resp = await fetch(`${SUPA_URL}/functions/v1/sign-mint`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -6684,7 +6733,6 @@ async function executeWithdrawRoom(tileNum, btn) {
       await provider.waitForTransaction(txHash, 1, 90000);
       showToast('🎉 #' + tileNum + ' NFT minted & sent on-chain!');
     } else if (isStaked) {
-      // Server unstakes NFT to user wallet
       const resp = await fetch(`${SUPA_URL}/functions/v1/unstake-room`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -6711,7 +6759,7 @@ async function executeStakeRoom(tileNum, btn) {
   try {
     const tile = new ethers.Contract(ONCHAIN.TILE, TILE_ABI, WALLET_SIGNER);
     const tx = await tile.stake(tileNum);
-    btn.textContent = '확인중…';
+    btn.textContent = 'Confirming…';
     await tx.wait();
     showToast('📥 #' + tileNum + ' NFT deposited in-app!');
     await _refreshRoomModal();
@@ -6786,8 +6834,11 @@ async function executeStakeRoom(tileNum, btn) {
   </div>
 </div>
 
+<!-- Wallet Selector Modal -->
 <div id="wallet-selector-ov" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:20px;padding:28px 24px;width:320px;max-width:92vw;font-family:'Jua',sans-serif;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+
+    <!-- 패널 1: 지갑 선택 -->
     <div id="wsp-main">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
         <span style="font-size:16px;font-weight:700;color:#1a1a1a;">Connect Wallet</span>
@@ -6800,16 +6851,24 @@ async function executeStakeRoom(tileNum, btn) {
         <span style="font-size:20px;">🦊</span> MetaMask / Browser Wallet
       </button>
     </div>
+
+    <!-- 패널 2: AGW 앱 등록 안내 -->
     <div id="wsp-agw" style="display:none;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
         <span style="font-size:15px;font-weight:700;color:#3A4BD4;">⬡ Abstract Global Wallet</span>
         <button onclick="_resolveWallet(false)" style="background:none;border:none;font-size:22px;line-height:1;cursor:pointer;color:#888;">×</button>
       </div>
       <div style="background:#F5F7FF;border-radius:12px;padding:14px;margin-bottom:16px;font-size:12px;color:#555;line-height:1.8;">
-        AGW는 <b>portal.abs.xyz</b> 웹 팝업으로 로그인하는 방식입니다.
+        AGW는 <b>portal.abs.xyz</b> 웹 팝업으로 로그인하는 방식입니다.<br>
+        사용하려면 아래에서 앱을 등록하고<br>
+        <code style="background:#e8ecff;padding:1px 4px;border-radius:4px;">app_id</code>와 <code style="background:#e8ecff;padding:1px 4px;border-radius:4px;">client_id</code>를 개발자에게 전달해 주세요.
       </div>
+      <a href="https://portal.abs.xyz" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;margin-bottom:10px;background:linear-gradient(135deg,#3A4BD4,#6C5CE7);border:none;border-radius:14px;font-family:'Jua',sans-serif;font-size:14px;color:#fff;cursor:pointer;text-align:center;text-decoration:none;box-sizing:border-box;">
+        <span style="font-size:18px;">⬡</span> portal.abs.xyz 앱 등록
+      </a>
       <button onclick="_showWspMain()" style="width:100%;padding:8px;background:none;border:none;font-size:12px;color:#aaa;cursor:pointer;">← 뒤로</button>
     </div>
+
   </div>
 </div>
 </body>
