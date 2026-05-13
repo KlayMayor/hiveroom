@@ -2129,6 +2129,8 @@ function switchTab(btn, cat) {
 // ══════════════════════════════════════
 const AI_PROXY_URL = 'https://oval-trombone-obedience.ngrok-free.dev';
 const AI_BASE_PROMPT = 'Cute isometric illustration, fit inside a pointy-top regular hexagon, The hexagon proportions are width:height = √3:2 (approximately 0.87:1), meaning it is taller than it is wide. Design the isometric interior so it fills this vertically-oriented hexagonal boundary — wider in the middle, narrowing toward the top and bottom points. the hexagon centered and occupying about 87% of the canvas width. diamond shaped floor area. No ceiling. No people. Pure white background outside the hexagon. Vivid pastel colors, Japanese kawaii cute 2D cel-shading style, highly detailed clean illustration,';
+const PENDING_JOB_KEY = 'hiveroom_pending_job';
+let _pollingActive = false;
 
 function limitConsoleChecks(name, max) {
   const boxes = document.querySelectorAll(`input[name="${name}"]`);
@@ -2231,47 +2233,12 @@ async function generateAIRoom() {
   const status = document.getElementById('ai-gen-status');
   genBtn.disabled = true;
   regenBtn.disabled = true;
-
-  const startTime = Date.now();
-  let statusMode = 'generating'; // 'generating' | 'queued'
-  let progressHigh = false;      // progress가 한 번이라도 높았는지
-
-  // 경과 타이머
-  const timerInterval = setInterval(() => {
-    const sec = Math.floor((Date.now() - startTime) / 1000);
-    const m = Math.floor(sec / 60), s = sec % 60;
-    const t = `${m}m:${String(s).padStart(2,'0')}s`;
-    status.textContent = statusMode === 'queued'
-      ? `⏳ In queue... ${t}`
-      : `Generating... ${t} (estimated 1:30)`;
-  }, 1000);
-  status.textContent = 'Generating... 0m:00s (estimated 1:30)';
-
-  // 큐 감지: progress가 높았다가 0으로 리셋되면 다른 유저 작업 완료 → 내 차례 대기 중
-  const progressPoller = setInterval(async () => {
-    try {
-      const r = await fetch(`${AI_PROXY_URL}/sdapi/v1/progress`, {
-        signal: AbortSignal.timeout(3000)
-      });
-      if (!r.ok) return;
-      const d = await r.json();
-      const prog = d.progress || 0;
-      if (prog > 0.15) progressHigh = true;
-      if (progressHigh && prog < 0.05) {
-        statusMode = 'queued';  // 한 사이클 완료됐는데 아직 응답 없음 → 큐 대기 중
-        progressHigh = false;   // 다음 사이클 감지를 위해 초기화
-      }
-    } catch(_) {}
-  }, 2000);
+  status.textContent = 'Submitting...';
 
   try {
     const ta = document.getElementById('ai-prompt-input');
     const userPart = ta ? ta.value.trim() : buildConsolePrompt();
     const prompt = AI_BASE_PROMPT + (userPart ? ' ' + userPart : '');
-
-    // 5분 타임아웃
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000);
 
     const res = await fetch(`${AI_PROXY_URL}/sdapi/v1/txt2img`, {
       method: 'POST',
@@ -2284,39 +2251,150 @@ async function generateAIRoom() {
         height: 640,
         cfg_scale: 1
       }),
-      signal: controller.signal
+      signal: AbortSignal.timeout(15000)
     });
-    clearTimeout(timeoutId);
-
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    const b64 = data.images?.[0];
-    if (!b64) throw new Error('No image returned');
-    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-    await applyAICanvas('data:image/png;base64,' + b64);
-    status.textContent = `Done ✓ (${elapsed}s)`;
-    // 모바일: 생성 완료 후 Preview 탭으로 자동 전환
-    if (window.innerWidth <= 768) mobSwitchView('preview');
-    regenBtn.disabled = false;
-    const finBtn = document.querySelector('.con-finish-btn');
-    if (finBtn) {
-      finBtn.removeAttribute('disabled');
-      finBtn.classList.add('on');
-      finBtn.classList.remove('flash');
-      void finBtn.offsetWidth;
-      finBtn.classList.add('flash');
-    }
+    const jobId = data.job_id;
+    if (!jobId) throw new Error('No job_id returned');
+
+    const startTime = Date.now();
+    localStorage.setItem(PENDING_JOB_KEY, JSON.stringify({ jobId, startTime }));
+    await pollJobResult(jobId, startTime, status);
+    localStorage.removeItem(PENDING_JOB_KEY);
   } catch(e) {
-    status.textContent = e.name === 'AbortError'
-      ? 'Error: Timed out after 5 minutes'
-      : 'Error: ' + e.message;
-    regenBtn.disabled = false;
-  } finally {
-    clearInterval(timerInterval);
-    clearInterval(progressPoller);
-    genBtn.disabled = false;
+    const status2 = document.getElementById('ai-gen-status');
+    if (status2) status2.textContent = 'Error: ' + e.message;
+    const g = document.getElementById('ai-gen-btn');
+    const r = document.getElementById('ai-regen-btn');
+    if (g) g.disabled = false;
+    if (r) r.disabled = false;
   }
 }
+
+async function pollJobResult(jobId, startTime, statusEl) {
+  if (_pollingActive) return;
+  _pollingActive = true;
+
+  const getEl = () => statusEl || document.getElementById('ai-gen-status');
+  let statusMode = 'generating';
+  let progressHigh = false;
+
+  const timerInterval = setInterval(() => {
+    const sec = Math.floor((Date.now() - startTime) / 1000);
+    const m = Math.floor(sec / 60), s = sec % 60;
+    const t = `${m}m:${String(s).padStart(2,'0')}s`;
+    const el = getEl();
+    if (el) el.textContent = statusMode === 'queued'
+      ? `⏳ In queue... ${t}`
+      : `Generating... ${t} (estimated 1:30)`;
+  }, 1000);
+  const el0 = getEl();
+  if (el0) el0.textContent = 'Generating... 0m:00s (estimated 1:30)';
+
+  const progressPoller = setInterval(async () => {
+    try {
+      const r = await fetch(`${AI_PROXY_URL}/sdapi/v1/progress`, { signal: AbortSignal.timeout(3000) });
+      if (!r.ok) return;
+      const d = await r.json();
+      const prog = d.progress || 0;
+      if (prog > 0.15) progressHigh = true;
+      if (progressHigh && prog < 0.05) { statusMode = 'queued'; progressHigh = false; }
+    } catch(_) {}
+  }, 2000);
+
+  return new Promise((resolve, reject) => {
+    const DEADLINE = 5 * 60 * 1000;
+    const poll = setInterval(async () => {
+      try {
+        if (Date.now() - startTime > DEADLINE) {
+          clearInterval(poll); clearInterval(timerInterval); clearInterval(progressPoller);
+          _pollingActive = false;
+          const genBtn = document.getElementById('ai-gen-btn');
+          const regenBtn = document.getElementById('ai-regen-btn');
+          if (genBtn) genBtn.disabled = false;
+          if (regenBtn) regenBtn.disabled = false;
+          reject(new Error('Timed out after 5 minutes')); return;
+        }
+        const r = await fetch(`${AI_PROXY_URL}/job/${jobId}`, { signal: AbortSignal.timeout(5000) });
+        if (r.status === 404) {
+          clearInterval(poll); clearInterval(timerInterval); clearInterval(progressPoller);
+          _pollingActive = false;
+          const genBtn = document.getElementById('ai-gen-btn');
+          const regenBtn = document.getElementById('ai-regen-btn');
+          if (genBtn) genBtn.disabled = false;
+          if (regenBtn) regenBtn.disabled = false;
+          reject(new Error('Job expired or not found')); return;
+        }
+        if (!r.ok) return;
+        const d = await r.json();
+        if (d.status === 'done') {
+          clearInterval(poll); clearInterval(timerInterval); clearInterval(progressPoller);
+          _pollingActive = false;
+          const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+          await applyAICanvas('data:image/png;base64,' + d.image);
+          const el = getEl();
+          if (el) el.textContent = `Done ✓ (${elapsed}s)`;
+          if (window.innerWidth <= 768) mobSwitchView('preview');
+          const genBtn = document.getElementById('ai-gen-btn');
+          const regenBtn = document.getElementById('ai-regen-btn');
+          if (genBtn) genBtn.disabled = false;
+          if (regenBtn) regenBtn.disabled = false;
+          const finBtn = document.querySelector('.con-finish-btn');
+          if (finBtn) {
+            finBtn.removeAttribute('disabled');
+            finBtn.classList.add('on');
+            finBtn.classList.remove('flash');
+            void finBtn.offsetWidth;
+            finBtn.classList.add('flash');
+          }
+          resolve();
+        } else if (d.status === 'error') {
+          clearInterval(poll); clearInterval(timerInterval); clearInterval(progressPoller);
+          _pollingActive = false;
+          const genBtn = document.getElementById('ai-gen-btn');
+          const regenBtn = document.getElementById('ai-regen-btn');
+          if (genBtn) genBtn.disabled = false;
+          if (regenBtn) regenBtn.disabled = false;
+          reject(new Error(d.error || 'Generation failed'));
+        }
+      } catch(_) {}
+    }, 2500);
+  });
+}
+
+async function checkPendingJob() {
+  if (_pollingActive) return;
+  const raw = localStorage.getItem(PENDING_JOB_KEY);
+  if (!raw) return;
+  let saved;
+  try { saved = JSON.parse(raw); } catch(_) { localStorage.removeItem(PENDING_JOB_KEY); return; }
+  const { jobId, startTime } = saved;
+  if (!jobId || Date.now() - startTime > 10 * 60 * 1000) {
+    localStorage.removeItem(PENDING_JOB_KEY); return;
+  }
+  const consoleEl = document.getElementById('console');
+  if (!consoleEl || !consoleEl.classList.contains('open')) return;
+
+  const genBtn = document.getElementById('ai-gen-btn');
+  const regenBtn = document.getElementById('ai-regen-btn');
+  const status = document.getElementById('ai-gen-status');
+  if (genBtn) genBtn.disabled = true;
+  if (regenBtn) regenBtn.disabled = true;
+  try {
+    await pollJobResult(jobId, startTime, status);
+    localStorage.removeItem(PENDING_JOB_KEY);
+  } catch(e) {
+    if (status) status.textContent = 'Error: ' + e.message;
+    localStorage.removeItem(PENDING_JOB_KEY);
+    if (genBtn) genBtn.disabled = false;
+    if (regenBtn) regenBtn.disabled = false;
+  }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') checkPendingJob();
+});
 
 function detectHexVertices(imgEl, size) {
   // 임시 캔버스에 이미지 그리고 픽셀 스캔
