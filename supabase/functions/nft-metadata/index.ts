@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
   const idStr = last.replace(/\.json$/i, '');
   const tokenId = parseInt(idStr, 10);
 
-  if (!tokenId || isNaN(tokenId) || tokenId < 1 || tokenId > 1000) {
+  if (!tokenId || isNaN(tokenId) || tokenId < 1 || tokenId > 1027) {
     return new Response(JSON.stringify({ error: 'Invalid token ID' }), {
       status: 400,
       headers: { ...CORS, 'Content-Type': 'application/json' },
